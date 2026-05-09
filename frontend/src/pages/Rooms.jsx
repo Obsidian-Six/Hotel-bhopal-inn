@@ -1,0 +1,248 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
+import config from '../config';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import TopBar from '@/components/layout/TopBar';
+import AnnouncementBar from '@/components/layout/AnnouncementBar';
+import { 
+  Wifi, Wind, ThermometerSun, 
+  Tv, UtensilsCrossed, Waves, Check, 
+  MessageCircle, Star, Info, ShieldCheck, 
+  Clock, Coffee, MapPin, Facebook, Instagram, Youtube
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+const API_BASE = config.API_URL;
+
+const RoomCard = ({ room }) => {
+  const getFullUrl = (path) => {
+    if (!path) return 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=2070&auto=format&fit=crop';
+    if (path.startsWith('http')) return path;
+    return `${API_BASE}${path}`;
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="bg-white group"
+    >
+      <div className="relative overflow-hidden aspect-[4/3] mb-6">
+        <img 
+          src={getFullUrl(room.images[0])} 
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+          alt={room.title} 
+        />
+      </div>
+      
+      <div className="space-y-4">
+        <h3 className="text-2xl lg:text-3xl font-serif text-[#0A192F] uppercase tracking-wide">
+          {room.title}
+        </h3>
+        
+        <p className="text-slate-500 text-sm leading-relaxed line-clamp-3">
+          {room.description}
+        </p>
+
+        <div className="flex gap-4 pt-4">
+          <Link 
+            to={`/rooms/${room.category}`}
+            className="flex-grow border border-[#0A192F] text-[#0A192F] py-3 text-[10px] font-bold uppercase tracking-widest text-center hover:bg-[#0A192F] hover:text-white transition-all"
+          >
+            Explore the Room
+          </Link>
+          <Link 
+            to="/booking" state={{ roomId: room._id }}
+            className="flex-grow bg-[#8B735B] text-white py-3 text-[10px] font-bold uppercase tracking-widest text-center hover:bg-[#725e4a] transition-all"
+          >
+            Book Now
+          </Link>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const ComparisonTable = () => {
+  const specs = [
+    { name: 'Air Conditioning', standard: true, deluxe: true, premium: true },
+    { name: 'High-Speed Wi-Fi', standard: true, deluxe: true, premium: true },
+    { name: '24/7 Hot Water', standard: true, deluxe: true, premium: true },
+    { name: 'Private Balcony', standard: false, deluxe: true, premium: true },
+    { name: 'Premium View', standard: false, deluxe: false, premium: true },
+    { name: 'In-Room Dining', standard: true, deluxe: true, premium: true },
+    { name: 'Smart TV', standard: true, deluxe: true, premium: true },
+  ];
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="border-b border-slate-200">
+            <th className="py-6 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">Features</th>
+            <th className="py-6 text-center text-sm font-serif text-[#0A192F] uppercase">Standard</th>
+            <th className="py-6 text-center text-sm font-serif text-[#0A192F] uppercase">Balcony</th>
+            <th className="py-6 text-center text-sm font-serif text-[#0A192F] uppercase">Super</th>
+          </tr>
+        </thead>
+        <tbody>
+          {specs.map((spec, idx) => (
+            <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+              <td className="py-5 text-sm text-slate-600">{spec.name}</td>
+              <td className="py-5 text-center">{spec.standard ? <Check size={18} className="mx-auto text-[#8B735B]" /> : <span className="text-slate-200">—</span>}</td>
+              <td className="py-5 text-center">{spec.deluxe ? <Check size={18} className="mx-auto text-[#8B735B]" /> : <span className="text-slate-200">—</span>}</td>
+              <td className="py-5 text-center">{spec.premium ? <Check size={18} className="mx-auto text-[#8B735B]" /> : <span className="text-slate-200">—</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const Rooms = () => {
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const fetchRooms = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/api/rooms`);
+        setRooms(res.data);
+      } catch (err) {
+        console.error('Error fetching rooms:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRooms();
+  }, []);
+
+  return (
+    <div className="min-h-screen flex flex-col bg-white">
+      <header className="fixed top-0 z-[200] w-full">
+        <TopBar />
+        <Navbar />
+      </header>
+      
+      <main className="flex-grow">
+        {/* Hero Section - Matching Reference Image 1 */}
+        <section className="relative min-h-[125vh] flex items-center justify-center overflow-hidden pt-20">
+          <img 
+            src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop" 
+            alt="Luxury Hero" 
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/40" />
+          
+          <div className="relative z-10 text-center px-4 max-w-6xl">
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-white text-xs lg:text-sm font-bold uppercase tracking-[0.6em] mb-4"
+            >
+              Hotel Bhopal Inn
+            </motion.p>
+            
+            <motion.h1 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-4xl md:text-7xl lg:text-8xl font-serif text-white mb-6 uppercase leading-tight tracking-wide"
+            >
+              Rooms & Suites <br className="hidden md:block" /> That Define Luxury
+            </motion.h1>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-white/90 text-sm lg:text-lg uppercase tracking-[0.4em] font-light"
+            >
+              Choose from an array of options
+            </motion.p>
+          </div>
+
+          {/* Social Icons - Right Floating */}
+          <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-6 z-20">
+            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0A192F] hover:bg-[#8B735B] hover:text-white transition-all shadow-lg">
+              <Facebook size={18} />
+            </button>
+            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0A192F] hover:bg-[#8B735B] hover:text-white transition-all shadow-lg">
+              <Instagram size={18} />
+            </button>
+            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0A192F] hover:bg-[#8B735B] hover:text-white transition-all shadow-lg">
+              <Youtube size={18} />
+            </button>
+          </div>
+        </section>
+
+        {/* Room Grid Section - Matching Reference Image 2 */}
+        <section className="py-24 bg-white">
+          <div className="container mx-auto px-4 lg:px-8">
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <div className="w-12 h-12 border-4 border-[#8B735B]/20 border-t-[#8B735B] rounded-full animate-spin"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-16">
+                {rooms.map((room) => (
+                  <RoomCard key={room._id} room={room} />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Comparison Section */}
+        <section className="py-24 bg-slate-50">
+          <div className="container mx-auto px-4 lg:px-8 max-w-5xl">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-serif text-[#0A192F] mb-4">
+                Not sure which room to choose?
+              </h2>
+              <div className="h-[1px] w-24 bg-[#8B735B] mx-auto"></div>
+            </div>
+
+            <div className="bg-white p-8 lg:p-12 shadow-xl border border-slate-100">
+              <ComparisonTable />
+            </div>
+
+            {/* CTAs */}
+            <div className="mt-16 flex flex-col md:flex-row items-center justify-center gap-6">
+              <a 
+                href="https://wa.me/916267276957"
+                className="w-full md:w-auto flex items-center justify-center gap-3 bg-[#25D366] text-white px-10 py-4 text-xs font-bold uppercase tracking-widest hover:bg-[#128C7E] transition-all shadow-lg"
+              >
+                <MessageCircle size={20} />
+                Speak to Us on WhatsApp
+              </a>
+              <Link 
+                to="/booking"
+                className="w-full md:w-auto bg-[#0A192F] text-white px-10 py-4 text-xs font-bold uppercase tracking-widest hover:bg-[#8B735B] transition-all shadow-lg text-center"
+              >
+                Book Your Room Now
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+      
+      {/* Floating WhatsApp Button */}
+      <a 
+        href="https://wa.me/916267276957"
+        className="fixed bottom-10 right-10 z-[300] w-16 h-16 bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-110 transition-transform"
+      >
+        <MessageCircle size={32} />
+      </a>
+
+      <Footer />
+    </div>
+  );
+};
+
+export default Rooms;

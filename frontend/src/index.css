@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 33% 98%; /* #FDFBF7 Warm Cream */
+    --foreground: 20 14% 15%; /* #2D241E Dark Brown */
+    
+    --primary: 30 35% 34%; /* #735438 Deep Brown */
+    --primary-foreground: 40 33% 98%;
+    
+    --accent: 35 35% 62%; /* #BFA37E Gold/Tan */
+    --accent-foreground: 20 14% 15%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 20 14% 15%;
+    
+    --border: 35 20% 85%;
+    --input: 35 20% 90%;
+    --ring: 30 35% 34%;
+    
+    --radius: 0px; /* Luxury often uses sharper edges or very subtle ones */
+  }
+
+  body {
+    @apply bg-[#FDFBF7] text-[#2D241E];
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-serif {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-[#735438] text-white px-8 py-3 uppercase tracking-widest text-xs font-bold transition-all hover:bg-[#5a422c];
+  }
+  
+  .section-title {
+    @apply text-4xl md:text-5xl font-serif text-center uppercase tracking-wider mb-2;
+  }
+  
+  .gold-line {
+    @apply w-24 h-[1px] bg-[#BFA37E] mx-auto mt-4 mb-8;
+  }
+}
+
+/* Custom styles to match the screenshots */
+.nav-link {
+  @apply text-sm uppercase tracking-widest font-medium text-[#2D241E] hover:text-[#735438] transition-colors;
+}
+
+.booking-field {
+  @apply flex flex-col gap-2 w-full;
+}
+
+.booking-field label {
+  @apply text-xs font-bold uppercase tracking-tighter text-[#735438];
+}
+
+.booking-field input, .booking-field select {
+  @apply border border-[#E5E1DA] p-3 w-full bg-white text-sm focus:outline-none focus:border-[#BFA37E];
+}
