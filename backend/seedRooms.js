@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Room = require('./models/Room');
 require('dotenv').config();
 
-const MONGO_URI = "mongodb+srv://balajikundrapu0000:Balaji123456@cluster0.kwjcu.mongodb.net/?appName=Cluster0";
+const MONGO_URI = process.env.MONGO_URI;
 
 const rooms = [
   {
