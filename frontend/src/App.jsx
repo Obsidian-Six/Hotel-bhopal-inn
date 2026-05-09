@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from '@/lib/AuthContext'
+import ProtectedRoute from '@/lib/ProtectedRoute'
 
 // Lazy loaded components
 const Home = lazy(() => import('@/pages/Home'))
@@ -15,6 +16,7 @@ const MyBookings = lazy(() => import('@/pages/MyBookings'))
 const Banquet = lazy(() => import('@/pages/Banquet'))
 const Gallery = lazy(() => import('@/pages/Gallery'))
 const About = lazy(() => import('@/pages/About'))
+const AdminLogin = lazy(() => import('@/pages/AdminLogin'))
 
 // Loading component
 const PageLoader = () => (
@@ -53,7 +55,15 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/booking" element={<Booking />} />
             <Route path="/my-bookings" element={<MyBookings />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route 
+              path="/admin" 
+              element={
+                <ProtectedRoute adminOnly={true}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/admin-login" element={<AdminLogin />} />
             
             <Route path="/faq" element={<FAQ />} />
             <Route path="/privacy-policy" element={<PlaceholderPage title="Privacy Policy" />} />

@@ -14,15 +14,15 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'bhopalinn@gmail.com',
-        pass: process.env.EMAIL_PASS || 'your-app-password'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
 });
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_Sm55QJ8wava9dI',
-    key_secret: process.env.RAZORPAY_KEY_SECRET || 'uzFnCvUKNpK9mjM0mkAOjJrF',
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 // GET: Today's Summary Stats for Front Desk
@@ -322,7 +322,7 @@ router.post('/verify-payment', async (req, res) => {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId } = req.body;
         const sign = razorpay_order_id + "|" + razorpay_payment_id;
         const expectedSign = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || 'uzFnCvUKNpK9mjM0mkAOjJrF')
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
             .update(sign.toString())
             .digest("hex");
 
@@ -361,8 +361,8 @@ router.post('/:id/notify', async (req, res) => {
         
         // 1. Email to Admin
         const mailOptions = {
-            from: 'bhopalinn@gmail.com',
-            to: 'bhopalinn@gmail.com',
+            from: process.env.EMAIL_USER,
+            to: process.env.ADMIN_EMAIL,
             subject: `New Booking Alert: ${guestName}`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; border: 1px solid #eee; padding: 20px;">

@@ -7,8 +7,8 @@ const Enquiry = require('../models/Enquiry');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER || 'sanivaraam@gmail.com',
-        pass: process.env.EMAIL_PASS || 'cpzu iwon vopw guna'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
 });
 
@@ -42,8 +42,8 @@ router.post('/', async (req, res) => {
 
         // Email to Admin
         const adminMailOptions = {
-            from: process.env.EMAIL_USER || 'sanivaraam@gmail.com',
-            to: 'sanivaraam@gmail.com',
+            from: process.env.EMAIL_USER,
+            to: process.env.ADMIN_EMAIL,
             subject: `New Banquet Enquiry from ${fullName}`,
             html: `
                 <h3>New Banquet Hall Enquiry</h3>
@@ -60,7 +60,7 @@ router.post('/', async (req, res) => {
 
         // Auto-reply to Enquirer
         const userMailOptions = {
-            from: process.env.EMAIL_USER || 'sanivaraam@gmail.com',
+            from: process.env.EMAIL_USER,
             to: emailAddress,
             subject: 'Thank you for your Enquiry - Hotel Bhopal Inn',
             html: `

@@ -6,8 +6,8 @@ const Newsletter = require('../models/Newsletter');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER || 'sanivaraam@gmail.com',
-        pass: process.env.EMAIL_PASS || 'cpzu iwon vopw guna'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
 });
 
@@ -26,8 +26,8 @@ router.post('/', async (req, res) => {
 
         // Send email notification to sanivaraam@gmail.com
         const mailOptions = {
-            from: process.env.EMAIL_USER || 'sanivaraam@gmail.com',
-            to: 'sanivaraam@gmail.com',
+            from: process.env.EMAIL_USER,
+            to: process.env.ADMIN_EMAIL,
             subject: `New Newsletter Subscriber: ${firstName}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background-color: #fcfcfc;">
@@ -44,7 +44,7 @@ router.post('/', async (req, res) => {
 
         try {
             await transporter.sendMail(mailOptions);
-            console.log(`Newsletter email successfully sent to sanivaraam@gmail.com`);
+            console.log(`Newsletter email successfully sent to ${process.env.ADMIN_EMAIL}`);
         } catch (mailErr) {
             console.error('Newsletter notification email sending failed:', mailErr);
         }

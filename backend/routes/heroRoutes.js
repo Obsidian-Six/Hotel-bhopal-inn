@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const HeroImage = require('../models/HeroImage');
 const fs = require('fs');
+const { protect, admin } = require('../middleware/auth');
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
@@ -30,7 +31,7 @@ router.get('/', async (req, res) => {
 
 // @route   POST /api/hero-images
 // @desc    Upload a new hero image
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/', protect, admin, upload.single('image'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Please upload an image' });
     }
@@ -52,7 +53,7 @@ router.post('/', upload.single('image'), async (req, res) => {
 
 // @route   DELETE /api/hero-images/:id
 // @desc    Delete a hero image
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, admin, async (req, res) => {
     try {
         const image = await HeroImage.findById(req.params.id);
         if (!image) return res.status(404).json({ message: 'Image not found' });

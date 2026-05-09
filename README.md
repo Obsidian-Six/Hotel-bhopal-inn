@@ -62,6 +62,16 @@ Create a `.env` file in the `frontend` folder and add:
 VITE_API_URL=http://localhost:8000
 ```
 
+### 4. Seed Admin User
+Run the following command in the `backend` folder to create an initial admin account:
+```bash
+cd backend
+node seedAdmin.js
+```
+**Default Admin Credentials:**
+- **Email:** `admin@bhopalinn.com`
+- **Password:** `adminpassword123`
+
 ---
 
 ## 🚀 Running the Project

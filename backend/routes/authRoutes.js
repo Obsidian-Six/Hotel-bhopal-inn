@@ -25,6 +25,7 @@ router.post('/register', async (req, res) => {
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
+            role: user.role,
             token
         });
     } catch (err) {
@@ -54,6 +55,7 @@ router.post('/login', async (req, res) => {
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
+            role: user.role,
             token
         });
     } catch (err) {
