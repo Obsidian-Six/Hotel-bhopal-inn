@@ -9,18 +9,38 @@ const app = express();
 const http = require('http');
 const { Server } = require('socket.io');
 const server = http.createServer(app);
+const allowedOriginsForSocket = [
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL?.replace('https://', 'https://www.'),
+    'http://localhost:5173'
+].filter(Boolean);
+
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || "*",
-        methods: ["GET", "POST"]
+        origin: allowedOriginsForSocket,
+        methods: ["GET", "POST"],
+        credentials: true
     }
 });
 
 const PORT = process.env.PORT || 8000;
 
 // Middleware
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL?.replace('https://', 'https://www.'),
+    'http://localhost:5173'
+].filter(Boolean);
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "*",
+    origin: function(origin, callback) {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
+        }
+        return callback(null, true);
+    },
     credentials: true
 }));
 app.use(express.json());
