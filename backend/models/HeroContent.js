@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const HeroContentSchema = new mongoose.Schema({
+const heroContentSchema = new mongoose.Schema({
     url: {
         type: String,
         required: true
@@ -12,12 +12,12 @@ const HeroContentSchema = new mongoose.Schema({
     },
     title: {
         type: String,
-        default: 'Luxury Hotel'
+        default: 'Luxury Stay'
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
+    active: {
+        type: Boolean,
+        default: true
     }
-});
+}, { timestamps: true });
 
-module.exports = mongoose.model('HeroContent', HeroContentSchema);
+module.exports = mongoose.model('HeroContent', heroContentSchema);

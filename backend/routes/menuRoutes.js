@@ -2,31 +2,29 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const MenuCategory = require('../models/MenuCategory');
+const Category = require('../models/Category');
 const MenuItem = require('../models/MenuItem');
+const fs = require('fs');
 
-// Multer Storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const dir = 'uploads/menu/';
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
+        const dest = 'uploads/menu/';
+        if (!fs.existsSync(dest)) {
+            fs.mkdirSync(dest, { recursive: true });
         }
-        cb(null, dir);
+        cb(null, dest);
     },
     filename: (req, file, cb) => {
-        cb(null, 'menu-' + Date.now() + path.extname(file.originalname));
+        cb(null, Date.now() + path.extname(file.originalname));
     }
 });
 
 const upload = multer({ storage });
 
-// --- Category Routes ---
-
+// Categories
 router.get('/categories', async (req, res) => {
     try {
-        const categories = await MenuCategory.find();
+        const categories = await Category.find();
         res.json(categories);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -34,13 +32,13 @@ router.get('/categories', async (req, res) => {
 });
 
 router.post('/categories', upload.single('image'), async (req, res) => {
+    const category = new Category({
+        name: req.body.name,
+        image: `/uploads/menu/${req.file.filename}`
+    });
     try {
-        const category = new MenuCategory({
-            name: req.body.name,
-            image: `/uploads/menu/${req.file.filename}`
-        });
-        await category.save();
-        res.status(201).json(category);
+        const saved = await category.save();
+        res.status(201).json(saved);
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
@@ -48,21 +46,19 @@ router.post('/categories', upload.single('image'), async (req, res) => {
 
 router.delete('/categories/:id', async (req, res) => {
     try {
-        const category = await MenuCategory.findById(req.params.id);
-        if (category.image && fs.existsSync(path.join(__dirname, '..', category.image))) {
-            fs.unlinkSync(path.join(__dirname, '..', category.image));
+        const cat = await Category.findById(req.params.id);
+        if (cat && fs.existsSync(path.join(__dirname, '..', cat.image))) {
+            fs.unlinkSync(path.join(__dirname, '..', cat.image));
         }
-        await MenuCategory.findByIdAndDelete(req.params.id);
-        // Also delete items in this category
         await MenuItem.deleteMany({ category: req.params.id });
+        await Category.findByIdAndDelete(req.params.id);
         res.json({ message: 'Category and its items deleted' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// --- Menu Item Routes ---
-
+// Items
 router.get('/items', async (req, res) => {
     try {
         const items = await MenuItem.find().populate('category');
@@ -73,18 +69,13 @@ router.get('/items', async (req, res) => {
 });
 
 router.post('/items', upload.single('picture'), async (req, res) => {
+    const item = new MenuItem({
+        ...req.body,
+        picture: `/uploads/menu/${req.file.filename}`
+    });
     try {
-        const item = new MenuItem({
-            name: req.body.name,
-            picture: `/uploads/menu/${req.file.filename}`,
-            description: req.body.description,
-            category: req.body.category,
-            isVeg: req.body.isVeg === 'true',
-            quantity: req.body.quantity,
-            cost: Number(req.body.cost)
-        });
-        await item.save();
-        res.status(201).json(item);
+        const saved = await item.save();
+        res.status(201).json(saved);
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
@@ -92,15 +83,12 @@ router.post('/items', upload.single('picture'), async (req, res) => {
 
 router.put('/items/:id', upload.single('picture'), async (req, res) => {
     try {
-        const updateData = { ...req.body };
+        const update = { ...req.body };
         if (req.file) {
-            updateData.picture = `/uploads/menu/${req.file.filename}`;
+            update.picture = `/uploads/menu/${req.file.filename}`;
         }
-        updateData.isVeg = req.body.isVeg === 'true';
-        updateData.cost = Number(req.body.cost);
-
-        const item = await MenuItem.findByIdAndUpdate(req.params.id, updateData, { new: true });
-        res.json(item);
+        const updated = await MenuItem.findByIdAndUpdate(req.params.id, update, { new: true });
+        res.json(updated);
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
@@ -109,7 +97,7 @@ router.put('/items/:id', upload.single('picture'), async (req, res) => {
 router.delete('/items/:id', async (req, res) => {
     try {
         const item = await MenuItem.findById(req.params.id);
-        if (item.picture && fs.existsSync(path.join(__dirname, '..', item.picture))) {
+        if (item && fs.existsSync(path.join(__dirname, '..', item.picture))) {
             fs.unlinkSync(path.join(__dirname, '..', item.picture));
         }
         await MenuItem.findByIdAndDelete(req.params.id);

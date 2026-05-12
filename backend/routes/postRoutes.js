@@ -2,26 +2,24 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 const Post = require('../models/Post');
+const fs = require('fs');
 
-// Multer Storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const dir = 'uploads/posts/';
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
+        const dest = 'uploads/posts/';
+        if (!fs.existsSync(dest)) {
+            fs.mkdirSync(dest, { recursive: true });
         }
-        cb(null, dir);
+        cb(null, dest);
     },
     filename: (req, file, cb) => {
-        cb(null, 'post-' + Date.now() + path.extname(file.originalname));
+        cb(null, Date.now() + path.extname(file.originalname));
     }
 });
 
 const upload = multer({ storage });
 
-// @route   GET /api/posts
 router.get('/', async (req, res) => {
     try {
         const posts = await Post.find().sort({ createdAt: -1 });
@@ -31,25 +29,24 @@ router.get('/', async (req, res) => {
     }
 });
 
-// @route   POST /api/posts
 router.post('/', upload.single('image'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ message: 'Please upload an image' });
+    const post = new Post({
+        image: `/uploads/posts/${req.file.filename}`,
+        caption: req.body.caption
+    });
     try {
-        const post = new Post({
-            image: `/uploads/posts/${req.file.filename}`,
-            caption: req.body.caption
-        });
-        await post.save();
-        res.status(201).json(post);
+        const saved = await post.save();
+        res.status(201).json(saved);
     } catch (err) {
         res.status(400).json({ message: err.message });
     }
 });
 
-// @route   DELETE /api/posts/:id
 router.delete('/:id', async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
-        if (post.image && fs.existsSync(path.join(__dirname, '..', post.image))) {
+        if (post && fs.existsSync(path.join(__dirname, '..', post.image))) {
             fs.unlinkSync(path.join(__dirname, '..', post.image));
         }
         await Post.findByIdAndDelete(req.params.id);
