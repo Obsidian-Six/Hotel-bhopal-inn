@@ -8,11 +8,7 @@ const fs = require('fs');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const dest = 'uploads/menu/';
-        if (!fs.existsSync(dest)) {
-            fs.mkdirSync(dest, { recursive: true });
-        }
-        cb(null, dest);
+        cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -34,7 +30,7 @@ router.get('/categories', async (req, res) => {
 router.post('/categories', upload.single('image'), async (req, res) => {
     const category = new Category({
         name: req.body.name,
-        image: `/uploads/menu/${req.file.filename}`
+        image: `/uploads/${req.file.filename}`
     });
     try {
         const saved = await category.save();
@@ -71,7 +67,7 @@ router.get('/items', async (req, res) => {
 router.post('/items', upload.single('picture'), async (req, res) => {
     const item = new MenuItem({
         ...req.body,
-        picture: `/uploads/menu/${req.file.filename}`
+        picture: `/uploads/${req.file.filename}`
     });
     try {
         const saved = await item.save();
@@ -85,7 +81,7 @@ router.put('/items/:id', upload.single('picture'), async (req, res) => {
     try {
         const update = { ...req.body };
         if (req.file) {
-            update.picture = `/uploads/menu/${req.file.filename}`;
+            update.picture = `/uploads/${req.file.filename}`;
         }
         const updated = await MenuItem.findByIdAndUpdate(req.params.id, update, { new: true });
         res.json(updated);

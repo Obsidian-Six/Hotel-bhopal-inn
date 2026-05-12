@@ -27,7 +27,6 @@ const InstagramFeed = () => {
     { image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1970&auto=format&fit=crop' },
     { image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=1970&auto=format&fit=crop' },
     { image: 'https://images.unsplash.com/photo-1590490359683-658d3d23f972?q=80&w=1970&auto=format&fit=crop' },
-    { image: 'https://images.unsplash.com/photo-1551882547-ff40c66fe561?q=80&w=1970&auto=format&fit=crop' }
   ];
 
   return (

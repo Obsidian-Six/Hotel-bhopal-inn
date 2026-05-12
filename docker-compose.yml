@@ -1,58 +1,38 @@
 version: '3.8'
 
 services:
-  traefik:
-    image: traefik:v2.10
-    container_name: traefik
-    command:
-      - "--api.insecure=false"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.myresolver.acme.httpchallenge=true"
-      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.myresolver.acme.email=sanivaraam@gmail.com"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./letsencrypt:/letsencrypt"
-    restart: always
-
   backend:
     build: ./backend
-    container_name: hotel-backend
+    container_name: hotel-bhopal-backend
     env_file:
       - ./backend/.env
+    volumes:
+      - /var/www/hotel-data/uploads:/app/uploads
+    networks:
+      - web-proxy  # Added this to talk to your global Traefik
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=Host(`api.hotelbhopalinn.tenontenstays.com`)"
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls.certresolver=myresolver"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
-      # Redirect HTTP to HTTPS
-      - "traefik.http.routers.backend-http.rule=Host(`api.hotelbhopalinn.tenontenstays.com`)"
-      - "traefik.http.routers.backend-http.entrypoints=web"
-      - "traefik.http.routers.backend-http.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     restart: always
 
   frontend:
     build: ./frontend
-    container_name: hotel-frontend
+    container_name: hotel-bhopal-frontend
     depends_on:
       - backend
+    networks:
+      - web-proxy  # Added this
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`hotelbhopalinn.tenontenstays.com`) || Host(`www.hotelbhopalinn.tenontenstays.com`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls.certresolver=myresolver"
       - "traefik.http.services.frontend.loadbalancer.server.port=80"
-      # Redirect HTTP to HTTPS
-      - "traefik.http.routers.frontend-http.rule=Host(`hotelbhopalinn.tenontenstays.com`) || Host(`www.hotelbhopalinn.tenontenstays.com`)"
-      - "traefik.http.routers.frontend-http.entrypoints=web"
-      - "traefik.http.routers.frontend-http.middlewares=redirect-to-https"
     restart: always
+
+networks:
+  web-proxy:
+    external: true

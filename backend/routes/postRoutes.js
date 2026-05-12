@@ -7,11 +7,7 @@ const fs = require('fs');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const dest = 'uploads/posts/';
-        if (!fs.existsSync(dest)) {
-            fs.mkdirSync(dest, { recursive: true });
-        }
-        cb(null, dest);
+        cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -32,7 +28,7 @@ router.get('/', async (req, res) => {
 router.post('/', upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'Please upload an image' });
     const post = new Post({
-        image: `/uploads/posts/${req.file.filename}`,
+        image: `/uploads/${req.file.filename}`,
         caption: req.body.caption
     });
     try {

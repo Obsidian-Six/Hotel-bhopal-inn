@@ -4,7 +4,7 @@ import TopBar from '@/components/layout/TopBar';
 import Navbar from '@/components/layout/Navbar';
 import HeroSection from '@/components/home/HeroSection';
 import BookingWidget from '@/components/home/BookingWidget';
-import USPStrip from '@/components/home/USPStrip';
+import USPStrip from '@/components/home/UspStrip';
 import RoomCategories from '@/components/home/RoomCategories';
 import ReelsSection from '@/components/home/ReelsSection';
 import SpecialOffers from '@/components/home/SpecialOffers';

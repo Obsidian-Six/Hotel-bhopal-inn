@@ -9,14 +9,7 @@ const { protect, admin } = require('../middleware/auth');
 // Multer Storage Configuration
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const isVideo = file.mimetype.startsWith('video');
-        const dest = isVideo ? 'uploads/videos/' : 'uploads/';
-        
-        // Ensure directory exists
-        if (!fs.existsSync(dest)) {
-            fs.mkdirSync(dest, { recursive: true });
-        }
-        cb(null, dest);
+        cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -52,8 +45,7 @@ router.post('/', protect, admin, upload.single('file'), async (req, res) => {
         return res.status(400).json({ message: 'Please upload a file' });
     }
 
-    const isVideo = req.file.mimetype.startsWith('video');
-    const url = isVideo ? `/uploads/videos/${req.file.filename}` : `/uploads/${req.file.filename}`;
+    const url = `/uploads/${req.file.filename}`;
     
     const newContent = new HeroContent({
         url: url,

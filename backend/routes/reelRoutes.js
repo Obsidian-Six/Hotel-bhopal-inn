@@ -7,11 +7,7 @@ const fs = require('fs');
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        const dest = 'uploads/videos/';
-        if (!fs.existsSync(dest)) {
-            fs.mkdirSync(dest, { recursive: true });
-        }
-        cb(null, dest);
+        cb(null, 'uploads/');
     },
     filename: (req, file, cb) => {
         cb(null, Date.now() + path.extname(file.originalname));
@@ -43,7 +39,7 @@ router.post('/', upload.single('video'), async (req, res) => {
     
     const newReel = new Reel({
         title: req.body.title || 'Hotel Reel',
-        videoUrl: `/uploads/videos/${req.file.filename}`
+        videoUrl: `/uploads/${req.file.filename}`
     });
 
     try {
