@@ -17,6 +17,8 @@ const Banquet = lazy(() => import('@/pages/Banquet'))
 const Gallery = lazy(() => import('@/pages/Gallery'))
 const About = lazy(() => import('@/pages/About'))
 const AdminLogin = lazy(() => import('@/pages/AdminLogin'))
+const FoodMenu = lazy(() => import('@/pages/FoodMenu'))
+import WhatsAppFloat from '@/components/layout/WhatsAppFloat'
 
 // Loading component
 const PageLoader = () => (
@@ -55,6 +57,7 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/booking" element={<Booking />} />
             <Route path="/my-bookings" element={<MyBookings />} />
+            <Route path="/menu" element={<FoodMenu />} />
             <Route 
               path="/admin" 
               element={
@@ -71,6 +74,7 @@ function App() {
             
             <Route path="*" element={<PlaceholderPage title="404 - Page Not Found" />} />
           </Routes>
+          <WhatsAppFloat />
         </Suspense>
       </Router>
     </AuthProvider>

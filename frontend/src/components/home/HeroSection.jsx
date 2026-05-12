@@ -18,31 +18,40 @@ const HeroSection = () => {
   ];
 
   useEffect(() => {
-    const fetchImages = async () => {
+    const fetchContent = async () => {
       try {
         const res = await axios.get(`${config.API_URL}/api/hero-images`);
         if (res.data && res.data.length > 0) {
-          setImages(res.data.map(img => `${config.API_URL}${img.imageUrl}`));
+          setImages(res.data); // Now contains objects with url and type
         } else {
-          setImages(defaultImages);
+          setImages(defaultImages.map(url => ({ url, type: 'image' })));
         }
       } catch (err) {
-        setImages(defaultImages);
+        setImages(defaultImages.map(url => ({ url, type: 'image' })));
       } finally {
         setLoading(false);
       }
     };
 
-    fetchImages();
+    fetchContent();
   }, []);
+
+  const handleNext = () => {
+    if (images.length > 0) {
+      setCurrent((prev) => (prev + 1) % images.length);
+    }
+  };
 
   useEffect(() => {
     if (images.length === 0) return;
-    const timer = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % images.length);
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [images.length]);
+    
+    // Only set a timer if the current item is an image
+    // If it's a video, we rely on the onEnded event
+    if (images[current]?.type !== 'video') {
+      const timer = setInterval(handleNext, 6000);
+      return () => clearInterval(timer);
+    }
+  }, [images.length, current]);
 
   return (
     <div className="relative min-h-[125vh] w-full overflow-hidden flex items-center justify-center bg-[#0A192F]">
@@ -50,20 +59,41 @@ const HeroSection = () => {
       <div className="absolute inset-0 z-0">
         <AnimatePresence mode="wait">
           {!loading && images.length > 0 && (
-            <motion.img
+            <motion.div
               key={current}
-              src={images[current]}
-              initial={{ opacity: 0, scale: 1.1 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 2 }}
-              className="w-full h-full object-cover"
-              alt={`Luxury Hotel ${current + 1}`}
-            />
+              transition={{ duration: 1.5 }}
+              className="w-full h-full"
+            >
+              {images[current].type === 'video' ? (
+                <video
+                  src={images[current].url.startsWith('http') ? images[current].url : `${config.API_URL}${images[current].url}`}
+                  autoPlay
+                  muted
+                  playsInline
+                  loop={images.length === 1}
+                  onEnded={handleNext}
+                  preload="auto"
+                  className="w-full h-full object-cover"
+                />
+
+              ) : (
+                <img
+                  src={images[current].url.startsWith('http') ? images[current].url : `${config.API_URL}${images[current].url}`}
+                  loading="eager"
+                  className="w-full h-full object-cover"
+                  alt={`Hero ${current + 1}`}
+                />
+              )}
+            </motion.div>
           )}
         </AnimatePresence>
-        <div className="absolute inset-0 bg-[#0A192F]/50 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-[#0A192F]/40" />
       </div>
+
+
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 text-center mt-20">

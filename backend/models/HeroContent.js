@@ -1,9 +1,14 @@
 const mongoose = require('mongoose');
 
-const HeroImageSchema = new mongoose.Schema({
-    imageUrl: {
+const HeroContentSchema = new mongoose.Schema({
+    url: {
         type: String,
         required: true
+    },
+    type: {
+        type: String,
+        enum: ['image', 'video'],
+        default: 'image'
     },
     title: {
         type: String,
@@ -15,4 +20,4 @@ const HeroImageSchema = new mongoose.Schema({
     }
 });
 
-module.exports = mongoose.model('HeroImage', HeroImageSchema);
+module.exports = mongoose.model('HeroContent', HeroContentSchema);

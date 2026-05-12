@@ -9,7 +9,10 @@ import OfferManagement from '@/components/admin/OfferManagement';
 import InventoryManagement from '@/components/admin/InventoryManagement';
 import FrontDeskManagement from '@/components/admin/FrontDeskManagement';
 import FinanceManagement from '@/components/admin/FinanceManagement';
-import { Tag, Calendar, Users, IndianRupee } from 'lucide-react';
+import ReelManagement from '@/components/admin/ReelManagement';
+import FoodMenuManagement from '@/components/admin/FoodMenuManagement';
+import PostManagement from '@/components/admin/PostManagement';
+import { Tag, Calendar, Users, IndianRupee, Film, Utensils, Camera } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('hero'); // 'hero', 'rooms', or 'banquet'
@@ -46,7 +49,7 @@ const AdminDashboard = () => {
     }
 
     const formData = new FormData();
-    formData.append('image', selectedFile);
+    formData.append('file', selectedFile);
     formData.append('title', title);
 
     setLoading(true);
@@ -82,9 +85,10 @@ const AdminDashboard = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-[#0A192F] text-white flex flex-col">
         <div className="p-8 border-b border-white/10">
-          <h1 className="text-xl font-serif font-bold text-[#BFA37E] uppercase tracking-tighter">Bhopal Inn</h1>
+          <img src="/logo.png" alt="Logo" className="h-12 w-auto object-contain bg-white p-1" />
           <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em] mt-2">CMS Admin Panel</p>
         </div>
+
         
         <nav className="flex-grow p-4 space-y-2 mt-6">
           <button 
@@ -143,6 +147,27 @@ const AdminDashboard = () => {
             <IndianRupee size={16} />
             Finance — Income, Expense & Cash
           </button>
+          <button 
+            onClick={() => setActiveTab('reels')}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'reels' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+          >
+            <Film size={16} />
+            Video Reels
+          </button>
+          <button 
+            onClick={() => setActiveTab('menu')}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'menu' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+          >
+            <Utensils size={16} />
+            Food Menu
+          </button>
+          <button 
+            onClick={() => setActiveTab('posts')}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'posts' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+          >
+            <Camera size={16} />
+            Instagram Posts
+          </button>
         </nav>
 
         <div className="p-4 border-t border-white/10">
@@ -159,16 +184,16 @@ const AdminDashboard = () => {
           {activeTab === 'hero' ? (
             <div className="space-y-10">
               <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-serif font-bold text-[#0A192F]">Hero Slider Management</h2>
+                <h2 className="text-3xl font-serif font-bold text-[#0A192F]">Hero Content Management</h2>
               </div>
 
               {/* Upload Section */}
               <div className="bg-white p-8 rounded-sm shadow-sm border border-slate-100">
-                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-6">Upload New Hero Image</h3>
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-6">Upload New Hero Image or Video</h3>
                 <form onSubmit={onUpload} className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Image Title</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Content Title</label>
                       <input 
                         type="text" 
                         value={title} 
@@ -178,9 +203,10 @@ const AdminDashboard = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Select Photo</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Select File (Image/Video)</label>
                       <input 
                         type="file" 
+                        accept="image/*,video/*"
                         onChange={onFileChange}
                         className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:bg-[#BFA37E] file:text-white hover:file:bg-[#0A192F] transition-all"
                       />
@@ -204,22 +230,32 @@ const AdminDashboard = () => {
                 <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-8">Current Slides</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   {images.length === 0 ? (
-                    <p className="text-slate-400 italic text-sm">No images uploaded yet.</p>
+                    <p className="text-slate-400 italic text-sm">No content uploaded yet.</p>
                   ) : (
-                    images.map((img) => (
-                      <div key={img._id} className="relative group border border-slate-50 overflow-hidden">
-                        <img 
-                          src={`${config.API_URL}${img.imageUrl}`} 
-                          alt={img.title} 
-                          className="w-full h-48 object-cover"
-                        />
+                    images.map((item) => (
+                      <div key={item._id} className="relative group border border-slate-50 overflow-hidden">
+                        {item.type === 'video' ? (
+                          <video 
+                            src={`${config.API_URL}${item.url}`} 
+                            className="w-full h-48 object-cover"
+                            muted
+                            loop
+                          />
+                        ) : (
+                          <img 
+                            src={`${config.API_URL}${item.url}`} 
+                            alt={item.title} 
+                            className="w-full h-48 object-cover"
+                          />
+                        )}
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-6 text-center">
-                          <span className="text-white text-[10px] font-bold uppercase tracking-widest mb-4">{img.title}</span>
+                          <span className="text-white text-[10px] font-bold uppercase tracking-widest mb-2">{item.title}</span>
+                          <span className="text-white/60 text-[8px] font-bold uppercase tracking-widest mb-4">{item.type}</span>
                           <button 
-                            onClick={() => onDelete(img._id)}
+                            onClick={() => onDelete(item._id)}
                             className="text-white bg-red-600 px-6 py-2 rounded-sm text-[9px] font-bold uppercase tracking-widest hover:bg-red-700 transition-all"
                           >
-                            Delete Slide
+                            Delete Item
                           </button>
                         </div>
                       </div>
@@ -228,6 +264,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
             </div>
+
           ) : activeTab === 'rooms' ? (
             <RoomManagement />
           ) : activeTab === 'banquet' ? (
@@ -242,6 +279,12 @@ const AdminDashboard = () => {
             <InventoryManagement />
           ) : activeTab === 'finance' ? (
             <FinanceManagement role="Admin" />
+          ) : activeTab === 'reels' ? (
+            <ReelManagement />
+          ) : activeTab === 'menu' ? (
+            <FoodMenuManagement />
+          ) : activeTab === 'posts' ? (
+            <PostManagement />
           ) : null}
         </div>
       </main>

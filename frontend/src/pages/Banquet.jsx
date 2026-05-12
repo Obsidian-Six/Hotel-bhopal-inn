@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import config from '../config';
@@ -141,7 +142,7 @@ const BanquetPage = () => {
               className="absolute inset-0"
             >
               <img 
-                src={banquetData.heroImages?.length > 0 ? `${config.API_URL}${banquetData.heroImages[currentSlide]}` : '/assets/banquet-default.png'} 
+                src="/banquet_main.jpg" 
                 className="w-full h-full object-cover" 
                 alt="Hero"
               />
@@ -160,7 +161,6 @@ const BanquetPage = () => {
           </div>
 
           <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-6 z-20">
-            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0A192F] hover:bg-[#BFA37E] hover:text-white transition-all shadow-lg"><Facebook size={18} /></button>
             <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0A192F] hover:bg-[#BFA37E] hover:text-white transition-all shadow-lg"><Instagram size={18} /></button>
             <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0A192F] hover:bg-[#BFA37E] hover:text-white transition-all shadow-lg"><Youtube size={18} /></button>
           </div>
@@ -406,7 +406,6 @@ const BanquetPage = () => {
         )}
       </AnimatePresence>
 
-      <a href="https://wa.me/919876543210" className="fixed bottom-10 right-10 z-[300] w-16 h-16 bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-110 transition-transform"><MessageCircle size={32} /></a>
     </div>
   );
 };

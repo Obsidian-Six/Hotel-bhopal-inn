@@ -101,20 +101,20 @@ const MyBookings = () => {
                                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-4">Booking ID: {booking._id.substring(0, 8)}</p>
                                 
                                 <div className="space-y-3">
-                                    <div className="flex items-start gap-3">
-                                        <Calendar size={16} className="text-slate-400 mt-0.5" />
+                                    <div className="flex items-start gap-3 bg-[#BFA37E]/5 p-3 rounded-sm border border-[#BFA37E]/20">
+                                        <Calendar size={20} className="text-[#BFA37E] mt-1" />
                                         <div>
-                                            <p className="text-xs font-bold text-slate-700">Check-In</p>
-                                            <p className="text-sm text-slate-600">{new Date(booking.checkInDate).toLocaleDateString()}</p>
-                                            <p className="text-xs text-slate-500">From 14:00</p>
+                                            <p className="text-[10px] font-black text-[#BFA37E] uppercase tracking-tighter">CHECK-IN</p>
+                                            <p className="text-lg font-serif font-bold text-[#0A192F]">{new Date(booking.checkInDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                            <p className="text-[11px] font-black text-[#0A192F] bg-[#BFA37E]/20 px-2 py-0.5 rounded-full inline-block mt-1">FROM 12:00 PM</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-start gap-3">
-                                        <Calendar size={16} className="text-slate-400 mt-0.5" />
+                                    <div className="flex items-start gap-3 bg-slate-100 p-3 rounded-sm border border-slate-200">
+                                        <Calendar size={20} className="text-slate-400 mt-1" />
                                         <div>
-                                            <p className="text-xs font-bold text-slate-700">Check-Out</p>
-                                            <p className="text-sm text-slate-600">{new Date(booking.checkOutDate).toLocaleDateString()}</p>
-                                            <p className="text-xs text-slate-500">Until 11:00</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">CHECK-OUT</p>
+                                            <p className="text-lg font-serif font-bold text-[#0A192F]">{new Date(booking.checkOutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                            <p className="text-[11px] font-black text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full inline-block mt-1">UNTIL 11:00 AM</p>
                                         </div>
                                     </div>
                                 </div>
@@ -177,14 +177,19 @@ const MyBookings = () => {
                                     </div>
                                 </div>
                                 
-                                <div className="mt-6 pt-4 border-t border-slate-100 flex gap-4">
+                                <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap gap-6">
                                     <button 
                                         onClick={() => window.print()}
                                         className="text-[#8B735B] text-[10px] font-bold uppercase tracking-widest hover:underline flex items-center gap-2"
                                     >
                                         Download Invoice / Print
                                     </button>
+
+                                    {(booking.status === 'Confirmed' || booking.status === 'Checked-In') && (
+                                        <ExtensionPanel booking={booking} onUpdate={() => window.location.reload()} />
+                                    )}
                                 </div>
+
                             </div>
                         </motion.div>
                     ))}
@@ -198,4 +203,86 @@ const MyBookings = () => {
   );
 };
 
+const ExtensionPanel = ({ booking, onUpdate }) => {
+    const [show, setShow] = useState(false);
+    const [newDate, setNewDate] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const roomTariff = booking.financials?.roomTariff / ((new Date(booking.checkOutDate) - new Date(booking.checkInDate)) / (1000 * 60 * 60 * 24)) || 2000;
+
+    const calculateExtra = () => {
+        if (!newDate) return 0;
+        const currentOut = new Date(booking.checkOutDate);
+        const extendedOut = new Date(newDate);
+        const diffDays = Math.ceil((extendedOut - currentOut) / (1000 * 60 * 60 * 24));
+        return diffDays > 0 ? diffDays * roomTariff : 0;
+    };
+
+    const handleExtend = async () => {
+        const extra = calculateExtra();
+        if (extra <= 0) return alert('Please select a date after your current check-out date');
+
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            await axios.post(`${API_BASE}/api/bookings/${booking._id}/extend`, {
+                newCheckOutDate: newDate,
+                additionalAmount: extra
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            alert('Booking extended successfully!');
+            onUpdate();
+        } catch (err) {
+            alert('Failed to extend booking');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!show) return (
+        <button 
+            onClick={() => setShow(true)}
+            className="bg-[#0A192F] text-white px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-[#8B735B] transition-all rounded-sm"
+        >
+            Extend Stay
+        </button>
+    );
+
+    return (
+        <div className="flex flex-col sm:flex-row items-end gap-4 p-4 bg-slate-50 border border-slate-200 rounded-sm w-full mt-4">
+            <div className="flex-grow">
+                <label className="block text-[9px] font-bold text-slate-500 uppercase mb-1">New Check-Out Date</label>
+                <input 
+                    type="date" 
+                    min={new Date(new Date(booking.checkOutDate).getTime() + 86400000).toISOString().split('T')[0]}
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                    className="w-full bg-white border border-slate-200 p-2 text-xs font-bold focus:outline-none focus:border-[#8B735B]"
+                />
+            </div>
+            <div className="text-right whitespace-nowrap min-w-[120px]">
+                <p className="text-[9px] font-bold text-slate-400 uppercase">Extra to Pay</p>
+                <p className="text-lg font-serif text-[#0A192F]">₹{calculateExtra().toLocaleString()}</p>
+            </div>
+            <div className="flex gap-2">
+                <button 
+                    onClick={handleExtend}
+                    disabled={loading || !newDate}
+                    className="bg-green-600 text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-all rounded-sm disabled:opacity-50"
+                >
+                    {loading ? 'Processing...' : 'Pay & Extend'}
+                </button>
+                <button 
+                    onClick={() => setShow(false)}
+                    className="bg-slate-200 text-slate-600 px-4 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-slate-300 transition-all rounded-sm"
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    );
+};
+
 export default MyBookings;
+

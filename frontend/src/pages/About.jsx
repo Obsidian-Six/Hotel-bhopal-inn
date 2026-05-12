@@ -109,9 +109,9 @@ const About = () => {
         {/* Ten on Ten Stays Brand */}
         <section className="py-24 bg-[#0A192F] text-white">
           <div className="container mx-auto px-4 lg:px-8 max-w-4xl text-center">
-             <h2 className="text-3xl md:text-5xl font-serif text-[#BFA37E] mb-6 uppercase tracking-wide">
-              Ten on Ten Stays — Our Brand
-            </h2>
+            <div className="flex justify-center mb-6">
+                <img src="/logo.png" alt="Hotel Bhopal Inn Logo" className="h-32 md:h-48 w-auto object-contain bg-white rounded-sm" />
+            </div>
             <div className="h-[1px] w-24 bg-[#BFA37E] mx-auto mb-10"></div>
             <p className="text-slate-300 text-lg leading-relaxed font-light">
               Ten on Ten Stays represents a commitment to excellence in hospitality. We believe in providing top-tier service, impeccable cleanliness, and memorable experiences for every guest. Our brand stands for reliability, luxury within reach, and a warm, welcoming environment that makes you feel instantly at home.
@@ -123,13 +123,6 @@ const About = () => {
         <Testimonials />
       </main>
 
-      {/* Floating WhatsApp Button */}
-      <a 
-        href="https://wa.me/919876543210"
-        className="fixed bottom-10 right-10 z-[300] w-16 h-16 bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-110 transition-transform"
-      >
-        <MessageCircle size={32} />
-      </a>
 
       <Footer />
     </div>

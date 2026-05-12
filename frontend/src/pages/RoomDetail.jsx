@@ -257,12 +257,6 @@ const RoomDetail = () => {
         <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-[#0A192F] shadow-xl hover:bg-[#8B735B] hover:text-white transition-all"><Info size={20} /></button>
       </div>
 
-      <a 
-        href="https://wa.me/919876543210"
-        className="fixed bottom-10 right-10 z-[300] w-16 h-16 bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-110 transition-transform"
-      >
-        <MessageCircle size={32} />
-      </a>
 
       <Footer />
     </div>

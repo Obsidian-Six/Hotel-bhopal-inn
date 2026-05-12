@@ -194,7 +194,7 @@ router.get('/daily-report', async (req, res) => {
 router.get('/pending-dues', async (req, res) => {
     try {
         const bookings = await Booking.find({
-            status: { $in: ['Checked-In', 'Checked-Out'] },
+            status: { $in: ['Confirmed', 'Checked-In', 'Checked-Out'] },
             'financials.balance': { $gt: 0 }
         }).populate('roomCategory');
         

@@ -39,14 +39,10 @@ const AdminLogin = () => {
                 className="max-w-md w-full bg-[#0A192F] text-white p-10 shadow-2xl border border-white/5"
             >
                 <div className="text-center mb-10">
-                    <div className="inline-block p-4 border border-[#BFA37E] mb-6">
-                        <h1 className="text-2xl font-serif font-bold uppercase tracking-tighter">Bhopal Inn</h1>
-                        <div className="flex items-center gap-1 w-full mt-1">
-                            <div className="h-[1px] bg-[#BFA37E] flex-grow"></div>
-                            <span className="text-[8px] tracking-[0.3em] font-bold text-[#BFA37E]">ADMIN PANEL</span>
-                            <div className="h-[1px] bg-[#BFA37E] flex-grow"></div>
-                        </div>
+                    <div className="inline-block p-4 bg-white mb-6">
+                        <img src="/logo.png" alt="Logo" className="h-16 w-auto object-contain" />
                     </div>
+
                     <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.3em]">Administrator Secure Login</p>
                 </div>
 

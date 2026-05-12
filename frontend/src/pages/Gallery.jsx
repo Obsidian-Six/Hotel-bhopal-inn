@@ -266,15 +266,6 @@ const Gallery = () => {
         )}
       </AnimatePresence>
 
-      {/* Floating WhatsApp Button */}
-      <a 
-        href="https://wa.me/917470795199" 
-        target="_blank" 
-        rel="noopener noreferrer" 
-        className="fixed bottom-8 right-8 z-[120] bg-[#25D366] text-white p-4 rounded-full shadow-2xl hover:bg-[#1ebd59] hover:scale-110 active:scale-95 transition-all duration-300 animate-bounce flex items-center justify-center"
-      >
-        <MessageCircle size={28} />
-      </a>
 
       <Footer />
     </div>

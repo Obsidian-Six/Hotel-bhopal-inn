@@ -6,7 +6,7 @@ const LocationMap = () => {
   const locations = [
     { icon: Train, label: 'Rani Kamlapati Railway Station', dist: '10 minutes' },
     { icon: Plane, label: 'Raja Bhoj Airport', dist: 'approx. 25–30 minutes' },
-    { icon: ShoppingBag, label: 'DB Mall', dist: '5–10 minutes' },
+    { icon: ShoppingBag, label: 'DB CITY MALL', dist: '5–10 minutes' },
     { icon: Waves, label: 'Upper Lake (Bada Talab)', dist: '15 minutes' },
     { icon: TreePine, label: 'Van Vihar National Park', dist: '15–20 minutes' },
     { icon: Building2, label: 'Bharat Bhavan', dist: '10 minutes' },

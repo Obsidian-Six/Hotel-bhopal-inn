@@ -141,7 +141,7 @@ const Booking = () => {
           });
           
           const options = {
-              key: "rzp_test_Sm55QJ8wava9dI", // Need real key for production
+              key: config.RAZORPAY_KEY, 
               amount: orderRes.data.amount,
               currency: orderRes.data.currency,
               name: "Hotel Bhopal Inn",

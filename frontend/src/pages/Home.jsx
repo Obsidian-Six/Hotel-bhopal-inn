@@ -6,6 +6,7 @@ import HeroSection from '@/components/home/HeroSection';
 import BookingWidget from '@/components/home/BookingWidget';
 import USPStrip from '@/components/home/USPStrip';
 import RoomCategories from '@/components/home/RoomCategories';
+import ReelsSection from '@/components/home/ReelsSection';
 import SpecialOffers from '@/components/home/SpecialOffers';
 import BanquetTeaser from '@/components/home/BanquetTeaser';
 import AmenitiesOverview from '@/components/home/AmenitiesOverview';
@@ -28,6 +29,7 @@ const Home = () => {
         <BookingWidget />
         <USPStrip />
         <RoomCategories />
+        <ReelsSection />
         <SpecialOffers />
         <BanquetTeaser />
         <AmenitiesOverview />

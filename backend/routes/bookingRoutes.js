@@ -394,4 +394,27 @@ router.post('/:id/notify', async (req, res) => {
     }
 });
 
+// POST: Extend Booking
+router.post('/:id/extend', async (req, res) => {
+    try {
+        const { newCheckOutDate, additionalAmount } = req.body;
+        const booking = await Booking.findById(req.params.id);
+        
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        // Update booking details
+        booking.checkOutDate = new Date(newCheckOutDate);
+        booking.financials.totalAmount += Number(additionalAmount);
+        booking.financials.balance = booking.financials.totalAmount - booking.financials.amountPaid;
+
+        await booking.save();
+        
+        req.app.get('socketio').emit('booking_updated', { type: 'extension', bookingId: booking._id });
+        res.json(booking);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
 module.exports = router;
+

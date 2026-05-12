@@ -28,6 +28,7 @@ const Navbar = () => {
       dropdown: []
     },
     { name: 'BANQUET & EVENTS', path: '/banquet' },
+    { name: 'MENU', path: '/menu' },
     { name: 'GALLERY', path: '/gallery' },
     { name: 'ABOUT US', path: '/about' },
     { name: 'CONTACT', path: '/contact' },
@@ -55,17 +56,15 @@ const Navbar = () => {
           
           {/* Logo */}
           <Link to="/" className="relative z-[100] group">
-            <div className={`bg-white p-4 shadow-xl transition-all duration-500 ${isScrolled ? 'scale-90 -translate-y-2' : 'scale-110 translate-y-2'}`}>
-               <div className="flex flex-col items-center border border-[#BFA37E] px-4 py-2">
-                 <span className="text-xl lg:text-2xl font-serif font-bold text-[#0A192F] leading-none tracking-tighter uppercase">Bhopal Inn</span>
-                 <div className="flex items-center gap-1 w-full mt-1">
-                   <div className="h-[1px] bg-[#BFA37E] flex-grow"></div>
-                   <span className="text-[8px] tracking-[0.3em] font-bold text-[#BFA37E]">HOTEL</span>
-                   <div className="h-[1px] bg-[#BFA37E] flex-grow"></div>
-                 </div>
-               </div>
+            <div className={`transition-all duration-500 ${isScrolled ? 'h-12' : 'h-16 lg:h-20'}`}>
+                <img 
+                    src="/logo.png" 
+                    alt="Bhopal Inn Logo" 
+                    className="h-full w-auto object-contain bg-white rounded-sm"
+                />
             </div>
           </Link>
+
 
           {/* Desktop Links */}
           <nav className="hidden lg:flex items-center gap-8">
@@ -178,7 +177,8 @@ const Navbar = () => {
             className="fixed inset-0 bg-white z-[100] flex flex-col p-8"
           >
             <div className="flex justify-between items-center mb-12">
-              <span className="font-serif text-2xl font-bold text-[#0A192F]">Bhopal Inn</span>
+              <img src="/logo.png" alt="Bhopal Inn Logo" className="h-10 w-auto object-contain" />
+
               <button onClick={() => setMobileMenuOpen(false)}>
                 <X size={32} className="text-[#0A192F]" />
               </button>
