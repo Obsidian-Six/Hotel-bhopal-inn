@@ -46,6 +46,27 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const googleLogin = async (googleToken) => {
+        try {
+            const res = await axios.post(`${config.API_URL}/api/auth/google`, { token: googleToken });
+            localStorage.setItem('token', res.data.token);
+            axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+            const userData = {
+                _id: res.data._id,
+                firstName: res.data.firstName,
+                lastName: res.data.lastName,
+                email: res.data.email,
+                role: res.data.role
+            };
+            localStorage.setItem('user', JSON.stringify(userData));
+            setUser(userData);
+            return { success: true };
+        } catch (error) {
+            console.error('Google Login Error:', error);
+            return { success: false, message: error.response?.data?.message || 'Google login failed' };
+        }
+    };
+
     const register = async (userData) => {
         try {
             const res = await axios.post(`${config.API_URL}/api/auth/register`, userData);
@@ -73,7 +94,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, googleLogin, register, logout, loading }}>
             {children}
         </AuthContext.Provider>
     );

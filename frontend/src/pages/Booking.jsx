@@ -549,7 +549,14 @@ const Booking = () => {
                                         <Star size={14} fill="currentColor" />
                                     </div>
                                 </div>
-                                <p className="text-xs text-slate-600 flex items-center gap-2 mb-1"><MapPin size={12}/> M.P. Nagar, Bhopal, India</p>
+                                <a 
+                                    href="https://maps.google.com/?q=2/213,+Danish+Nagar,+Bagmugaliya,+Bhopal,+Madhya+Pradesh+462026" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-slate-600 flex items-center gap-2 mb-1 hover:text-[#BFA37E] transition-colors"
+                                >
+                                    <MapPin size={12}/> 2/213, Danish Nagar, Bhopal, India
+                                </a>
                                 <div className="flex flex-col gap-1 mt-2">
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reservations & Support</p>
                                     <a href="tel:+916267276957" className="text-xs text-[#665038] hover:underline flex items-center gap-2"><Phone size={12}/> +91 62672 76957</a>

@@ -119,8 +119,13 @@ router.post('/', upload.array('images', 10), async (req, res) => {
             room.amenities = parsedAmenities;
             room.details = { ...room.details.toObject(), ...parsedDetails };
             room.tags = parsedTags;
+            
             if (imageUrls.length > 0) {
-                room.images = [...room.images, ...imageUrls];
+                if (req.body.replaceImages === 'true') {
+                    room.images = imageUrls;
+                } else {
+                    room.images = [...room.images, ...imageUrls];
+                }
             }
             await room.save();
             console.log('Room updated successfully');

@@ -50,6 +50,19 @@ router.post('/', upload.single('video'), async (req, res) => {
     }
 });
 
+router.put('/:id', async (req, res) => {
+    try {
+        const updatedReel = await Reel.findByIdAndUpdate(
+            req.params.id, 
+            { title: req.body.title }, 
+            { new: true }
+        );
+        res.json(updatedReel);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
 router.delete('/:id', async (req, res) => {
     try {
         const reel = await Reel.findById(req.params.id);

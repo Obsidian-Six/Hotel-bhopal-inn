@@ -11,7 +11,7 @@ const SpecialOffers = () => {
       body: 'Book directly on our website and save up to 10% compared to OTA platforms. Plus, free early check-in subject to availability.',
       cta: 'Book Direct & Save',
       path: '/booking',
-      color: 'bg-[#0A192F]'
+      color: 'bg-black'
     },
     {
       title: 'Weekend Getaway Deal',
@@ -27,7 +27,7 @@ const SpecialOffers = () => {
       body: '7 nights or more? Enjoy special long-stay pricing and complimentary laundry service. Ideal for business travellers.',
       cta: 'Enquire for Long Stay',
       path: '/contact',
-      color: 'bg-[#1a2b4a]'
+      color: 'bg-black'
     }
   ];
 

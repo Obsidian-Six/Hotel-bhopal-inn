@@ -85,7 +85,9 @@ const AdminDashboard = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-[#0A192F] text-white flex flex-col">
         <div className="p-8 border-b border-white/10">
-          <img src="/logo.png" alt="Logo" className="h-12 w-auto object-contain bg-white p-1" />
+          <div className="h-16 w-full overflow-hidden flex items-center justify-center bg-white rounded-sm p-1">
+            <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain scale-[2.2]" />
+          </div>
           <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em] mt-2">CMS Admin Panel</p>
         </div>
 

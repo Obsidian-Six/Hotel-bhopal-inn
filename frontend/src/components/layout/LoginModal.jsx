@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 const LoginModal = ({ isOpen, onClose }) => {
-    const { login, register } = useAuth();
+    const { login, googleLogin, register } = useAuth();
     const [isLogin, setIsLogin] = useState(true);
     const [formData, setFormData] = useState({
         firstName: '', lastName: '', email: '', password: '', phone: ''
@@ -30,6 +31,17 @@ const LoginModal = ({ isOpen, onClose }) => {
             res = await register(formData);
         }
 
+        setLoading(false);
+        if (res.success) {
+            onClose();
+        } else {
+            setError(res.message);
+        }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse) => {
+        setLoading(true);
+        const res = await googleLogin(credentialResponse.credential);
         setLoading(false);
         if (res.success) {
             onClose();
@@ -102,6 +114,24 @@ const LoginModal = ({ isOpen, onClose }) => {
                                 {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Register')}
                             </button>
                         </form>
+
+                        <div className="mt-8 flex items-center gap-4">
+                            <div className="flex-grow h-px bg-slate-100"></div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OR</span>
+                            <div className="flex-grow h-px bg-slate-100"></div>
+                        </div>
+
+                        <div className="mt-8 flex justify-center">
+                            <GoogleLogin
+                                onSuccess={handleGoogleSuccess}
+                                onError={() => setError('Google Login Failed')}
+                                useOneTap
+                                theme="filled_blue"
+                                size="large"
+                                shape="pill"
+                                width="300px"
+                            />
+                        </div>
 
                         <div className="mt-6 text-center">
                             <p className="text-sm text-slate-600">

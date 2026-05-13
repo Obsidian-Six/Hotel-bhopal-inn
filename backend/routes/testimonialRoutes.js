@@ -6,7 +6,11 @@ const Testimonial = require('../models/Testimonial');
 // @desc    Get all testimonials
 router.get('/', async (req, res) => {
     try {
-        const testimonials = await Testimonial.find().sort({ createdAt: -1 });
+        const query = {};
+        if (req.query.visible === 'true') {
+            query.isVisible = true;
+        }
+        const testimonials = await Testimonial.find(query).sort({ createdAt: -1 });
         res.json(testimonials);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -16,7 +20,7 @@ router.get('/', async (req, res) => {
 // @route   POST /api/testimonials
 // @desc    Create a testimonial
 router.post('/', async (req, res) => {
-    const { name, city, text, source, rating } = req.body;
+    const { name, city, text, source, rating, isVisible } = req.body;
     
     if (!name || !city || !text) {
         return res.status(400).json({ message: 'Name, City and Text are required' });
@@ -27,7 +31,8 @@ router.post('/', async (req, res) => {
         city,
         text,
         source: source || 'Via Google',
-        rating: rating || 5
+        rating: rating || 5,
+        isVisible: isVisible !== undefined ? isVisible : false
     });
 
     try {
@@ -77,6 +82,22 @@ router.delete('/:id', async (req, res) => {
         res.json({ message: 'Testimonial deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+});
+
+// @route   PATCH /api/testimonials/:id/toggle
+// @desc    Toggle visibility
+router.patch('/:id/toggle', async (req, res) => {
+    try {
+        const testimonial = await Testimonial.findById(req.params.id);
+        if (!testimonial) {
+            return res.status(404).json({ message: 'Testimonial not found' });
+        }
+        testimonial.isVisible = !testimonial.isVisible;
+        await testimonial.save();
+        res.json(testimonial);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
     }
 });
 

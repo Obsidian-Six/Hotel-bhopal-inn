@@ -122,7 +122,7 @@ const Gallery = () => {
         {/* Background Image with warm lighting, premium decor */}
         <div className="absolute inset-0 z-0">
           <img 
-            src="https://images.unsplash.com/photo-1578683010236-d716f9a3f461?q=80&w=2070&auto=format&fit=crop" 
+            src="/Room.jpeg" 
             className="w-full h-full object-cover" 
             alt="Gallery Header" 
           />
@@ -138,7 +138,7 @@ const Gallery = () => {
             transition={{ duration: 0.8 }}
             className="text-[#BFA37E] text-[12px] md:text-sm font-bold uppercase tracking-[0.6em] mb-4 select-none"
           >
-            HOTEL ORCHARD BLISS
+            HOTEL BHOPAL INN
           </motion.p>
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
@@ -146,7 +146,7 @@ const Gallery = () => {
             transition={{ delay: 0.2, duration: 0.8 }}
             className="text-3xl md:text-6xl lg:text-7xl font-serif text-[#FAFAFA] tracking-wider mb-6 uppercase leading-tight select-none font-medium max-w-5xl"
           >
-            EXPLORE HOTEL ORCHARD BLISS
+            EXPLORE BHOPAL INN
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}

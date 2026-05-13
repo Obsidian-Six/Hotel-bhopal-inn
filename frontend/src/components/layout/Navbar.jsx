@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import config from '../../config';
 
-const Navbar = () => {
+const Navbar = ({ light = false }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -28,7 +28,7 @@ const Navbar = () => {
       dropdown: []
     },
     { name: 'BANQUET & EVENTS', path: '/banquet' },
-    { name: 'MENU', path: '/menu' },
+    { name: 'ORDER FOOD', path: '/menu' },
     { name: 'GALLERY', path: '/gallery' },
     { name: 'ABOUT US', path: '/about' },
     { name: 'CONTACT', path: '/contact' },
@@ -49,19 +49,23 @@ const Navbar = () => {
     fetchRooms();
   }, []);
 
+  const showDarkText = isScrolled || light;
+
   return (
-    <nav className={`w-full z-[90] transition-all duration-500 ${isScrolled ? 'bg-white shadow-lg py-2' : 'bg-transparent py-4 lg:py-6'}`}>
+    <nav className={`w-full z-[90] transition-all duration-500 ${showDarkText ? 'bg-white shadow-lg py-2' : 'bg-transparent py-4 lg:py-6'}`}>
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between min-h-[50px]">
           
           {/* Logo */}
           <Link to="/" className="relative z-[100] group">
             <div className={`transition-all duration-500 ${isScrolled ? 'h-12' : 'h-16 lg:h-20'}`}>
-                <img 
-                    src="/logo.png" 
-                    alt="Bhopal Inn Logo" 
-                    className="h-full w-auto object-contain bg-white rounded-sm"
-                />
+                <div className="h-full w-auto overflow-hidden flex items-center justify-center">
+                    <img 
+                        src="/logo.png" 
+                        alt="Bhopal Inn Logo" 
+                        className="h-full w-auto object-contain scale-[2.4]"
+                    />
+                </div>
             </div>
           </Link>
 
@@ -77,7 +81,7 @@ const Navbar = () => {
               >
                 <Link 
                   to={link.path} 
-                  className={`flex items-center gap-1 text-[12px] font-bold tracking-widest transition-colors ${isScrolled ? 'text-[#0A192F] hover:text-[#BFA37E]' : 'text-white/90 hover:text-white'}`}
+                  className={`flex items-center gap-1 text-[12px] font-bold tracking-widest transition-colors ${showDarkText ? 'text-[#0A192F] hover:text-[#BFA37E]' : 'text-white/90 hover:text-white'}`}
                 >
                   {link.name}
                   {link.dropdown && <ChevronDown size={14} className={`transition-transform duration-300 ${activeDropdown === link.name ? 'rotate-180' : ''}`} />}
@@ -116,7 +120,7 @@ const Navbar = () => {
                 <div>
                     <button 
                         onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                        className={`flex items-center gap-2 px-6 py-2 rounded-sm text-[12px] font-bold tracking-widest transition-all ${isScrolled ? 'text-[#0A192F] border border-[#0A192F]' : 'text-white border border-white hover:bg-white/10'}`}
+                        className={`flex items-center gap-2 px-6 py-2 rounded-sm text-[12px] font-bold tracking-widest transition-all ${showDarkText ? 'text-[#0A192F] border border-[#0A192F]' : 'text-white border border-white hover:bg-white/10'}`}
                     >
                         <UserIcon size={16} />
                         {user.firstName?.toUpperCase()}
@@ -150,7 +154,7 @@ const Navbar = () => {
             ) : (
                 <Link 
                   to="/booking" 
-                  className={`px-8 py-3 rounded-sm text-[12px] font-bold tracking-widest transition-all shadow-md hover:shadow-lg ${isScrolled ? 'bg-[#BFA37E] text-white hover:bg-[#a68d6d]' : 'bg-white text-[#0A192F] hover:bg-[#BFA37E] hover:text-white'}`}
+                  className={`px-8 py-3 rounded-sm text-[12px] font-bold tracking-widest transition-all shadow-md hover:shadow-lg ${showDarkText ? 'bg-[#BFA37E] text-white hover:bg-[#a68d6d]' : 'bg-white text-[#0A192F] hover:bg-[#BFA37E] hover:text-white'}`}
                 >
                   BOOK NOW
                 </Link>
@@ -159,7 +163,7 @@ const Navbar = () => {
 
           {/* Mobile Menu Toggle */}
           <button 
-            className={`lg:hidden transition-colors ${isScrolled ? 'text-[#0A192F]' : 'text-white'}`}
+            className={`lg:hidden transition-colors ${showDarkText ? 'text-[#0A192F]' : 'text-white'}`}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
@@ -177,8 +181,9 @@ const Navbar = () => {
             className="fixed inset-0 bg-white z-[100] flex flex-col p-8"
           >
             <div className="flex justify-between items-center mb-12">
-              <img src="/logo.png" alt="Bhopal Inn Logo" className="h-10 w-auto object-contain" />
-
+              <Link to="/" className="h-12 w-32 md:h-16 md:w-48 overflow-hidden flex items-center justify-center">
+                <img src="/logo.png" alt="Bhopal Inn" className="h-full w-full object-contain scale-[2.1] transition-transform" />
+              </Link>
               <button onClick={() => setMobileMenuOpen(false)}>
                 <X size={32} className="text-[#0A192F]" />
               </button>

@@ -30,7 +30,7 @@ const LocationMap = () => {
           {/* Map Embed */}
           <div className="w-full lg:w-3/5 h-[500px]">
             <iframe 
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3666.216667597148!2d77.43333331497184!3d23.23333338484967!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x397c4260d7000001%3A0x2155716d572d4f8!2sRani%20Kamalapati%20(Habibganj)%20Railway%20Station!5e0!3m2!1sen!2sin!4v1714000000000!5m2!1sen!2sin" 
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3667.620067597148!2d77.46666671497184!3d23.18333338484967!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x397c43c0d7000001%3A0x2155716d572d4f8!2sDanish%20Nagar%2C%20Bhopal!5e0!3m2!1sen!2sin!4v1714000000000!5m2!1sen!2sin" 
               width="100%" 
               height="100%" 
               style={{ border: 0 }} 
@@ -61,7 +61,7 @@ const LocationMap = () => {
             </div>
             
             <a 
-              href="https://maps.google.com" 
+              href="https://maps.google.com/?q=2/213,+Danish+Nagar,+Bagmugaliya,+Bhopal,+Madhya+Pradesh+462026" 
               target="_blank" 
               rel="noreferrer"
               className="mt-12 flex items-center justify-center gap-3 bg-[#BFA37E] text-white py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-white hover:text-[#0A192F] transition-all shadow-xl"

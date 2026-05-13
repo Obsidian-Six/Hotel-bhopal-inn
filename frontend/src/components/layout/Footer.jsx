@@ -16,8 +16,8 @@ const Footer = () => {
   };
 
   const WhatsAppIcon = ({ className = "w-5 h-5" }) => (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+    <svg viewBox="0 0 448 512" className={className} fill="currentColor">
+        <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3 18.7-68.1-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.2-8.5-44.2-27.1-16.4-14.6-27.4-32.7-30.6-38.2-3.2-5.6-.3-8.6 2.5-11.3 2.5-2.5 5.6-6.5 8.3-9.7 2.8-3.3 3.7-5.6 5.6-9.3 1.9-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.3 5.7 23.7 9.1 31.7 11.7 13.3 4.2 25.4 3.6 35 2.2 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
     </svg>
   );
 
@@ -29,22 +29,30 @@ const Footer = () => {
           {/* Column 1 - Brand */}
           <div className="flex flex-col gap-6">
             <Link to="/" className="flex flex-col">
-              <img src="/logo.png" alt="Bhopal Inn Logo" className="h-24 w-auto object-contain self-start bg-white rounded-sm" />
+              <div className="h-28 w-56 overflow-hidden flex items-start justify-start">
+                <img src="/logo.png" alt="Bhopal Inn Logo" className="h-full w-auto object-contain scale-[2.2] origin-left" />
+              </div>
             </Link>
 
             <p className="text-xs leading-loose text-slate-400 font-medium italic">
               Budget Comfort. Top-Notch Hospitality. City Centre Bhopal.
             </p>
-            <div className="flex items-center gap-4 mt-2">
-              <div className="bg-white/5 p-2 rounded-sm border border-white/10">
-                <span className="text-[10px] block font-bold text-[#BFA37E]">⭐ 4.5/5</span>
-                <span className="text-[8px] uppercase tracking-tighter text-white/60">Google Rating</span>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="bg-white/5 p-2 rounded-sm border border-white/10 flex items-center gap-3">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" className="w-5 h-5" />
+                  <div>
+                    <span className="text-[10px] block font-bold text-[#BFA37E]">4.5/5</span>
+                    <span className="text-[8px] uppercase tracking-tighter text-white/60">Google Rating</span>
+                  </div>
+                </div>
+                <div className="bg-white/5 p-2 rounded-sm border border-white/10 flex items-center gap-3">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Tripadvisor_logo.svg" alt="TripAdvisor" className="w-5 h-5 shadow-sm brightness-110" />
+                  <div>
+                    <span className="text-[10px] block font-bold text-[#BFA37E]">TripAdvisor</span>
+                    <span className="text-[8px] uppercase tracking-tighter text-white/60">Excellence</span>
+                  </div>
+                </div>
               </div>
-              <div className="bg-white/5 p-2 rounded-sm border border-white/10">
-                <span className="text-[10px] block font-bold text-[#BFA37E]">TripAdvisor</span>
-                <span className="text-[8px] uppercase tracking-tighter text-white/60">Certificate of Excellence</span>
-              </div>
-            </div>
           </div>
 
           {/* Column 2 - Quick Links */}
@@ -68,13 +76,21 @@ const Footer = () => {
             <ul className="flex flex-col gap-5 text-xs font-medium leading-relaxed text-slate-300">
               <li className="flex items-start gap-3">
                 <MapPin size={18} className="text-[#BFA37E] mt-0.5 shrink-0" />
-                <span>Opp. Railway Station, Rani Kamlapati, <br/>MP Nagar, Bhopal, MP 462011</span>
+                <a 
+                  href="https://maps.google.com/?q=2/213,+Danish+Nagar,+Bagmugaliya,+Bhopal,+Madhya+Pradesh+462026" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:text-[#BFA37E] transition-colors"
+                >
+                  2/213, Danish Nagar, Bagmugaliya, <br/>Bhopal, Madhya Pradesh 462026
+                </a>
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={18} className="text-[#BFA37E] shrink-0" />
                 <div className="flex flex-col">
                   <a href="tel:+916267276957" className="hover:text-[#BFA37E] transition-colors">+91 62672 76957</a>
                   <a href="tel:+919630252729" className="hover:text-[#BFA37E] transition-colors">+91 96302 52729</a>
+                  <a href="tel:+917225888650" className="hover:text-[#BFA37E] transition-colors">+91 72258 88650</a>
                 </div>
               </li>
               <li className="flex items-center gap-3">

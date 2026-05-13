@@ -11,10 +11,7 @@ const WhatsAppFloat = () => {
             className="fixed bottom-8 right-8 z-[9999] group"
         >
             <div className="relative">
-                {/* Ping Animation */}
-                <div className="absolute inset-0 bg-[#25D366] rounded-full animate-ping opacity-25"></div>
-                
-                {/* Logo Container */}
+                {/* Static WhatsApp Logo */}
                 <div className="relative bg-[#25D366] p-4 rounded-full shadow-[0_10px_30px_rgba(37,211,102,0.4)] hover:scale-110 transition-all duration-300">
                     <svg 
                         viewBox="0 0 24 24" 

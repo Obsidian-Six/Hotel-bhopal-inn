@@ -20,6 +20,10 @@ const testimonialSchema = new mongoose.Schema({
     rating: {
         type: Number,
         default: 5
+    },
+    isVisible: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

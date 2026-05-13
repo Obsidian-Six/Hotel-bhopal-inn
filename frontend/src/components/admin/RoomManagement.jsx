@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import config from '../../config';
 import { Trash2, Plus, Save, Edit3 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const API_URL = `${config.API_URL}/api/rooms`;
 
@@ -23,6 +24,20 @@ const RoomManagement = () => {
   const [view, setView] = useState('');
   const [extraPersonCharge, setExtraPersonCharge] = useState('');
   const [files, setFiles] = useState([]);
+  const [replaceImages, setReplaceImages] = useState(false);
+
+  const PRESET_AMENITIES = [
+    'AC', 'Wi-Fi', 'Hot Water', 'TV', 'Toiletries', 'Premium Linen', 
+    '24/7 Room Service', 'King Size Bed', 'Balcony View', 'Tea/Coffee Maker',
+    'Safe', 'Mini Fridge', 'Work Desk', 'Breakfast'
+  ];
+
+  const PRESET_TAGS = [
+    'Best Value', 'Premium View', 'Luxury Stay', 'Business Friendly', 'Family Choice'
+  ];
+
+  const [selectedAmenities, setSelectedAmenities] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
 
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
@@ -54,7 +69,10 @@ const RoomManagement = () => {
     setBedType('');
     setView('');
     setExtraPersonCharge('');
+    setSelectedAmenities([]);
+    setSelectedTags([]);
     setFiles([]);
+    setReplaceImages(false);
   };
 
   const onEdit = (room) => {
@@ -70,6 +88,9 @@ const RoomManagement = () => {
     setBedType(room.details?.bedType || '');
     setView(room.details?.view || '');
     setExtraPersonCharge(room.details?.extraPersonCharge || '');
+    setSelectedAmenities(room.amenities || []);
+    setSelectedTags(room.tags || []);
+    setReplaceImages(false);
   };
 
   const onSubmit = async (e) => {
@@ -79,11 +100,15 @@ const RoomManagement = () => {
     const finalCategory = category === 'NEW' ? newCategory : category;
 
     const formData = new FormData();
+    if (editingRoom) {
+      formData.append('id', editingRoom._id);
+    }
     formData.append('category', finalCategory);
     formData.append('title', title);
     formData.append('description', description);
-    formData.append('amenities', JSON.stringify(amenities.split(',').map(s => s.trim()).filter(s => s)));
-    formData.append('tags', JSON.stringify(tags.split(',').map(s => s.trim()).filter(s => s)));
+    formData.append('amenities', JSON.stringify(selectedAmenities));
+    formData.append('tags', JSON.stringify(selectedTags));
+    formData.append('replaceImages', replaceImages);
     formData.append('details', JSON.stringify({
       startingPrice: Number(startingPrice),
       maxOccupancy,
@@ -110,6 +135,18 @@ const RoomManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleAmenity = (amenity) => {
+    setSelectedAmenities(prev => 
+      prev.includes(amenity) ? prev.filter(a => a !== amenity) : [...prev, amenity]
+    );
+  };
+
+  const toggleTag = (tag) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
   };
 
   const onDelete = async (cat) => {
@@ -264,31 +301,61 @@ const RoomManagement = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 gap-8">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Amenities (Comma Separated)</label>
-                  <input 
-                    type="text" 
-                    value={amenities} 
-                    onChange={(e) => setAmenities(e.target.value)}
-                    placeholder="AC, Wi-Fi, Hot Water, TV"
-                    className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
-                  />
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Select Amenities</label>
+                  <div className="flex flex-wrap gap-2">
+                    {PRESET_AMENITIES.map((amenity) => (
+                      <button
+                        key={amenity}
+                        type="button"
+                        onClick={() => toggleAmenity(amenity)}
+                        className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                          selectedAmenities.includes(amenity)
+                            ? 'bg-[#0A192F] text-white border-[#0A192F]'
+                            : 'bg-white text-slate-400 border-slate-100 hover:border-[#BFA37E]'
+                        }`}
+                      >
+                        {amenity}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Marketing Tags</label>
-                  <input 
-                    type="text" 
-                    value={tags} 
-                    onChange={(e) => setTags(e.target.value)}
-                    placeholder="Best Value, Premium View"
-                    className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
-                  />
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Marketing Tags</label>
+                  <div className="flex flex-wrap gap-2">
+                    {PRESET_TAGS.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                          selectedTags.includes(tag)
+                            ? 'bg-[#BFA37E] text-white border-[#BFA37E]'
+                            : 'bg-white text-slate-400 border-slate-100 hover:border-[#BFA37E]'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               <div className="pt-8 border-t border-[#F1E9DA]">
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Gallery Upload</label>
+                <div className="flex items-center gap-2 mb-4">
+                  <input 
+                    type="checkbox" 
+                    id="replaceImages" 
+                    checked={replaceImages} 
+                    onChange={(e) => setReplaceImages(e.target.checked)}
+                    className="w-4 h-4 accent-[#BFA37E]"
+                  />
+                  <label htmlFor="replaceImages" className="text-[10px] font-bold uppercase tracking-widest text-slate-500 cursor-pointer">
+                    Replace existing images with new uploads
+                  </label>
+                </div>
                 <div className="flex items-center justify-center w-full">
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-[#F1E9DA] border-dashed rounded-lg cursor-pointer bg-[#FDFBF7] hover:bg-[#F1E9DA] transition-all">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">

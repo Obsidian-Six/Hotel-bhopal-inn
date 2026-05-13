@@ -16,7 +16,7 @@ const FoodMenuManagement = () => {
     const [showItemForm, setShowItemForm] = useState(false);
     const [editItem, setEditItem] = useState(null);
     const [itemData, setItemData] = useState({ 
-        name: '', picture: null, description: '', category: '', isVeg: true, quantity: '', cost: '' 
+        name: '', picture: null, description: '', category: '', isVeg: true, quantity: '' 
     });
 
     const API_URL = `${config.API_URL}/api/menu`;
@@ -93,7 +93,7 @@ const FoodMenuManagement = () => {
                 });
                 setMessage('Item added!');
             }
-            setItemData({ name: '', picture: null, description: '', category: '', isVeg: true, quantity: '', cost: '' });
+            setItemData({ name: '', picture: null, description: '', category: '', isVeg: true, quantity: '' });
             setShowItemForm(false);
             setEditItem(null);
             fetchData();
@@ -122,8 +122,7 @@ const FoodMenuManagement = () => {
             description: item.description,
             category: item.category._id || item.category,
             isVeg: item.isVeg,
-            quantity: item.quantity,
-            cost: item.cost
+            quantity: item.quantity
         });
         setShowItemForm(true);
     };
@@ -243,16 +242,6 @@ const FoodMenuManagement = () => {
                                     className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Cost (₹)</label>
-                                <input 
-                                    type="number" 
-                                    required
-                                    value={itemData.cost} 
-                                    onChange={(e) => setItemData({ ...itemData, cost: e.target.value })}
-                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]"
-                                />
-                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -314,8 +303,7 @@ const FoodMenuManagement = () => {
                                     </div>
                                 </div>
                                 <p className="text-[10px] text-slate-400 line-clamp-1 mt-2">{item.description}</p>
-                                <div className="flex justify-between items-center mt-4">
-                                    <span className="text-xs font-bold text-[#0A192F]">₹{item.cost}</span>
+                                <div className="flex justify-end items-center mt-4">
                                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                         <button onClick={() => handleEditItem(item)} className="p-2 text-slate-400 hover:text-[#BFA37E]"><Edit2 size={12} /></button>
                                         <button onClick={() => handleItemDelete(item._id)} className="p-2 text-slate-400 hover:text-red-600"><Trash2 size={12} /></button>

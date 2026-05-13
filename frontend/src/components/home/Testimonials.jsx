@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Quote, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Quote, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 import axios from 'axios';
 import config from '../../config';
 
@@ -38,7 +38,7 @@ const Testimonials = () => {
 
   const fetchReviews = async () => {
     try {
-      const res = await axios.get(`${config.API_URL}/api/testimonials`);
+      const res = await axios.get(`${config.API_URL}/api/testimonials?visible=true`);
       if (res.data && res.data.length > 0) {
         setReviews(res.data);
       }
@@ -58,12 +58,7 @@ const Testimonials = () => {
   if (reviews.length === 0) return null;
 
   return (
-    <section className="py-24 bg-[#0A192F] relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
-        <Quote size={400} className="absolute -top-20 -left-20 text-white" />
-      </div>
-
+    <section className="py-24 bg-[#E8F2F2] relative overflow-hidden">
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -71,86 +66,82 @@ const Testimonials = () => {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <span className="text-[#BFA37E] text-xs font-bold tracking-[0.4em] uppercase mb-4 block">Guest Experiences</span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-white mb-6">What Our Guests Say</h2>
-          <div className="w-24 h-[2px] bg-[#BFA37E] mx-auto" />
+          <h2 className="text-4xl md:text-5xl font-serif font-bold text-[#0A192F] mb-4">Our Customer Reviews</h2>
         </motion.div>
 
-        <div className="max-w-4xl mx-auto relative group">
-          <div className="min-h-[350px] flex items-center justify-center">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={current}
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                className="text-center px-6"
-              >
-                <div className="flex justify-center gap-1 mb-8">
-                  {[...Array(reviews[current]?.rating || 5)].map((_, i) => (
-                    <Star key={i} size={20} fill="#BFA37E" className="text-[#BFA37E]" />
-                  ))}
-                </div>
-                
-                <p className="text-xl md:text-3xl font-serif italic text-white/90 leading-relaxed mb-10 max-w-3xl mx-auto">
-                  "{reviews[current]?.text}"
-                </p>
-                
-                <div className="flex flex-col items-center gap-2">
-                  <h4 className="text-sm font-bold tracking-[0.3em] text-[#BFA37E] uppercase">
-                    {reviews[current]?.name} {reviews[current]?.city ? `• ${reviews[current].city}` : ''}
-                  </h4>
-                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                    {reviews[current]?.source}
-                  </span>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
+        <div className="max-w-6xl mx-auto relative px-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {reviews.slice(current, current + 3).length > 0 ? (
+                    reviews.slice(current, (current + 3) > reviews.length ? reviews.length : current + 3).map((review, idx) => (
+                        <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-white p-6 rounded-lg shadow-sm border border-slate-100 flex flex-col gap-4"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden">
+                                        <img src={`https://ui-avatars.com/api/?name=${review.name}&background=random`} alt={review.name} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-[#0A192F]">{review.name}</h4>
+                                        <p className="text-[10px] text-slate-400">{review.city} • {review.source}</p>
+                                    </div>
+                                </div>
+                                {review.source?.toLowerCase().includes('google') ? (
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" className="w-5 h-5" />
+                                ) : (
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Tripadvisor_logo.svg" alt="TripAdvisor" className="w-5 h-5" />
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                                {[...Array(review.rating)].map((_, i) => (
+                                    <Star key={i} size={14} fill="#FBBC05" className="text-[#FBBC05]" />
+                                ))}
+                                <CheckCircle2 size={14} className="text-blue-500 ml-1" fill="currentColor" />
+                            </div>
+
+                            <p className="text-xs text-slate-600 leading-relaxed line-clamp-4">
+                                {review.text}
+                            </p>
+                            
+                            {review.text.length > 150 && (
+                                <button className="text-xs font-bold text-slate-400 hover:text-[#BFA37E] transition-colors text-left">Read more</button>
+                            )}
+                        </motion.div>
+                    ))
+                ) : (
+                    <div className="col-span-3 text-center py-10 text-slate-400 italic">No reviews found</div>
+                )}
+            </div>
 
           {/* Navigation Controls */}
           <button 
             onClick={() => setCurrent((prev) => (prev === 0 ? reviews.length - 1 : prev - 1))}
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-12 h-12 border border-white/10 flex items-center justify-center text-white/40 hover:text-[#BFA37E] hover:border-[#BFA37E] transition-all rounded-full hidden md:flex"
+            className="absolute -left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white shadow-md flex items-center justify-center text-slate-400 hover:text-[#BFA37E] transition-all rounded-full z-20"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={20} />
           </button>
           <button 
             onClick={() => setCurrent((prev) => (prev + 1) % reviews.length)}
-            className="absolute right-0 top-1/2 -translate-y-1/2 w-12 h-12 border border-white/10 flex items-center justify-center text-white/40 hover:text-[#BFA37E] hover:border-[#BFA37E] transition-all rounded-full hidden md:flex"
+            className="absolute -right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white shadow-md flex items-center justify-center text-slate-400 hover:text-[#BFA37E] transition-all rounded-full z-20"
           >
-            <ChevronRight size={24} />
+            <ChevronRight size={20} />
           </button>
         </div>
 
-        {/* Social Proof Bar */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="mt-20 pt-10 border-t border-white/10 flex flex-wrap justify-center items-center gap-8 md:gap-16"
-        >
-          <div className="flex items-center gap-4">
-            <span className="text-2xl font-serif font-bold text-white">4.5<span className="text-sm text-white/40">/5</span></span>
-            <div className="flex flex-col">
-              <div className="flex gap-0.5">
-                {[...Array(5)].map((_, i) => <Star key={i} size={10} fill="#BFA37E" className="text-[#BFA37E]" />)}
-              </div>
-              <span className="text-[9px] font-bold text-white/60 uppercase tracking-tighter mt-1">Average Rating</span>
-            </div>
-          </div>
-          <div className="w-[1px] h-8 bg-white/10 hidden md:block" />
-          <div className="text-center">
-            <span className="block text-lg font-serif font-bold text-white">1,200+</span>
-            <span className="text-[9px] font-bold text-white/60 uppercase tracking-tighter">Reviews on Google</span>
-          </div>
-          <div className="w-[1px] h-8 bg-white/10 hidden md:block" />
-          <div className="text-center">
-            <span className="block text-lg font-serif font-bold text-white">Top 3</span>
-            <span className="text-[9px] font-bold text-white/60 uppercase tracking-tighter">Budget Hotels in Bhopal</span>
-          </div>
-        </motion.div>
+        {/* Indicators */}
+        <div className="flex justify-center gap-2 mt-12">
+            {reviews.map((_, i) => (
+                <button 
+                    key={i} 
+                    onClick={() => setCurrent(i)}
+                    className={`w-2 h-2 rounded-full transition-all ${current === i ? 'bg-[#BFA37E] w-6' : 'bg-slate-300'}`}
+                />
+            ))}
+        </div>
       </div>
     </section>
   );

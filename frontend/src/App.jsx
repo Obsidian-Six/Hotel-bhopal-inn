@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from '@/lib/AuthContext'
 import ProtectedRoute from '@/lib/ProtectedRoute'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 
 // Lazy loaded components
 const Home = lazy(() => import('@/pages/Home'))
@@ -42,8 +43,9 @@ const PlaceholderPage = ({ title }) => (
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <GoogleOAuthProvider clientId="473199157851-81idd74itd3v99n3oqdhhd42vgpot4s4.apps.googleusercontent.com">
+      <AuthProvider>
+        <Router>
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -78,6 +80,7 @@ function App() {
         </Suspense>
       </Router>
     </AuthProvider>
+  </GoogleOAuthProvider>
   )
 }
 

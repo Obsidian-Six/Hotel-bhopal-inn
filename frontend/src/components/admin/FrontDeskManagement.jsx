@@ -208,7 +208,7 @@ const FrontDeskManagement = () => {
           <div class="header">
             <div>
               <h1 class="hotel-name">HOTEL BHOPAL INN</h1>
-              <div style="font-size: 10px; color: #64748B; margin-top: 5px;">M.P. NAGAR, BHOPAL | +91 7470795199 | bookings@bhopalinn.com</div>
+              <div style="font-size: 10px; color: #64748B; margin-top: 5px;">2/213, DANISH NAGAR, BAGMUGALIYA, BHOPAL | +91 7470795199 | bookings@bhopalinn.com</div>
             </div>
             <div style="text-align: right;">
               <div class="invoice-title">Invoice</div>

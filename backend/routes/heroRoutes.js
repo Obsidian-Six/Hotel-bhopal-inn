@@ -46,7 +46,7 @@ router.post('/', protect, admin, upload.single('file'), async (req, res) => {
     }
 
     const url = `/uploads/${req.file.filename}`;
-    
+    const isVideo = req.file.mimetype.startsWith('video/');
     const newContent = new HeroContent({
         url: url,
         type: isVideo ? 'video' : 'image',

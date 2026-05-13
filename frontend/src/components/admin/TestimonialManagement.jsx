@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import config from '../../config';
-import { Trash2, Plus, Save, Edit3, Star } from 'lucide-react';
+import { Trash2, Plus, Save, Edit3, Star, CheckCircle, Circle } from 'lucide-react';
 
 const API_URL = `${config.API_URL}/api/testimonials`;
 
@@ -28,6 +28,42 @@ const TestimonialManagement = () => {
       setTestimonials(res.data);
     } catch (err) {
       console.error('Error fetching testimonials:', err);
+    }
+  };
+
+  const handleToggleVisibility = async (id) => {
+    try {
+      await axios.patch(`${API_URL}/${id}/toggle`);
+      fetchTestimonials();
+    } catch (err) {
+      console.error('Error toggling visibility:', err);
+    }
+  };
+
+  const handleImportGoogleReviews = async () => {
+    const googleReviews = [
+      { "name": "Ramjuraja Parmar", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Have a good hotel 🎀" },
+      { "name": "Abhi Verma", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Vishal gave the best service, I really liked it. Rooms: 5" },
+      { "name": "AMIT RATHORE", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "I had a very good stay at this hotel. The rooms were clean and comfortable. The staff was polite and helpful." },
+      { "name": "Rahul Raisinghani", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Amazing stay. Their food is very tasty. Had comfortable stay with family. Nice staff and very nice location. Highly recommend." },
+      { "name": "Prathviraj Patil", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Best hotel to stay in Bhopal & great service by Vishal!" }
+    ];
+
+    setLoading(true);
+    try {
+      for (const review of googleReviews) {
+        const exists = testimonials.find(t => t.name === review.name && t.text.substring(0, 10) === review.text.substring(0, 10));
+        if (!exists) {
+          await axios.post(API_URL, review);
+        }
+      }
+      setMessage('Google reviews imported successfully!');
+      fetchTestimonials();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('Import error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -108,13 +144,22 @@ const TestimonialManagement = () => {
           <h1 className="text-3xl font-serif font-bold text-[#0A192F]">Testimonial Management</h1>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-2">Add, modify and manage guest experiences</p>
         </div>
-        <button 
-          onClick={resetForm}
-          className="flex items-center gap-2 bg-[#0A192F] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#BFA37E] transition-all"
-        >
-          <Plus size={16}/>
-          Add New Testimonial
-        </button>
+        <div className="flex gap-4">
+          <button 
+            onClick={handleImportGoogleReviews}
+            className="flex items-center gap-2 bg-[#BFA37E] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#0A192F] transition-all"
+          >
+            <Star size={16}/>
+            Import Google Reviews
+          </button>
+          <button 
+            onClick={resetForm}
+            className="flex items-center gap-2 bg-[#0A192F] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#BFA37E] transition-all"
+          >
+            <Plus size={16}/>
+            Add New Testimonial
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -247,6 +292,13 @@ const TestimonialManagement = () => {
                     <p className="text-xs text-slate-500 italic mb-4 leading-relaxed font-serif">"{t.text}"</p>
                   </div>
                   <div className="flex gap-4 border-t border-[#F1E9DA] pt-4 mt-2">
+                    <button 
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); handleToggleVisibility(t._id); }} 
+                      className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${t.isVisible ? 'text-green-600' : 'text-slate-300 hover:text-green-600'}`}
+                    >
+                      {t.isVisible ? <><CheckCircle size={12}/> Visible</> : <><Circle size={12}/> Hidden</>}
+                    </button>
                     <button 
                       type="button"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(t); }} 
