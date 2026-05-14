@@ -22,7 +22,7 @@ const Footer = () => {
   );
 
   return (
-    <footer className="bg-[#0A192F] text-[#EFEDEA] pt-20 pb-10">
+    <footer className="bg-[#FDFBF7] text-[#0A192F] pt-20 pb-10 border-t border-slate-100">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           
@@ -34,22 +34,22 @@ const Footer = () => {
               </div>
             </Link>
 
-            <p className="text-xs leading-loose text-slate-400 font-medium italic">
+            <p className="text-xs leading-loose text-slate-600 font-medium italic">
               Budget Comfort. Top-Notch Hospitality. City Centre Bhopal.
             </p>
               <div className="flex items-center gap-4 mt-2">
-                <div className="bg-white/5 p-2 rounded-sm border border-white/10 flex items-center gap-3">
+                <div className="bg-slate-100 p-2 rounded-sm border border-slate-200 flex items-center gap-3">
                   <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" className="w-5 h-5" />
                   <div>
                     <span className="text-[10px] block font-bold text-[#BFA37E]">4.5/5</span>
-                    <span className="text-[8px] uppercase tracking-tighter text-white/60">Google Rating</span>
+                    <span className="text-[8px] uppercase tracking-tighter text-slate-500">Google Rating</span>
                   </div>
                 </div>
-                <div className="bg-white/5 p-2 rounded-sm border border-white/10 flex items-center gap-3">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Tripadvisor_logo.svg" alt="TripAdvisor" className="w-5 h-5 shadow-sm brightness-110" />
+                <div className="bg-slate-100 p-2 rounded-sm border border-slate-200 flex items-center gap-3">
+                  <img src="https://www.vectorlogo.zone/logos/tripadvisor/tripadvisor-icon.svg" alt="TripAdvisor" className="w-6 h-6" />
                   <div>
                     <span className="text-[10px] block font-bold text-[#BFA37E]">TripAdvisor</span>
-                    <span className="text-[8px] uppercase tracking-tighter text-white/60">Excellence</span>
+                    <span className="text-[8px] uppercase tracking-tighter text-slate-600 font-bold">Excellence</span>
                   </div>
                 </div>
               </div>
@@ -73,7 +73,7 @@ const Footer = () => {
           {/* Column 3 - Contact */}
           <div className="flex flex-col gap-6">
             <h4 className="font-serif text-lg font-bold text-[#BFA37E] uppercase tracking-wider">Contact Details</h4>
-            <ul className="flex flex-col gap-5 text-xs font-medium leading-relaxed text-slate-300">
+            <ul className="flex flex-col gap-5 text-xs font-medium leading-relaxed text-slate-600">
               <li className="flex items-start gap-3">
                 <MapPin size={18} className="text-[#BFA37E] mt-0.5 shrink-0" />
                 <a 
@@ -121,23 +121,23 @@ const Footer = () => {
           <div className="flex flex-col gap-6 lg:items-end lg:text-right">
             <h4 className="font-serif text-lg font-bold text-[#BFA37E] uppercase tracking-wider">Social Connect</h4>
             <div className="flex gap-4 lg:justify-end">
-              <a href="https://www.instagram.com/hoteltenontenstays/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 border border-white/10 flex items-center justify-center hover:bg-[#E4405F] hover:text-white transition-all rounded-sm bg-white/5">
+              <a href="https://www.instagram.com/hoteltenontenstays/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 border border-slate-200 flex items-center justify-center hover:bg-[#E4405F] hover:text-white transition-all rounded-sm bg-slate-100">
                 <Instagram size={18} />
               </a>
-              <a href="https://wa.me/916267276957" target="_blank" rel="noopener noreferrer" className="w-10 h-10 border border-white/10 flex items-center justify-center hover:bg-[#25D366] hover:text-white transition-all rounded-sm bg-white/5">
+              <a href="https://wa.me/916267276957" target="_blank" rel="noopener noreferrer" className="w-10 h-10 border border-slate-200 flex items-center justify-center hover:bg-[#25D366] hover:text-white transition-all rounded-sm bg-slate-100">
                 <WhatsAppIcon className="w-5 h-5" />
               </a>
             </div>
             <div className="mt-4 text-[12px] text-white font-black uppercase tracking-widest flex flex-col gap-2 lg:items-end">
-              <span className="bg-[#BFA37E] px-3 py-1 rounded-sm">CHECK-IN: 12:00 PM</span>
-              <span className="bg-[#BFA37E] px-3 py-1 rounded-sm">CHECK-OUT: 11:00 AM</span>
+              <span className="bg-[#BFA37E] px-3 py-1 rounded-sm text-white">CHECK-IN: 12:00 PM</span>
+              <span className="bg-[#BFA37E] px-3 py-1 rounded-sm text-white">CHECK-OUT: 11:00 AM</span>
             </div>
           </div>
 
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+        <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
           <p>© 2026 Hotel Bhopal Inn by <a href="https://www.tenontenstays.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">Ten on Ten Stays</a></p>
           <div className="flex gap-6">
             <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>

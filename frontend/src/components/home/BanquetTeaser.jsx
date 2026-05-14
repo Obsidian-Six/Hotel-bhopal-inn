@@ -25,7 +25,7 @@ const BanquetTeaser = () => {
             <div className="relative group">
               <div className="absolute -inset-4 border border-[#BFA37E]/20 -z-10 group-hover:inset-0 transition-all duration-700" />
               <img 
-                src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=2074&auto=format&fit=crop" 
+                src="banquet_main.jpg" 
                 alt="Banquet Hall" 
                 className="w-full h-[500px] object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-700 shadow-2xl"
               />

@@ -11,7 +11,7 @@ const HeroSection = () => {
   const [loading, setLoading] = useState(true);
 
   const defaultImages = [
-    "/Room.jpeg",
+    "/banquet_main.jpg",
     "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=2070&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=2070&auto=format&fit=crop"

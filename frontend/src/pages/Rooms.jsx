@@ -28,7 +28,7 @@ const RoomCard = ({ room }) => {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="bg-white group"
+      className="bg-white group flex flex-col h-full"
     >
       <div className="relative overflow-hidden aspect-[4/3] mb-6">
         <img 
@@ -38,7 +38,7 @@ const RoomCard = ({ room }) => {
         />
       </div>
       
-      <div className="space-y-4">
+      <div className="flex flex-col flex-grow space-y-4">
         <h3 className="text-2xl lg:text-3xl font-serif text-[#0A192F] uppercase tracking-wide">
           {room.title}
         </h3>
@@ -47,7 +47,7 @@ const RoomCard = ({ room }) => {
           {room.description}
         </p>
 
-        <div className="flex gap-4 pt-4">
+        <div className="flex gap-4 pt-4 mt-auto">
           <Link 
             to={`/rooms/${room.category}`}
             className="flex-grow border border-[#0A192F] text-[#0A192F] py-3 text-[10px] font-bold uppercase tracking-widest text-center hover:bg-[#0A192F] hover:text-white transition-all"
@@ -66,16 +66,11 @@ const RoomCard = ({ room }) => {
   );
 };
 
-const ComparisonTable = () => {
-  const specs = [
-    { name: 'Air Conditioning', standard: true, deluxe: true, premium: true },
-    { name: 'High-Speed Wi-Fi', standard: true, deluxe: true, premium: true },
-    { name: '24/7 Hot Water', standard: true, deluxe: true, premium: true },
-    { name: 'Private Balcony', standard: false, deluxe: true, premium: true },
-    { name: 'Premium View', standard: false, deluxe: false, premium: true },
-    { name: 'In-Room Dining', standard: true, deluxe: true, premium: true },
-    { name: 'Smart TV', standard: true, deluxe: true, premium: true },
-  ];
+const ComparisonTable = ({ rooms }) => {
+  if (!rooms || rooms.length === 0) return null;
+
+  // Get all unique amenities across all rooms to create rows
+  const allAmenities = Array.from(new Set(rooms.flatMap(r => r.amenities || [])));
 
   return (
     <div className="w-full overflow-x-auto">
@@ -83,18 +78,26 @@ const ComparisonTable = () => {
         <thead>
           <tr className="border-b border-slate-200">
             <th className="py-6 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">Features</th>
-            <th className="py-6 text-center text-sm font-serif text-[#0A192F] uppercase">Standard</th>
-            <th className="py-6 text-center text-sm font-serif text-[#0A192F] uppercase">Balcony</th>
-            <th className="py-6 text-center text-sm font-serif text-[#0A192F] uppercase">Super</th>
+            {rooms.map((room) => (
+              <th key={room._id} className="py-6 text-center text-sm font-serif text-[#0A192F] uppercase px-4 whitespace-nowrap">
+                {room.category}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {specs.map((spec, idx) => (
+          {allAmenities.map((amenity, idx) => (
             <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
-              <td className="py-5 text-sm text-slate-600">{spec.name}</td>
-              <td className="py-5 text-center">{spec.standard ? <Check size={18} className="mx-auto text-[#8B735B]" /> : <span className="text-slate-200">—</span>}</td>
-              <td className="py-5 text-center">{spec.deluxe ? <Check size={18} className="mx-auto text-[#8B735B]" /> : <span className="text-slate-200">—</span>}</td>
-              <td className="py-5 text-center">{spec.premium ? <Check size={18} className="mx-auto text-[#8B735B]" /> : <span className="text-slate-200">—</span>}</td>
+              <td className="py-5 text-sm text-slate-600 min-w-[200px]">{amenity}</td>
+              {rooms.map((room) => (
+                <td key={room._id} className="py-5 text-center">
+                  {(room.amenities || []).includes(amenity) ? (
+                    <Check size={18} className="mx-auto text-[#8B735B]" />
+                  ) : (
+                    <span className="text-slate-200">—</span>
+                  )}
+                </td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -211,7 +214,7 @@ const Rooms = () => {
             </div>
 
             <div className="bg-white p-8 lg:p-12 shadow-xl border border-slate-100">
-              <ComparisonTable />
+              <ComparisonTable rooms={rooms} />
             </div>
 
             {/* CTAs */}

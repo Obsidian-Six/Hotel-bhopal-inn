@@ -29,15 +29,18 @@ const RoomCategories = () => {
     return `${API_BASE}${path}`;
   };
 
-  const amenityIcons = {
-    'AC': Wind,
-    'Air Conditioner': Wind,
-    'Wi-Fi': Wifi,
-    'TV': Tv,
-    'Hot Water': ThermometerSun,
-    'Room Service': UtensilsCrossed,
-    'Balcony': Waves
+  const getIcon = (amenity) => {
+    const a = amenity.toLowerCase();
+    if (a.includes('ac') || a.includes('air')) return Wind;
+    if (a.includes('wi-fi') || a.includes('wifi') || a.includes('internet')) return Wifi;
+    if (a.includes('water') || a.includes('hot')) return ThermometerSun;
+    if (a.includes('tv') || a.includes('television')) return Tv;
+    if (a.includes('room service') || a.includes('service')) return UtensilsCrossed;
+    if (a.includes('balcony')) return Waves;
+    return Check;
   };
+
+
 
   return (
     <section className="py-24 bg-white">
@@ -64,7 +67,7 @@ const RoomCategories = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: idx * 0.2 }}
-              className="group flex flex-col bg-[#FDFBF7] border border-slate-100 relative shadow-sm hover:shadow-2xl transition-all duration-500"
+              className="group flex flex-col bg-[#FDFBF7] border border-slate-100 relative shadow-sm hover:shadow-2xl transition-all duration-500 h-full"
             >
               {room.popular && (
                 <div className="absolute top-4 right-4 z-10 bg-[#BFA37E] text-white text-[10px] font-bold px-4 py-1 uppercase tracking-widest">
@@ -97,12 +100,12 @@ const RoomCategories = () => {
 
                 <div className="flex gap-4 mb-8">
                   {(room.amenities || []).slice(0, 5).map((amenity, i) => {
-                    const Icon = amenityIcons[amenity] || Check;
+                    const Icon = getIcon(amenity);
                     return <Icon key={i} size={16} className="text-[#BFA37E]" strokeWidth={1.5} />;
                   })}
                 </div>
 
-                <div className="flex items-center justify-between pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-auto">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Starting from</span>
                     <span className="text-xl font-serif font-bold text-[#0A192F]">₹{(room.details?.startingPrice || room.details?.basePrice || room.price || 0).toLocaleString()}<span className="text-xs">/night</span></span>

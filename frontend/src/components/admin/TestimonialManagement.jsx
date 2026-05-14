@@ -89,14 +89,15 @@ const TestimonialManagement = () => {
     e.preventDefault();
     setLoading(true);
 
+
     const payload = {
       name,
       city,
       text,
       source,
-      rating: Number(rating)
+      rating: Number(rating),
+      isVisible: true
     };
-
     try {
       if (editingTestimonial) {
         await axios.put(`${API_URL}/${editingTestimonial._id}`, payload);

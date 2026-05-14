@@ -56,19 +56,20 @@ const RoomDetail = () => {
     return `${API_BASE}${path}`;
   };
 
-  const amenityIcons = {
-    'H': { icon: ThermometerSun, label: '24x7 Hot & Cold Water' },
-    'AC': { icon: Wind, label: 'Fully Air-Conditioned Rooms' },
-    'Wi': { icon: Wifi, label: 'High-Speed WiFi' },
-    'K': { icon: Star, label: 'King-Size Beds' },
-    'Bt': { icon: ShieldCheck, label: 'Luxury Bathrooms' },
-    'Br': { icon: Star, label: 'British-Inspired Interiors' },
-    'RS': { icon: Utensils, label: 'Room Service' },
-    'CF': { icon: Coffee, label: 'Tea/Coffee Kettle' },
-    'Tl': { icon: ShieldCheck, label: 'Toiletries' },
-    'Fm': { icon: Users, label: 'Family-Friendly Stay' },
-    'Pk': { icon: Star, label: 'Parking Available' },
-    '24': { icon: Clock, label: '24x7 Guest Support' }
+  const getAmenityData = (amenity) => {
+    const a = amenity.toLowerCase();
+    if (a.includes('ac') || a.includes('air')) return { icon: Wind, label: amenity };
+    if (a.includes('wi-fi') || a.includes('wifi') || a.includes('internet')) return { icon: Wifi, label: amenity };
+    if (a.includes('water') || a.includes('hot')) return { icon: ThermometerSun, label: amenity };
+    if (a.includes('tv') || a.includes('television')) return { icon: Tv, label: amenity };
+    if (a.includes('coffee') || a.includes('tea') || a.includes('kettle')) return { icon: Coffee, label: amenity };
+    if (a.includes('room service') || a.includes('service')) return { icon: Utensils, label: amenity };
+    if (a.includes('toiletries') || a.includes('bathroom')) return { icon: ShieldCheck, label: amenity };
+    if (a.includes('bed') || a.includes('linen') || a.includes('interior')) return { icon: Star, label: amenity };
+    if (a.includes('family')) return { icon: Users, label: amenity };
+    if (a.includes('parking')) return { icon: ShieldCheck, label: amenity };
+    if (a.includes('support') || a.includes('24x7') || a.includes('clock') || a.includes('service')) return { icon: Clock, label: amenity };
+    return { icon: Info, label: amenity };
   };
 
   return (
@@ -211,23 +212,25 @@ const RoomDetail = () => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 max-w-6xl mx-auto">
-              {Object.entries(amenityIcons).map(([code, data], idx) => {
-                const Icon = data.icon;
-                return (
-                  <div key={idx} className="flex flex-col items-center gap-4 group">
-                    <div className="w-16 h-16 flex items-center justify-center bg-white shadow-sm rounded-full text-[#0A192F] group-hover:bg-[#8B735B] group-hover:text-white transition-all border border-slate-100">
-                      <span className="text-xl font-black absolute opacity-10 group-hover:opacity-0 transition-opacity">{code}</span>
-                      <Icon size={28} strokeWidth={1.5} className="relative z-10" />
+              {room.amenities && room.amenities.length > 0 ? (
+                room.amenities.map((amenity, idx) => {
+                  const { icon: Icon, label } = getAmenityData(amenity);
+                  return (
+                    <div key={idx} className="flex flex-col items-center gap-4 group">
+                      <div className="w-16 h-16 flex items-center justify-center bg-white shadow-sm rounded-full text-[#0A192F] group-hover:bg-[#8B735B] group-hover:text-white transition-all border border-slate-100">
+                        <Icon size={28} strokeWidth={1.5} className="relative z-10" />
+                      </div>
+                      <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-600 group-hover:text-[#0A192F] transition-colors leading-tight">
+                          {label}
+                          </span>
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-black uppercase text-[#8B735B] tracking-widest mb-1">{code}</span>
-                        <span className="text-xs font-bold text-slate-600 group-hover:text-[#0A192F] transition-colors leading-tight">
-                        {data.label}
-                        </span>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <p className="col-span-full text-slate-400 italic">No specific amenities listed for this room.</p>
+              )}
             </div>
           </div>
         </section>
