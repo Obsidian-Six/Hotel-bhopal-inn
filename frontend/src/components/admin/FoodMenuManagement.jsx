@@ -270,7 +270,7 @@ const FoodMenuManagement = () => {
                                         className={`flex items-center gap-2 px-4 py-2 rounded-sm text-[10px] font-bold uppercase tracking-widest transition-all ${itemData.isVeg ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
                                     >
                                         <Circle size={10} fill={itemData.isVeg ? '#15803d' : '#b91c1c'} />
-                                        {itemData.isVeg ? 'Vegetarian' : 'Non-Vegetarian'}
+                                        <span className="text-green-600">Vegetarian</span>
                                     </button>
                                 </div>
                             </div>

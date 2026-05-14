@@ -27,6 +27,7 @@ const RoomSchema = new mongoose.Schema({
         bedType: { type: String, default: '' },
         view: { type: String, default: '' },
         startingPrice: { type: Number, default: 0 },
+        cutPrice: { type: Number, default: 0 },
         extraPersonCharge: { type: Number, default: 0 }
     },
     tags: {

@@ -146,6 +146,15 @@ const RoomDetail = () => {
                   <h2 className="text-3xl lg:text-4xl font-serif text-[#0A192F] uppercase tracking-wide">Room Description</h2>
                   <div className="h-[1px] w-12 bg-[#8B735B]"></div>
                 </div>
+                <div className="flex flex-col mb-4">
+                  {room.details?.cutPrice > 0 && (
+                    <span className="text-lg font-serif text-slate-400 line-through decoration-slate-400/60">₹{room.details.cutPrice.toLocaleString()}</span>
+                  )}
+                  <span className="text-4xl font-serif font-bold text-[#0A192F]">
+                    ₹{(room.details?.startingPrice || 0).toLocaleString()}
+                    <span className="text-xs text-slate-400 font-normal uppercase tracking-[0.2em] ml-4 italic">Per Night Starting</span>
+                  </span>
+                </div>
                 <p className="text-slate-600 text-lg leading-relaxed font-light">
                   {room.description}
                 </p>

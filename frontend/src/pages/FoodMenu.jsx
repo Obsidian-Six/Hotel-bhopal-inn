@@ -11,7 +11,7 @@ const FoodMenu = () => {
     const [categories, setCategories] = useState([]);
     const [items, setItems] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
-    const [vegFilter, setVegFilter] = useState('all'); // 'all', 'veg', 'non-veg'
+    const [vegFilter, setVegFilter] = useState('veg'); // Always default to veg
     const [cart, setCart] = useState([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [showOrderForm, setShowOrderForm] = useState(false);
@@ -73,9 +73,7 @@ const FoodMenu = () => {
 
     const filteredItems = items.filter(item => {
         const categoryMatch = item.category?._id === activeCategory;
-        const vegMatch = vegFilter === 'all' || 
-                         (vegFilter === 'veg' && item.isVeg) || 
-                         (vegFilter === 'non-veg' && !item.isVeg);
+        const vegMatch = vegFilter === 'all' || (vegFilter === 'veg' && item.isVeg);
         return categoryMatch && vegMatch;
     });
 
@@ -98,24 +96,11 @@ const FoodMenu = () => {
                     <div className="space-y-12 mb-16">
                         {/* Veg Toggle */}
                         <div className="flex justify-center">
-                            <div className="bg-white p-1 rounded-full shadow-lg border border-slate-100 flex gap-1">
+                            <div className="flex bg-white/5 backdrop-blur-md rounded-full p-1 border border-white/10 shadow-xl">
                                 <button 
-                                    onClick={() => setVegFilter('all')}
-                                    className={`px-8 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${vegFilter === 'all' ? 'bg-[#0A192F] text-white shadow-md' : 'text-slate-400 hover:text-[#0A192F]'}`}
+                                    className="px-12 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest bg-green-600 text-white shadow-md flex items-center gap-2 cursor-default"
                                 >
-                                    All Items
-                                </button>
-                                <button 
-                                    onClick={() => setVegFilter('veg')}
-                                    className={`px-8 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${vegFilter === 'veg' ? 'bg-green-600 text-white shadow-md' : 'text-slate-400 hover:text-green-600'}`}
-                                >
-                                    <div className="w-2 h-2 rounded-full bg-green-500"></div> Veg Only
-                                </button>
-                                <button 
-                                    onClick={() => setVegFilter('non-veg')}
-                                    className={`px-8 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${vegFilter === 'non-veg' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:text-red-600'}`}
-                                >
-                                    <div className="w-2 h-2 rounded-full bg-red-500"></div> Non-Veg
+                                    <div className="w-2 h-2 rounded-full bg-white animate-pulse"></div> 100% Pure Vegetarian Menu
                                 </button>
                             </div>
                         </div>
@@ -154,8 +139,8 @@ const FoodMenu = () => {
                                     <div className="aspect-[16/11] relative overflow-hidden">
                                         <img src={`${config.API_URL}${item.picture}`} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                         <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-sm p-2 rounded-xl shadow-lg">
-                                            <div className={`w-5 h-5 border-2 p-[2px] flex items-center justify-center ${item.isVeg ? 'border-green-500' : 'border-red-500'}`}>
-                                                <div className={`w-full h-full rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                            <div className={`w-5 h-5 border-2 p-[2px] flex items-center justify-center border-green-500`}>
+                                                <div className={`w-full h-full rounded-full bg-green-500`}></div>
                                             </div>
                                         </div>
                                     </div>
@@ -166,7 +151,7 @@ const FoodMenu = () => {
                                         <div className="flex items-center gap-2 mb-6">
                                             <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest">{item.quantity}</span>
                                             <div className="w-1 h-1 rounded-full bg-slate-300"></div>
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.isVeg ? 'Vegetarian' : 'Non-Vegetarian'}</span>
+                                            <span className="text-[9px] font-bold text-green-600 uppercase tracking-widest">Vegetarian</span>
                                         </div>
                                         <p className="text-slate-500 text-sm font-light leading-relaxed mb-10 line-clamp-2">{item.description}</p>
                                         

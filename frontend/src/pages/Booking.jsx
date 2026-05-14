@@ -9,6 +9,8 @@ import config from '../config';
 import { useAuth } from '@/lib/AuthContext';
 import LoginModal from '@/components/layout/LoginModal';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { format } from 'date-fns';
 
 const API_BASE = config.API_URL;
 
@@ -41,6 +43,10 @@ const Booking = () => {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [calculatedPrice, setCalculatedPrice] = useState(null);
+  const [dateRange, setDateRange] = useState({
+    from: new Date(),
+    to: new Date(new Date().setDate(new Date().getDate() + 1))
+  });
 
   // Pre-fill user data if logged in
   useEffect(() => {
@@ -74,17 +80,18 @@ const Booking = () => {
       }
     };
     fetchRooms();
-    
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    setFormData(prev => ({
-        ...prev,
-        checkInDate: today.toISOString().split('T')[0],
-        checkOutDate: tomorrow.toISOString().split('T')[0]
-    }));
   }, []);
+
+  // Update formData when dateRange changes
+  useEffect(() => {
+    if (dateRange?.from && dateRange?.to) {
+        setFormData(prev => ({
+            ...prev,
+            checkInDate: format(dateRange.from, 'yyyy-MM-dd'),
+            checkOutDate: format(dateRange.to, 'yyyy-MM-dd')
+        }));
+    }
+  }, [dateRange]);
 
   useEffect(() => {
     if (formData.roomCategory) {
@@ -343,13 +350,9 @@ const Booking = () => {
                         {/* Date Selection Area */}
                         <div className="bg-white border border-slate-200 p-6 shadow-sm mb-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Check-In</label>
-                                    <input type="date" name="checkInDate" value={formData.checkInDate} onChange={handleChange} min={new Date().toISOString().split('T')[0]} className="w-full border border-slate-300 p-3 text-xs focus:outline-none focus:border-[#BFA37E]" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Check-Out</label>
-                                    <input type="date" name="checkOutDate" value={formData.checkOutDate} onChange={handleChange} min={formData.checkInDate} className="w-full border border-slate-300 p-3 text-xs focus:outline-none focus:border-[#BFA37E]" />
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Select Your Stay Dates</label>
+                                    <DateRangePicker date={dateRange} setDate={setDateRange} />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Meal Plan</label>

@@ -366,7 +366,6 @@ const BanquetPage = () => {
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Meal Requirement</label>
                 <select name="mealRequirement" value={formData.mealRequirement} onChange={handleInputChange} className="w-full bg-[#FDFBF7] border border-slate-100 p-4 text-xs font-bold focus:outline-none focus:border-[#BFA37E]">
                   <option>Veg Only</option>
-                  <option>Veg + Non-Veg</option>
                   <option>No Catering Needed</option>
                 </select>
               </div>

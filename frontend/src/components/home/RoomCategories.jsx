@@ -108,7 +108,12 @@ const RoomCategories = () => {
                 <div className="flex items-center justify-between pt-6 border-t border-slate-200 mt-auto">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Starting from</span>
-                    <span className="text-xl font-serif font-bold text-[#0A192F]">₹{(room.details?.startingPrice || room.details?.basePrice || room.price || 0).toLocaleString()}<span className="text-xs">/night</span></span>
+                    <div className="flex flex-col">
+                      {room.details?.cutPrice > 0 && (
+                        <span className="text-sm font-serif text-slate-400 line-through decoration-slate-400/50">₹{room.details.cutPrice.toLocaleString()}</span>
+                      )}
+                      <span className="text-xl font-serif font-bold text-[#0A192F]">₹{(room.details?.startingPrice || room.details?.basePrice || room.price || 0).toLocaleString()}<span className="text-xs text-slate-400 font-normal">/night</span></span>
+                    </div>
                   </div>
                   <Link 
                     to={`/rooms/${room.category}`} 

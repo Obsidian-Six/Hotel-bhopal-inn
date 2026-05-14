@@ -362,14 +362,14 @@ const BanquetManagement = () => {
                 <div className="aspect-[4/3] bg-slate-50 overflow-hidden mb-4 border-2 border-slate-50">
                   <img src={getImageUrl(img.imageUrl)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                 </div>
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-grow min-w-0">
                     <span className="text-[8px] font-bold text-[#BFA37E] uppercase tracking-widest">{img.category}</span>
-                    <p className="text-[10px] font-bold uppercase text-[#0A192F] truncate">{img.title}</p>
+                    <p className="text-[10px] font-bold uppercase text-[#0A192F] truncate" title={img.title}>{img.title}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => openGalleryModal(img)} className="text-slate-400 hover:text-[#BFA37E] transition-colors"><Edit size={14} /></button>
-                    <button onClick={() => handleDeleteGallery(img._id)} className="text-slate-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                  <div className="flex gap-3 flex-shrink-0 pt-1">
+                    <button onClick={() => openGalleryModal(img)} className="text-slate-400 hover:text-[#BFA37E] transition-colors p-1"><Edit size={14} /></button>
+                    <button onClick={() => handleDeleteGallery(img._id)} className="text-slate-400 hover:text-red-600 transition-colors p-1"><Trash2 size={14} /></button>
                   </div>
                 </div>
               </div>

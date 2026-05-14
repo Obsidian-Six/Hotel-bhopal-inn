@@ -19,6 +19,7 @@ const RoomManagement = () => {
   const [amenities, setAmenities] = useState('');
   const [tags, setTags] = useState('');
   const [startingPrice, setStartingPrice] = useState('');
+  const [cutPrice, setCutPrice] = useState('');
   const [maxOccupancy, setMaxOccupancy] = useState('');
   const [bedType, setBedType] = useState('');
   const [view, setView] = useState('');
@@ -65,6 +66,7 @@ const RoomManagement = () => {
     setAmenities('');
     setTags('');
     setStartingPrice('');
+    setCutPrice('');
     setMaxOccupancy('');
     setBedType('');
     setView('');
@@ -84,6 +86,7 @@ const RoomManagement = () => {
     setAmenities(room.amenities.join(', '));
     setTags(room.tags.join(', '));
     setStartingPrice(room.details?.startingPrice || '');
+    setCutPrice(room.details?.cutPrice || '');
     setMaxOccupancy(room.details?.maxOccupancy || '');
     setBedType(room.details?.bedType || '');
     setView(room.details?.view || '');
@@ -111,6 +114,7 @@ const RoomManagement = () => {
     formData.append('replaceImages', replaceImages);
     formData.append('details', JSON.stringify({
       startingPrice: Number(startingPrice),
+      cutPrice: Number(cutPrice),
       maxOccupancy,
       bedType,
       view,
@@ -249,6 +253,16 @@ const RoomManagement = () => {
                         onChange={(e) => setStartingPrice(e.target.value)}
                         className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
                         required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Cut Price (₹)</label>
+                      <input 
+                        type="number" 
+                        value={cutPrice} 
+                        onChange={(e) => setCutPrice(e.target.value)}
+                        placeholder="e.g. 8500"
+                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
                       />
                     </div>
                     <div>

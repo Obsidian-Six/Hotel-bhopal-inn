@@ -47,6 +47,16 @@ const RoomCard = ({ room }) => {
           {room.description}
         </p>
 
+        <div className="flex flex-col pt-4">
+          {room.details?.cutPrice > 0 && (
+            <span className="text-sm font-serif text-slate-400 line-through decoration-slate-400/60">₹{room.details.cutPrice.toLocaleString()}</span>
+          )}
+          <span className="text-2xl font-serif font-bold text-[#0A192F]">
+            ₹{(room.details?.startingPrice || 0).toLocaleString()}
+            <span className="text-[10px] text-slate-400 font-normal uppercase tracking-widest ml-2">Starting Price</span>
+          </span>
+        </div>
+
         <div className="flex gap-4 pt-4 mt-auto">
           <Link 
             to={`/rooms/${room.category}`}
