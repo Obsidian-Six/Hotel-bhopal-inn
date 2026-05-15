@@ -90,7 +90,14 @@ const Booking = () => {
         const res = await axios.get(`${API_BASE}/api/rooms`);
         setRooms(res.data);
         if (res.data.length > 0) {
-          const defaultRoomId = location.state?.roomId || res.data[0]._id;
+          // Check for roomId or roomType (string) in location state
+          let targetId = location.state?.roomId;
+          if (!targetId && location.state?.roomType && location.state.roomType !== 'All Rooms') {
+            const matchedRoom = res.data.find(r => r.title === location.state.roomType);
+            if (matchedRoom) targetId = matchedRoom._id;
+          }
+          
+          const defaultRoomId = targetId || res.data[0]._id;
           setFormData(prev => ({ ...prev, roomCategory: defaultRoomId }));
           setSelectedRoom(res.data.find(r => r._id === defaultRoomId) || res.data[0]);
         }
@@ -99,7 +106,30 @@ const Booking = () => {
       }
     };
     fetchRooms();
-  }, []);
+  }, [location.state]);
+
+  // Pre-fill from location state (Home Page Booking Widget)
+  useEffect(() => {
+    if (location.state) {
+      const { checkIn, checkOut, adults, children, infants } = location.state;
+      
+      if (checkIn && checkOut) {
+        setDateRange({
+          from: new Date(checkIn),
+          to: new Date(checkOut)
+        });
+      }
+      
+      if (adults !== undefined || children !== undefined || infants !== undefined) {
+        setFormData(prev => ({
+          ...prev,
+          adults: adults !== undefined ? adults : prev.adults,
+          children: children !== undefined ? children : prev.children,
+          infants: infants !== undefined ? infants : prev.infants,
+        }));
+      }
+    }
+  }, [location.state]);
 
   // Update formData when dateRange changes
   useEffect(() => {
@@ -395,7 +425,7 @@ const Booking = () => {
                                 >
                                     <div className="flex items-center gap-3">
                                         <Users size={18} className="text-[#BFA37E]" />
-                                        <span className="text-sm font-bold text-black">
+                                        <span className="text-sm font-bold text-black whitespace-nowrap">
                                             {formData.adults} Adults · {formData.children} Children · {formData.infants} Infants
                                         </span>
                                     </div>

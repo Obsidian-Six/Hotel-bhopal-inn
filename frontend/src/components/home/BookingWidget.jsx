@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Users, Home, Search, Plus, Minus, ChevronDown } from 'lucide-react';
+import { Calendar, Users, Home, Search, Plus, Minus, ChevronDown, CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { format } from 'date-fns';
 
 const BookingWidget = () => {
   const navigate = useNavigate();
@@ -11,9 +13,9 @@ const BookingWidget = () => {
     children: 0,
     rooms: 1
   });
-  const [dates, setDates] = useState({
-    checkIn: new Date().toISOString().split('T')[0],
-    checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  const [dateRange, setDateRange] = useState({
+    from: new Date(),
+    to: new Date(Date.now() + 86400000)
   });
   const [roomType, setRoomType] = useState('All Rooms');
   const guestRef = useRef(null);
@@ -29,10 +31,12 @@ const BookingWidget = () => {
   }, []);
 
   const handleSearch = () => {
+    if (!dateRange.from || !dateRange.to) return;
+    
     navigate('/booking', { 
       state: { 
-        checkIn: dates.checkIn, 
-        checkOut: dates.checkOut,
+        checkIn: format(dateRange.from, 'yyyy-MM-dd'), 
+        checkOut: format(dateRange.to, 'yyyy-MM-dd'),
         adults: guests.adults,
         children: guests.children,
         rooms: guests.rooms,
@@ -58,34 +62,20 @@ const BookingWidget = () => {
       >
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center">
           
-          {/* Check In */}
-          <div className="flex-1 px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group">
+          {/* Stay Dates (Combined Check-in & Check-out) */}
+          <div className="flex-[1.8] px-4 lg:px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group">
             <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-3 group-hover:text-black transition-colors">
-              <Calendar size={12} /> Check In
+              <CalendarDays size={12} /> Stay Dates
             </label>
-            <input 
-              type="date" 
-              value={dates.checkIn}
-              onChange={(e) => setDates({...dates, checkIn: e.target.value})}
-              className="w-full bg-transparent text-black text-sm font-bold focus:outline-none appearance-none cursor-pointer"
-            />
-          </div>
-
-          {/* Check Out */}
-          <div className="flex-1 px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group">
-            <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-3 group-hover:text-black transition-colors">
-              <Calendar size={12} /> Check Out
-            </label>
-            <input 
-              type="date" 
-              value={dates.checkOut}
-              onChange={(e) => setDates({...dates, checkOut: e.target.value})}
-              className="w-full bg-transparent text-black text-sm font-bold focus:outline-none appearance-none cursor-pointer"
+            <DateRangePicker 
+              date={dateRange} 
+              setDate={setDateRange} 
+              className="border-none p-0 h-auto"
             />
           </div>
 
           {/* Guests Popover (Image 2 style) */}
-          <div className="flex-1 px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group relative" ref={guestRef}>
+          <div className="flex-[1.5] px-4 lg:px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group relative" ref={guestRef}>
             <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-3 group-hover:text-black transition-colors">
               <Users size={12} /> Guests
             </label>
@@ -93,8 +83,8 @@ const BookingWidget = () => {
               onClick={() => setShowGuests(!showGuests)}
               className="w-full flex items-center justify-between text-black text-sm font-bold cursor-pointer"
             >
-              <span>{guests.adults} Adults · {guests.children} Children · {guests.rooms} Room</span>
-              <ChevronDown size={14} className={`transition-transform ${showGuests ? 'rotate-180' : ''}`} />
+              <span className="whitespace-nowrap">{guests.adults} Adults · {guests.children} Children · {guests.rooms} {guests.rooms > 1 ? 'Rooms' : 'Room'}</span>
+              <ChevronDown size={14} className={`transition-transform ${showGuests ? 'rotate-180' : ''} shrink-0 ml-2`} />
             </div>
 
             <AnimatePresence>
@@ -117,25 +107,27 @@ const BookingWidget = () => {
                         <button onClick={() => updateCount('adults', 1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={14}/></button>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-black">Children</div>
-                        <div className="text-[10px] text-slate-400 uppercase tracking-wider">Ages 0-11</div>
+                    <div className="flex items-center gap-8">
+                      <div className="flex-1 flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-bold text-black">Children</div>
+                          <div className="text-[10px] text-slate-400 uppercase tracking-wider">Ages 0-11</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => updateCount('children', -1)} className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={12}/></button>
+                          <span className="w-3 text-center font-bold text-sm">{guests.children}</span>
+                          <button onClick={() => updateCount('children', 1)} className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={12}/></button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <button onClick={() => updateCount('children', -1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={14}/></button>
-                        <span className="w-4 text-center font-bold">{guests.children}</span>
-                        <button onClick={() => updateCount('children', 1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={14}/></button>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-black">Rooms</div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <button onClick={() => updateCount('rooms', -1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={14}/></button>
-                        <span className="w-4 text-center font-bold">{guests.rooms}</span>
-                        <button onClick={() => updateCount('rooms', 1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={14}/></button>
+                      <div className="flex-1 flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-bold text-black whitespace-nowrap">Rooms</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => updateCount('rooms', -1)} className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={12}/></button>
+                          <span className="w-3 text-center font-bold text-sm">{guests.rooms}</span>
+                          <button onClick={() => updateCount('rooms', 1)} className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={12}/></button>
+                        </div>
                       </div>
                     </div>
                     <button 
@@ -151,7 +143,7 @@ const BookingWidget = () => {
           </div>
 
           {/* Room Type */}
-          <div className="flex-1 px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group">
+          <div className="flex-1 px-4 lg:px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group">
             <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-3 group-hover:text-black transition-colors">
               <Home size={12} /> Room Type
             </label>
@@ -170,7 +162,7 @@ const BookingWidget = () => {
           {/* Search Button (Image 3 style) */}
           <button 
             onClick={handleSearch}
-            className="lg:w-72 bg-[#BFA37E] text-white py-10 lg:py-14 px-10 flex items-center justify-center gap-4 text-xs font-bold uppercase tracking-[0.3em] hover:bg-black transition-all duration-500"
+            className="lg:w-72 bg-[#BFA37E] text-white py-6 lg:py-14 px-10 flex items-center justify-center gap-4 text-xs font-bold uppercase tracking-[0.3em] hover:bg-black transition-all duration-500"
           >
             <Search size={18} />
             <div className="flex flex-col items-start leading-none">

@@ -69,14 +69,7 @@ const Footer = () => {
                   2/213, Danish Nagar, Bagmugaliya, <br/>Bhopal, Madhya Pradesh 462026
                 </a>
               </li>
-              <li className="flex items-center gap-3">
-                <Phone size={18} className="text-[#BFA37E] shrink-0" />
-                <div className="flex flex-col">
-                  <a href="tel:+916267276957" className="hover:text-[#BFA37E] transition-colors">+91 62672 76957</a>
-                  <a href="tel:+919630252729" className="hover:text-[#BFA37E] transition-colors">+91 96302 52729</a>
-                  <a href="tel:+917225888650" className="hover:text-[#BFA37E] transition-colors">+91 72258 88650</a>
-                </div>
-              </li>
+
               <li className="flex items-center gap-3">
                 <Mail size={18} className="text-[#BFA37E] shrink-0" />
                 <a href="mailto:bhopalinn@gmail.com" className="hover:text-[#BFA37E] transition-colors">bhopalinn@gmail.com</a>
