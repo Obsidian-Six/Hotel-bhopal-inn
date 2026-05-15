@@ -25,7 +25,7 @@ const WhatsAppFloat = () => {
 
                 {/* Tooltip */}
                 <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-white px-4 py-2 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
-                    <p className="text-[10px] font-bold text-[#0A192F] uppercase tracking-widest">Connect on WhatsApp</p>
+                    <p className="text-[10px] font-bold text-[#000000] uppercase tracking-widest">Connect on WhatsApp</p>
                 </div>
             </div>
         </a>

@@ -83,7 +83,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#0A192F] text-white flex flex-col">
+      <aside className="w-64 bg-[#000000] text-white flex flex-col">
         <div className="p-8 border-b border-white/10">
           <div className="h-16 w-full overflow-hidden flex items-center justify-center bg-white rounded-sm p-1">
             <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain scale-[2.2]" />
@@ -186,7 +186,7 @@ const AdminDashboard = () => {
           {activeTab === 'hero' ? (
             <div className="space-y-10">
               <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-serif font-bold text-[#0A192F]">Hero Content Management</h2>
+                <h2 className="text-3xl font-serif font-bold text-[#000000]">Hero Content Management</h2>
               </div>
 
               {/* Upload Section */}
@@ -201,7 +201,7 @@ const AdminDashboard = () => {
                         value={title} 
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="e.g. Deluxe Room View"
-                        className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]"
+                        className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]"
                       />
                     </div>
                     <div>
@@ -210,7 +210,7 @@ const AdminDashboard = () => {
                         type="file" 
                         accept="image/*,video/*"
                         onChange={onFileChange}
-                        className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:bg-[#BFA37E] file:text-white hover:file:bg-[#0A192F] transition-all"
+                        className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:bg-[#BFA37E] file:text-white hover:file:bg-[#000000] transition-all"
                       />
                     </div>
                   </div>
@@ -218,7 +218,7 @@ const AdminDashboard = () => {
                     <button 
                       type="submit" 
                       disabled={loading}
-                      className="w-full md:w-auto bg-[#0A192F] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] transition-all disabled:opacity-50"
+                      className="w-full md:w-auto bg-[#000000] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] transition-all disabled:opacity-50"
                     >
                       {loading ? 'Uploading...' : 'Upload to Slider'}
                     </button>

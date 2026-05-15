@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import TopBar from '@/components/layout/TopBar';
-import { Lock, Mail, Phone, MapPin, Star, Plus } from 'lucide-react';
+import { Lock, Mail, Phone, MapPin, Star, Plus, Minus, Users, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import config from '../config';
 import { useAuth } from '@/lib/AuthContext';
@@ -19,6 +19,25 @@ const Booking = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [showGuests, setShowGuests] = useState(false);
+  const guestRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (guestRef.current && !guestRef.current.contains(event.target)) {
+        setShowGuests(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const updateGuestCount = (type, delta) => {
+    setFormData(prev => ({
+      ...prev,
+      [type]: Math.max(type === 'adults' ? 1 : 0, prev[type] + delta)
+    }));
+  };
   
   const [formData, setFormData] = useState({
     title: '--Select--',
@@ -32,7 +51,7 @@ const Booking = () => {
     checkOutDate: '',
     paymentMethod: 'Pay at Hotel',
     acceptTerms: false,
-    adults: 1,
+    adults: 2,
     children: 0,
     infants: 0,
     plan: 'EP' // EP, CP, MAP, AP
@@ -178,7 +197,7 @@ const Booking = () => {
                   email: formData.email,
                   contact: formData.phone
               },
-              theme: { color: "#0A192F" }
+              theme: { color: "#000000" }
           };
 
           const paymentObject = new window.Razorpay(options);
@@ -198,8 +217,8 @@ const Booking = () => {
       
       // Adult charges based on plan
       const adultRate = formData.plan === 'EP' ? 400 : (formData.plan === 'CP' ? 800 : 1000);
-      if (formData.adults > 1) {
-          extra += (formData.adults - 1) * adultRate * nights;
+      if (formData.adults > 2) {
+          extra += (formData.adults - 2) * adultRate * nights;
       }
       
       // Child (5-11)
@@ -364,32 +383,81 @@ const Booking = () => {
                                 </div>
                                 <div className="bg-slate-50 p-3 text-center border border-dashed border-slate-300">
                                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Duration</div>
-                                    <div className="text-lg font-serif text-[#0A192F]">{calculatedPrice?.nights || 1} Nights</div>
+                                    <div className="text-lg font-serif text-[#000000]">{calculatedPrice?.nights || 1} Nights</div>
                                 </div>
                             </div>
                             
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 pt-6 border-t border-slate-100">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Adults (12+ yrs)</label>
-                                    <select name="adults" value={formData.adults} onChange={handleChange} className="w-full border border-slate-300 p-2 text-xs">
-                                        {[1,2,3,4].map(n => <option key={n} value={n}>{n}</option>)}
-                                    </select>
-                                    <p className="text-[9px] text-slate-400 mt-1">₹{formData.plan === 'EP' ? 400 : (formData.plan === 'CP' ? 800 : 1000)} per extra adult</p>
+                            <div className="mt-8 pt-8 border-t border-slate-100 relative" ref={guestRef}>
+                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Occupancy & Guests</label>
+                                <div 
+                                    onClick={() => setShowGuests(!showGuests)}
+                                    className="w-full md:w-1/2 flex items-center justify-between bg-white border border-slate-300 p-4 rounded-sm cursor-pointer hover:border-[#BFA37E] transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Users size={18} className="text-[#BFA37E]" />
+                                        <span className="text-sm font-bold text-black">
+                                            {formData.adults} Adults · {formData.children} Children · {formData.infants} Infants
+                                        </span>
+                                    </div>
+                                    <ChevronDown size={18} className={`text-slate-400 transition-transform ${showGuests ? 'rotate-180' : ''}`} />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Children (5-11 yrs)</label>
-                                    <select name="children" value={formData.children} onChange={handleChange} className="w-full border border-slate-300 p-2 text-xs">
-                                        {[0,1,2].map(n => <option key={n} value={n}>{n}</option>)}
-                                    </select>
-                                    <p className="text-[9px] text-slate-400 mt-1">₹300 per child (with mattress)</p>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Below 5 yrs</label>
-                                    <select name="infants" value={formData.infants} onChange={handleChange} className="w-full border border-slate-300 p-2 text-xs">
-                                        {[0,1,2].map(n => <option key={n} value={n}>{n}</option>)}
-                                    </select>
-                                    <p className="text-[9px] text-emerald-600 mt-1 uppercase font-bold">Complimentary</p>
-                                </div>
+
+                                <AnimatePresence>
+                                    {showGuests && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 10 }}
+                                            className="absolute left-0 top-full mt-2 w-full md:w-80 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-6 z-50 border border-slate-100 rounded-lg"
+                                        >
+                                            <div className="space-y-6">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="text-sm font-bold text-black">Adults</div>
+                                                        <div className="text-[10px] text-slate-400 uppercase tracking-wider">Ages 12+</div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <button type="button" onClick={() => updateGuestCount('adults', -1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={14}/></button>
+                                                        <span className="w-4 text-center font-bold">{formData.adults}</span>
+                                                        <button type="button" onClick={() => updateGuestCount('adults', 1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={14}/></button>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="text-sm font-bold text-black">Children</div>
+                                                        <div className="text-[10px] text-slate-400 uppercase tracking-wider">Ages 5-11</div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <button type="button" onClick={() => updateGuestCount('children', -1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={14}/></button>
+                                                        <span className="w-4 text-center font-bold">{formData.children}</span>
+                                                        <button type="button" onClick={() => updateGuestCount('children', 1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={14}/></button>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="text-sm font-bold text-black">Infants</div>
+                                                        <div className="text-[10px] text-slate-400 uppercase tracking-wider">Below 5</div>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <button type="button" onClick={() => updateGuestCount('infants', -1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={14}/></button>
+                                                        <span className="w-4 text-center font-bold">{formData.infants}</span>
+                                                        <button type="button" onClick={() => updateGuestCount('infants', 1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={14}/></button>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setShowGuests(false)}
+                                                    className="w-full py-3 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-[#BFA37E] transition-all rounded-md mt-2"
+                                                >
+                                                    Done
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                                <p className="text-[10px] text-slate-400 mt-4 italic font-medium">
+                                    Note: Extra adult and child charges will be calculated based on the selected meal plan automatically.
+                                </p>
                             </div>
                         </div>
 
@@ -453,7 +521,7 @@ const Booking = () => {
 
                             {/* Payment Selection */}
                             <div className="mb-8 border-b border-slate-100 pb-8">
-                                <h3 className="text-sm font-bold text-[#0A192F] mb-4 uppercase">Payment Method</h3>
+                                <h3 className="text-sm font-bold text-[#000000] mb-4 uppercase">Payment Method</h3>
                                 <div className="flex flex-col gap-4">
                                     <label className="flex items-center gap-3 p-4 border border-slate-200 rounded cursor-pointer hover:bg-slate-50 transition-colors">
                                         <input 
@@ -465,7 +533,7 @@ const Booking = () => {
                                             className="w-4 h-4 text-[#8B735B]"
                                         />
                                         <div>
-                                            <div className="font-bold text-sm text-[#0A192F]">Pay Online (Razorpay)</div>
+                                            <div className="font-bold text-sm text-[#000000]">Pay Online (Razorpay)</div>
                                             <div className="text-xs text-slate-500">Securely pay now via UPI, Credit/Debit Card, or Netbanking.</div>
                                         </div>
                                     </label>
@@ -479,7 +547,7 @@ const Booking = () => {
                                             className="w-4 h-4 text-[#8B735B]"
                                         />
                                         <div>
-                                            <div className="font-bold text-sm text-[#0A192F]">Pay at Hotel</div>
+                                            <div className="font-bold text-sm text-[#000000]">Pay at Hotel</div>
                                             <div className="text-xs text-slate-500">Reserve your room now and pay when you arrive.</div>
                                         </div>
                                     </label>
@@ -488,32 +556,32 @@ const Booking = () => {
 
                             {/* Terms & Conditions Section */}
                             <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-sm">
-                                <h3 className="text-sm font-black text-[#0A192F] mb-4 uppercase tracking-widest flex items-center gap-2">
+                                <h3 className="text-sm font-black text-[#000000] mb-4 uppercase tracking-widest flex items-center gap-2">
                                     <Star size={16} className="text-[#BFA37E]" /> Terms & Conditions
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-[10px] leading-relaxed text-slate-600">
                                     <div>
-                                        <p className="font-bold text-[#0A192F] uppercase mb-1">Cancellation Policy</p>
+                                        <p className="font-bold text-[#000000] uppercase mb-1">Cancellation Policy</p>
                                         <p>No refund within 0–3 days of check-in. Full refund if cancelled 4+ days in advance.</p>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-[#0A192F] uppercase mb-1">No Show</p>
+                                        <p className="font-bold text-[#000000] uppercase mb-1">No Show</p>
                                         <p>No refund applicable in case of a no-show.</p>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-[#0A192F] uppercase mb-1">Refund Processing</p>
+                                        <p className="font-bold text-[#000000] uppercase mb-1">Refund Processing</p>
                                         <p>Refunds processed within 7 working days from date of initiation.</p>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-[#0A192F] uppercase mb-1">Group Bookings</p>
+                                        <p className="font-bold text-[#000000] uppercase mb-1">Group Bookings</p>
                                         <p>Standard 7-day cancellation policy applies to group bookings and peak date reservations.</p>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-[#0A192F] uppercase mb-1">Peak Season</p>
+                                        <p className="font-bold text-[#000000] uppercase mb-1">Peak Season</p>
                                         <p>Minimum 2-night stay. MAP mandatory. No same-day reservations at B2B rates.</p>
                                     </div>
                                     <div>
-                                        <p className="font-bold text-[#0A192F] uppercase mb-1">Check-In / Out</p>
+                                        <p className="font-bold text-[#000000] uppercase mb-1">Check-In / Out</p>
                                         <p>Early check-in and late check-out subject to availability and additional charge.</p>
                                     </div>
                                 </div>
@@ -529,8 +597,8 @@ const Booking = () => {
                             {status && !status.includes('Successfully') && <p className="text-red-500 text-sm font-bold mb-4">{status}</p>}
 
                             <div className="flex justify-end gap-4">
-                                <button type="submit" disabled={loading} className="bg-[#0A192F] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#8B735B] transition-all disabled:opacity-70">
-                                    {loading ? 'Processing...' : (formData.paymentMethod === 'Razorpay' ? `Pay ₹${finalPrice}` : 'Confirm Booking')}
+                                <button type="submit" disabled={loading || (calculatedPrice && !calculatedPrice.isAvailable)} className="bg-[#000000] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#8B735B] transition-all disabled:opacity-70">
+                                    {loading ? 'Processing...' : (calculatedPrice && !calculatedPrice.isAvailable ? 'Not Available' : (formData.paymentMethod === 'Razorpay' ? `Pay ₹${finalPrice}` : 'Confirm Booking'))}
                                 </button>
                             </div>
                         </form>
@@ -564,6 +632,7 @@ const Booking = () => {
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reservations & Support</p>
                                     <a href="tel:+916267276957" className="text-xs text-[#665038] hover:underline flex items-center gap-2"><Phone size={12}/> +91 62672 76957</a>
                                     <a href="tel:+919630252729" className="text-xs text-[#665038] hover:underline flex items-center gap-2"><Phone size={12}/> +91 96302 52729</a>
+                                    <a href="tel:+917225888650" className="text-xs text-[#665038] hover:underline flex items-center gap-2"><Phone size={12}/> +91 72258 88650</a>
                                     <a href="https://wa.me/916267276957" target="_blank" rel="noopener noreferrer" className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded-sm font-bold w-fit mt-1 flex items-center gap-1">WhatsApp Support Available</a>
                                 </div>
                             </div>
@@ -610,10 +679,17 @@ const Booking = () => {
                                 </div>
                             </div>
                             
-                            <div className="p-4 bg-[#0A192F] text-white flex justify-between items-center">
+                            <div className="p-4 bg-[#000000] text-white flex justify-between items-center">
                                 <span className="font-bold text-sm">Total Amount</span>
                                 <span className="font-bold text-xl text-[#BFA37E]">₹{finalPrice}</span>
                             </div>
+                            {calculatedPrice && (
+                                <div className={`p-4 text-center text-xs font-bold uppercase tracking-widest ${calculatedPrice.isAvailable ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                    {calculatedPrice.isAvailable 
+                                        ? `Available (${calculatedPrice.minAvailable} rooms left)` 
+                                        : 'Sold Out / Closed'}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

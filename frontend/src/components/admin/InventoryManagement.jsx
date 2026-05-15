@@ -290,7 +290,7 @@ const InventoryManagement = () => {
                 <select 
                     value={roomFilter}
                     onChange={(e) => setRoomFilter(e.target.value)}
-                    className="border border-slate-300 rounded px-3 py-2 text-sm text-[#0A192F] font-bold bg-white"
+                    className="border border-slate-300 rounded px-3 py-2 text-sm text-[#000000] font-bold bg-white"
                 >
                     <option>All rooms</option>
                     {data.rooms.map(room => (
@@ -306,13 +306,13 @@ const InventoryManagement = () => {
             </div>
                 <button 
                     onClick={() => setIsSummaryOpen(true)}
-                    className="border border-[#0071C2] text-[#0071C2] hover:bg-[#0071C2]/5 p-2 rounded flex items-center gap-2"
+                    className="border border-[#000000] text-[#000000] hover:bg-[#000000]/5 p-2 rounded flex items-center gap-2"
                     title="Calendar Summary"
                 >
                     <CalendarDays size={20} />
                     <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Live Status</span>
                 </button>
-                <button className="border border-[#0071C2] text-[#0071C2] hover:bg-[#0071C2]/5 px-4 py-2 rounded text-sm font-bold">
+                <button className="border border-[#000000] text-[#000000] hover:bg-[#000000]/5 px-4 py-2 rounded text-sm font-bold">
                     Availability settings
                 </button>
             </div>
@@ -329,7 +329,7 @@ const InventoryManagement = () => {
                     return (
                         <div key={date.toISOString()} className={`flex flex-col items-center justify-center w-16 min-w-[64px] border-r border-slate-200 py-2 ${isWeekend ? 'bg-slate-50' : 'bg-white'}`}>
                             <span className="text-xs text-slate-500 font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                            <span className="text-sm font-bold text-[#0A192F]">{date.getDate()}</span>
+                            <span className="text-sm font-bold text-[#000000]">{date.getDate()}</span>
                         </div>
                     );
                 })}
@@ -344,14 +344,14 @@ const InventoryManagement = () => {
                     {/* Room Header & Bulk Edit */}
                     <div className="flex w-full sticky left-0 bg-white z-10 p-3 items-center justify-between border-b border-slate-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                         <div>
-                            <h3 className="font-bold text-[#0A192F]">{room.title} <span className="font-normal text-xs text-slate-500 ml-2">(Room ID: {room._id.slice(-6)})</span></h3>
+                            <h3 className="font-bold text-[#000000]">{room.title} <span className="font-normal text-xs text-slate-500 ml-2">(Room ID: {room._id.slice(-6)})</span></h3>
                             <div className="text-[10px] text-orange-600 flex items-center gap-1 mt-1 font-bold">
                                 <Info size={12} /> Add availability Data updates twice per day.
                             </div>
                         </div>
                         <button 
                             onClick={() => openBulkEdit(room._id)}
-                            className="bg-[#0071C2] hover:bg-[#005a9e] text-white px-4 py-2 rounded text-sm font-bold transition-colors"
+                            className="bg-[#000000] hover:bg-[#005a9e] text-white px-4 py-2 rounded text-sm font-bold transition-colors"
                         >
                             Bulk edit
                         </button>
@@ -366,10 +366,10 @@ const InventoryManagement = () => {
                             <div className="h-8 border-b border-slate-200 px-3 flex items-center text-xs text-slate-600 font-medium">Rooms to sell</div>
                             <div className="h-8 border-b border-slate-200 px-3 flex items-center text-xs text-slate-600 font-medium">Net booked</div>
                             <div className="h-8 border-b border-slate-200 px-3 flex items-center text-xs text-slate-600 font-medium text-orange-600">Blocked</div>
-                            <div className="h-12 border-b border-slate-200 px-3 flex flex-col justify-center text-xs text-[#0071C2]">
+                            <div className="h-12 border-b border-slate-200 px-3 flex flex-col justify-center text-xs text-[#000000]">
                                 <div className="flex items-center justify-between group cursor-pointer" onClick={() => openBulkEdit(room._id)}>
                                     <span>Fully flexible</span>
-                                    <span className="text-[10px] bg-[#0071C2]/10 px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
+                                    <span className="text-[10px] bg-[#000000]/10 px-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
                                 </div>
                                 <div className="text-[10px] text-slate-500">x 2 Edit</div>
                             </div>
@@ -473,7 +473,7 @@ const InventoryManagement = () => {
                     
                     {/* Sidebar Header */}
                     <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                        <h2 className="text-2xl font-bold text-[#0A192F]">Bulk edit</h2>
+                        <h2 className="text-2xl font-bold text-[#000000]">Bulk edit</h2>
                         <button onClick={() => setIsSidebarOpen(false)} className="text-slate-500 hover:bg-slate-100 p-2 rounded-full">
                             <X size={20} />
                         </button>
@@ -484,11 +484,11 @@ const InventoryManagement = () => {
                         <div className="flex gap-4">
                             <div className="flex-1">
                                 <label className="block text-xs font-bold text-slate-700 mb-1">From:</label>
-                                <input type="date" value={bulkForm.fromDate} onChange={e => setBulkForm({...bulkForm, fromDate: e.target.value})} className="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#0071C2] focus:ring-1 focus:ring-[#0071C2] outline-none" required/>
+                                <input type="date" value={bulkForm.fromDate} onChange={e => setBulkForm({...bulkForm, fromDate: e.target.value})} className="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#000000] focus:ring-1 focus:ring-[#000000] outline-none" required/>
                             </div>
                             <div className="flex-1">
                                 <label className="block text-xs font-bold text-slate-700 mb-1">Up to and including:</label>
-                                <input type="date" value={bulkForm.toDate} onChange={e => setBulkForm({...bulkForm, toDate: e.target.value})} className="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#0071C2] focus:ring-1 focus:ring-[#0071C2] outline-none" required/>
+                                <input type="date" value={bulkForm.toDate} onChange={e => setBulkForm({...bulkForm, toDate: e.target.value})} className="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#000000] focus:ring-1 focus:ring-[#000000] outline-none" required/>
                             </div>
                         </div>
 
@@ -502,7 +502,7 @@ const InventoryManagement = () => {
                                             type="checkbox" 
                                             checked={bulkForm.daysOfWeek.includes(day)}
                                             onChange={() => toggleDay(day)}
-                                            className="w-4 h-4 text-[#0071C2] rounded border-slate-300 focus:ring-[#0071C2]"
+                                            className="w-4 h-4 text-[#000000] rounded border-slate-300 focus:ring-[#000000]"
                                         />
                                         <span className="text-sm text-slate-700">{day}</span>
                                     </label>
@@ -512,10 +512,10 @@ const InventoryManagement = () => {
 
                         {/* Tabs (Visual only to match design) */}
                         <div className="border-b border-slate-200 flex gap-6">
-                            <div className="border-b-2 border-[#0071C2] text-[#0071C2] pb-2 font-bold text-sm">
+                            <div className="border-b-2 border-[#000000] text-[#000000] pb-2 font-bold text-sm">
                                 {selectedRoom?.title || 'Selected Room'}
                             </div>
-                            <div className="text-[#0071C2] pb-2 font-medium text-sm hover:underline cursor-pointer">
+                            <div className="text-[#000000] pb-2 font-medium text-sm hover:underline cursor-pointer">
                                 Multiple room types
                             </div>
                         </div>
@@ -524,20 +524,20 @@ const InventoryManagement = () => {
                         <div className="space-y-4">
                             {/* Rooms to sell */}
                             <div className="border border-slate-200 rounded p-4">
-                                <h3 className="font-bold text-sm text-[#0A192F] mb-1">Rooms to sell</h3>
+                                <h3 className="font-bold text-sm text-[#000000] mb-1">Rooms to sell</h3>
                                 <p className="text-xs text-slate-500 mb-4">Update the number of rooms to sell for this room type</p>
                                 <input 
                                     type="number" 
                                     value={bulkForm.roomsToSell} 
                                     onChange={e => setBulkForm({...bulkForm, roomsToSell: e.target.value})}
                                     placeholder="Enter number of rooms" 
-                                    className="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#0071C2] outline-none"
+                                    className="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#000000] outline-none"
                                 />
                             </div>
 
                             {/* Prices */}
                             <div className="border border-slate-200 rounded p-4">
-                                <h3 className="font-bold text-sm text-[#0A192F] mb-1">Prices</h3>
+                                <h3 className="font-bold text-sm text-[#000000] mb-1">Prices</h3>
                                 <p className="text-xs text-slate-500 mb-4">Edit the prices of any rate plans for this room</p>
                                 <div className="flex items-center gap-2">
                                     <span className="text-slate-500 font-bold border border-slate-300 rounded bg-slate-50 p-2">₹</span>
@@ -546,19 +546,19 @@ const InventoryManagement = () => {
                                         value={bulkForm.price} 
                                         onChange={e => setBulkForm({...bulkForm, price: e.target.value})}
                                         placeholder="Enter new price" 
-                                        className="flex-grow border border-slate-300 rounded p-2 text-sm focus:border-[#0071C2] outline-none"
+                                        className="flex-grow border border-slate-300 rounded p-2 text-sm focus:border-[#000000] outline-none"
                                     />
                                 </div>
                             </div>
 
                             {/* Room status */}
                             <div className="border border-slate-200 rounded p-4">
-                                <h3 className="font-bold text-sm text-[#0A192F] mb-1">Room status</h3>
+                                <h3 className="font-bold text-sm text-[#000000] mb-1">Room status</h3>
                                 <p className="text-xs text-slate-500 mb-4">Open or close this room</p>
                                 <select 
                                     value={bulkForm.status} 
                                     onChange={e => setBulkForm({...bulkForm, status: e.target.value})}
-                                    className="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#0071C2] outline-none"
+                                    className="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#000000] outline-none"
                                 >
                                     <option value="">Don't change status</option>
                                     <option value="Bookable">Open (Bookable)</option>
@@ -568,14 +568,14 @@ const InventoryManagement = () => {
 
                             {/* Block Rooms */}
                             <div className="border border-slate-200 rounded p-4">
-                                <h3 className="font-bold text-sm text-[#0A192F] mb-1">Block Rooms</h3>
+                                <h3 className="font-bold text-sm text-[#000000] mb-1">Block Rooms</h3>
                                 <p className="text-xs text-slate-500 mb-4">Mark rooms for maintenance or VIP hold</p>
                                 <input 
                                     type="number" 
                                     value={bulkForm.blockedCount} 
                                     onChange={e => setBulkForm({...bulkForm, blockedCount: e.target.value})}
                                     placeholder="Number of rooms to block" 
-                                    className="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#0071C2] outline-none"
+                                    className="w-full border border-slate-300 rounded p-2 text-sm focus:border-[#000000] outline-none"
                                 />
                             </div>
                         </div>
@@ -605,10 +605,10 @@ const InventoryManagement = () => {
                             Clear Overrides
                         </button>
                         <div className="flex gap-4">
-                            <button onClick={() => setIsSidebarOpen(false)} className="px-6 py-2 rounded text-[#0071C2] hover:bg-[#0071C2]/10 font-bold text-sm transition-colors">
+                            <button onClick={() => setIsSidebarOpen(false)} className="px-6 py-2 rounded text-[#000000] hover:bg-[#000000]/10 font-bold text-sm transition-colors">
                                 Cancel
                             </button>
-                            <button onClick={handleBulkSubmit} className="bg-[#0071C2] hover:bg-[#005a9e] text-white px-8 py-2 rounded font-bold text-sm transition-colors">
+                            <button onClick={handleBulkSubmit} className="bg-[#000000] hover:bg-[#005a9e] text-white px-8 py-2 rounded font-bold text-sm transition-colors">
                                 Save changes
                             </button>
                         </div>
@@ -622,7 +622,7 @@ const InventoryManagement = () => {
         {isSummaryOpen && (
             <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
                 <div className="bg-white w-full max-w-5xl rounded-lg shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-                    <div className="p-4 bg-[#0A192F] text-white flex justify-between items-center">
+                    <div className="p-4 bg-[#000000] text-white flex justify-between items-center">
                         <div className="flex items-center gap-4">
                             <h2 className="text-xl font-bold font-serif">ROOM INVENTORY — LIVE STATUS</h2>
                             <div className="h-6 w-[1px] bg-white/20"></div>
@@ -636,7 +636,7 @@ const InventoryManagement = () => {
                     <div className="flex-grow overflow-y-auto p-6 flex flex-col md:flex-row gap-8">
                         {/* Monthly Summary Calendar */}
                         <div className="flex-1">
-                            <div className="bg-[#0A192F] text-white p-3 rounded-t-lg text-center font-bold text-lg mb-0.5">
+                            <div className="bg-[#000000] text-white p-3 rounded-t-lg text-center font-bold text-lg mb-0.5">
                                 {summaryDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                             </div>
                             <div className="grid grid-cols-7 text-center bg-teal-600 text-white text-xs font-bold py-2">
@@ -682,12 +682,12 @@ const InventoryManagement = () => {
                         <div className="w-full md:w-[400px]">
                             {selectedDayData ? (
                                 <div className="border border-slate-200 rounded-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4">
-                                    <div className="bg-[#0A192F] text-white p-3 text-sm font-bold flex justify-between">
+                                    <div className="bg-[#000000] text-white p-3 text-sm font-bold flex justify-between">
                                         <span>LIVE STATUS | {new Date(selectedDayData.date).toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left text-xs">
-                                            <thead className="bg-[#EBF5FB] text-[#0A192F] font-bold">
+                                            <thead className="bg-[#EBF5FB] text-[#000000] font-bold">
                                                 <tr>
                                                     <th className="p-3 border-b border-slate-200">Room Category</th>
                                                     <th className="p-3 border-b border-slate-200 text-center">Total</th>
@@ -718,7 +718,7 @@ const InventoryManagement = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                <tr className="bg-white font-bold border-t-2 border-[#0A192F]">
+                                                <tr className="bg-white font-bold border-t-2 border-[#000000]">
                                                     <td className="p-3 uppercase">TOTAL</td>
                                                     <td className="p-3 text-center">{selectedDayData.total.total}</td>
                                                     <td className="p-3 text-center">{selectedDayData.total.booked}</td>
@@ -742,7 +742,7 @@ const InventoryManagement = () => {
                     <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
                         <button 
                             onClick={() => { setIsSummaryOpen(false); setSelectedDayData(null); }}
-                            className="bg-[#0A192F] text-white px-6 py-2 rounded font-bold text-sm hover:bg-[#162a4a] transition-colors"
+                            className="bg-[#000000] text-white px-6 py-2 rounded font-bold text-sm hover:bg-[#162a4a] transition-colors"
                         >
                             Close View
                         </button>

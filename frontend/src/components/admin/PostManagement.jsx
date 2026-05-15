@@ -58,10 +58,10 @@ const PostManagement = () => {
     return (
         <div className="space-y-8">
             <div className="flex items-center justify-between border-b border-slate-100 pb-6">
-                <h2 className="text-3xl font-serif font-bold text-[#0A192F]">Instagram Journey Posts</h2>
+                <h2 className="text-3xl font-serif font-bold text-[#000000]">Instagram Journey Posts</h2>
                 <button 
                     onClick={() => setShowForm(!showForm)}
-                    className="bg-[#0A192F] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#BFA37E] transition-all"
+                    className="bg-[#000000] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#BFA37E] transition-all"
                 >
                     {showForm ? 'Cancel' : <><Plus size={14} /> Add Post</>}
                 </button>
@@ -84,7 +84,7 @@ const PostManagement = () => {
                             type="text" 
                             value={formData.caption}
                             onChange={(e) => setFormData({ ...formData, caption: e.target.value })}
-                            className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]"
+                            className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]"
                         />
                     </div>
                     <button 

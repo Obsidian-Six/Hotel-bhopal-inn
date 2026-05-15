@@ -54,7 +54,7 @@ const HeroSection = () => {
   }, [images.length, current]);
 
   return (
-    <div className="relative min-h-[125vh] w-full overflow-hidden flex items-center justify-center bg-[#0A192F]">
+    <div className="relative min-h-screen lg:min-h-[125vh] w-full overflow-hidden flex items-center justify-center bg-[#000000]">
       {/* Background Slider */}
       <div className="absolute inset-0 z-0">
         <AnimatePresence mode="wait">
@@ -90,7 +90,7 @@ const HeroSection = () => {
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="absolute inset-0 bg-[#0A192F]/40" />
+        <div className="absolute inset-0 bg-[#000000]/40" />
       </div>
 
 
@@ -111,7 +111,7 @@ const HeroSection = () => {
             Welcome to Bhopal Inn
           </motion.p>
           
-          <h1 className="text-4xl md:text-7xl lg:text-8xl font-serif text-white mb-8 uppercase leading-tight tracking-wide">
+          <h1 className="text-4xl md:text-7xl lg:text-8xl font-serif text-white mb-8 uppercase leading-[1.1] tracking-wide">
             Experience Luxury <br className="hidden md:block"/> At Every Turn
           </h1>
           
@@ -128,7 +128,7 @@ const HeroSection = () => {
             </Link>
             <Link 
               to="/rooms" 
-              className="border border-white text-white px-10 py-4 text-xs font-bold tracking-[0.2em] uppercase rounded-sm hover:bg-white hover:text-[#0A192F] transition-all min-w-[200px]"
+              className="border border-white text-white px-10 py-4 text-xs font-bold tracking-[0.2em] uppercase rounded-sm hover:bg-white hover:text-[#000000] transition-all min-w-[200px]"
             >
               Explore Rooms
             </Link>

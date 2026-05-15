@@ -9,7 +9,7 @@
     --background: 40 33% 98%; /* #FDFBF7 Warm Cream */
     --foreground: 20 14% 15%; /* #2D241E Dark Brown */
     
-    --primary: 30 35% 34%; /* #735438 Deep Brown */
+    --primary: 0 0% 0%; /* #000000 Black */
     --primary-foreground: 40 33% 98%;
     
     --accent: 35 35% 62%; /* #BFA37E Gold/Tan */
@@ -20,7 +20,7 @@
     
     --border: 35 20% 85%;
     --input: 35 20% 90%;
-    --ring: 30 35% 34%;
+    --ring: 0 0% 0%;
     
     --radius: 0px; /* Luxury often uses sharper edges or very subtle ones */
   }

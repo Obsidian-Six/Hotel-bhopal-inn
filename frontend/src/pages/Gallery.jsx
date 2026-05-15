@@ -118,7 +118,7 @@ const Gallery = () => {
       </header>
 
       {/* LUXURY FULL-SCREEN HERO SECTION WITH DARK OVERLAY */}
-      <section className="relative min-h-[125vh] w-full bg-[#0A192F] overflow-hidden flex items-center justify-center pt-20">
+      <section className="relative min-h-[125vh] w-full bg-[#000000] overflow-hidden flex items-center justify-center pt-20">
         {/* Background Image with warm lighting, premium decor */}
         <div className="absolute inset-0 z-0">
           <img 
@@ -166,7 +166,7 @@ const Gallery = () => {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-sm ${activeCategory === cat ? 'bg-[#0A192F] text-white' : 'bg-transparent text-[#0A192F] hover:text-[#BFA37E]'}`}
+              className={`px-6 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-all rounded-sm ${activeCategory === cat ? 'bg-[#000000] text-white' : 'bg-transparent text-[#000000] hover:text-[#BFA37E]'}`}
             >
               {cat}
             </button>
@@ -180,7 +180,7 @@ const Gallery = () => {
           <div key={categoryName} className="space-y-12">
             {/* Category Section Header */}
             <div className="flex flex-col items-center text-center">
-              <h2 className="text-2xl md:text-3xl font-serif text-[#0A192F] tracking-[0.15em] uppercase border-b border-[#BFA37E]/40 pb-4 mb-2 min-w-[240px] font-medium">
+              <h2 className="text-2xl md:text-3xl font-serif text-[#000000] tracking-[0.15em] uppercase border-b border-[#BFA37E]/40 pb-4 mb-2 min-w-[240px] font-medium">
                 {categoryName}
               </h2>
               <span className="text-[10px] tracking-[0.2em] uppercase font-bold text-slate-400">Perfectly Curated Spaces</span>
@@ -211,7 +211,7 @@ const Gallery = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         className="bg-white p-3 rounded-full shadow-2xl border border-slate-200 flex items-center justify-center cursor-pointer"
                       >
-                        <Search size={18} className="text-[#0A192F]" />
+                        <Search size={18} className="text-[#000000]" />
                       </motion.div>
                     </div>
                   </div>
@@ -230,7 +230,7 @@ const Gallery = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-[#0A192F]/85 backdrop-blur-md cursor-pointer"
+              className="absolute inset-0 bg-[#000000]/85 backdrop-blur-md cursor-pointer"
               onClick={() => setSelectedImage(null)}
             />
             
@@ -243,7 +243,7 @@ const Gallery = () => {
               {/* Close Icon Button */}
               <button 
                 onClick={() => setSelectedImage(null)}
-                className="absolute top-6 right-6 z-30 bg-[#0A192F] text-white p-3 rounded-full hover:bg-[#BFA37E] transition-all duration-300 shadow-xl"
+                className="absolute top-6 right-6 z-30 bg-[#000000] text-white p-3 rounded-full hover:bg-[#BFA37E] transition-all duration-300 shadow-xl"
               >
                 <X size={20} />
               </button>
@@ -259,7 +259,7 @@ const Gallery = () => {
               {/* Lightbox Caption */}
               <div className="p-6 text-center bg-white">
                 <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-[0.3em] mb-2 block">{selectedImage.category}</span>
-                <h3 className="text-xl md:text-2xl font-serif text-[#0A192F] tracking-wide mb-1 uppercase">{selectedImage.title}</h3>
+                <h3 className="text-xl md:text-2xl font-serif text-[#000000] tracking-wide mb-1 uppercase">{selectedImage.title}</h3>
               </div>
             </motion.div>
           </div>

@@ -114,12 +114,12 @@ const FinanceManagement = ({ role = 'Admin' }) => {
     <div className="space-y-8 pb-12">
       <div className="flex items-center justify-between">
         <div>
-            <h2 className="text-3xl font-serif font-bold text-[#0A192F]">Finance</h2>
+            <h2 className="text-3xl font-serif font-bold text-[#000000]">Finance</h2>
             <p className="text-slate-500 text-sm mt-1">Manage daily ledgers and end-of-shift reporting.</p>
         </div>
         <div className="flex items-center gap-4">
             {role === 'Admin' && (
-                <button className="bg-white border border-slate-200 text-[#0A192F] px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-slate-50 flex items-center gap-2">
+                <button className="bg-white border border-slate-200 text-[#000000] px-4 py-2 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-slate-50 flex items-center gap-2">
                     <Download size={14} /> Download Report
                 </button>
             )}
@@ -149,7 +149,7 @@ const FinanceManagement = ({ role = 'Admin' }) => {
               <div className="p-0 overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                       <thead>
-                          <tr className="bg-slate-50 text-[#0A192F] text-[10px] font-bold uppercase tracking-widest border-b border-slate-200">
+                          <tr className="bg-slate-50 text-[#000000] text-[10px] font-bold uppercase tracking-widest border-b border-slate-200">
                               <th className="px-6 py-4">#</th>
                               <th className="px-6 py-4">Guest Name</th>
                               <th className="px-6 py-4">Room Category</th>
@@ -180,7 +180,7 @@ const FinanceManagement = ({ role = 'Admin' }) => {
           <>
             {role !== 'FrontDesk' && summary && (
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-0 rounded-sm overflow-hidden shadow-sm border border-slate-100">
-                    <div className="bg-[#0A192F] text-white p-6 flex flex-col justify-center border-r border-white/10 cursor-pointer hover:bg-[#0A192F]/90 transition-colors">
+                    <div className="bg-[#000000] text-white p-6 flex flex-col justify-center border-r border-white/10 cursor-pointer hover:bg-[#000000]/90 transition-colors">
                         <p className="text-[10px] text-white/50 uppercase tracking-widest font-bold mb-2">Date</p>
                         <p className="text-xl font-serif font-bold">{new Date(selectedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'})}</p>
                     </div>
@@ -218,7 +218,7 @@ const FinanceManagement = ({ role = 'Admin' }) => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-[#0A192F] text-white">
+                            <tr className="bg-[#000000] text-white">
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest w-12">#</th>
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest">Time</th>
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest">Description</th>
@@ -267,7 +267,7 @@ const FinanceManagement = ({ role = 'Admin' }) => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-[#0A192F] text-white">
+                            <tr className="bg-[#000000] text-white">
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest w-12">#</th>
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest">Time</th>
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest">Description</th>
@@ -311,20 +311,20 @@ const FinanceManagement = ({ role = 'Admin' }) => {
                 {handover ? (
                     <div className="p-8 text-center bg-green-50/30">
                         <CheckCircle className="mx-auto text-green-500 mb-4" size={48} />
-                        <h4 className="text-lg font-serif font-bold text-[#0A192F] mb-2">Handover Submitted</h4>
+                        <h4 className="text-lg font-serif font-bold text-[#000000] mb-2">Handover Submitted</h4>
                         <p className="text-xs text-slate-500 mb-6">The cash handover for this date has been completed and locked.</p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto text-left">
                             <div className="bg-white p-4 border border-slate-100 rounded-sm">
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Shift End</p>
-                                <p className="text-sm font-bold text-[#0A192F] mt-1">{handover.shiftEndTime}</p>
+                                <p className="text-sm font-bold text-[#000000] mt-1">{handover.shiftEndTime}</p>
                             </div>
                             <div className="bg-white p-4 border border-slate-100 rounded-sm">
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Staff Name</p>
-                                <p className="text-sm font-bold text-[#0A192F] mt-1">{handover.staffName}</p>
+                                <p className="text-sm font-bold text-[#000000] mt-1">{handover.staffName}</p>
                             </div>
                             <div className="bg-white p-4 border border-slate-100 rounded-sm">
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Handover To</p>
-                                <p className="text-sm font-bold text-[#0A192F] mt-1">{handover.handoverTo}</p>
+                                <p className="text-sm font-bold text-[#000000] mt-1">{handover.handoverTo}</p>
                             </div>
                             <div className="bg-white p-4 border border-slate-100 rounded-sm">
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Closing Balance</p>
@@ -364,7 +364,7 @@ const FinanceManagement = ({ role = 'Admin' }) => {
             {role !== 'FrontDesk' && summary && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Cash Summary */}
-                    <div className="bg-[#0A192F] text-white rounded-sm overflow-hidden shadow-sm">
+                    <div className="bg-[#000000] text-white rounded-sm overflow-hidden shadow-sm">
                         <div className="bg-[#1A2B48] p-4 text-center border-b border-white/10">
                             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#0ea5e9]">Cash Summary</h3>
                         </div>
@@ -397,8 +397,8 @@ const FinanceManagement = ({ role = 'Admin' }) => {
                     </div>
 
                     {/* Pending Dues */}
-                    <div className="bg-white border border-[#0A192F] rounded-sm overflow-hidden shadow-sm">
-                        <div className="bg-[#0A192F] p-4 text-center">
+                    <div className="bg-white border border-[#000000] rounded-sm overflow-hidden shadow-sm">
+                        <div className="bg-[#000000] p-4 text-center">
                             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-white">Pending Dues (Rooms not settled)</h3>
                         </div>
                         <div className="p-0">

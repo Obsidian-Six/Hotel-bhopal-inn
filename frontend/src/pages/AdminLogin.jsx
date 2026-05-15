@@ -36,7 +36,7 @@ const AdminLogin = () => {
             <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="max-w-md w-full bg-[#0A192F] text-white p-10 shadow-2xl border border-white/5"
+                className="max-w-md w-full bg-[#000000] text-white p-10 shadow-2xl border border-white/5"
             >
                 <div className="text-center mb-10">
                     <div className="inline-block p-4 bg-white mb-6">

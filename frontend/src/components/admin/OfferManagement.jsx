@@ -108,7 +108,7 @@ const OfferManagement = () => {
   return (
     <div className="space-y-10">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-serif font-bold text-[#0A192F]">Special Offers Management</h2>
+        <h2 className="text-3xl font-serif font-bold text-[#000000]">Special Offers Management</h2>
       </div>
 
       {/* Upload Section */}
@@ -118,15 +118,15 @@ const OfferManagement = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Offer Title</label>
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Early Bird Discount" className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]" />
+              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Early Bird Discount" className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]" />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Validity Period</label>
-              <input type="text" value={validity} onChange={(e) => setValidity(e.target.value)} required placeholder="e.g. Valid till Dec 31, 2026" className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]" />
+              <input type="text" value={validity} onChange={(e) => setValidity(e.target.value)} required placeholder="e.g. Valid till Dec 31, 2026" className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]" />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Short Description</label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="e.g. Book 14 days in advance..." rows="3" className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] resize-none" />
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} required placeholder="e.g. Book 14 days in advance..." rows="3" className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] resize-none" />
             </div>
           </div>
           
@@ -137,14 +137,14 @@ const OfferManagement = () => {
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Offer Image / Icon</label>
-              <input type="file" id="offerImage" onChange={onFileChange} className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:bg-[#BFA37E] file:text-white hover:file:bg-[#0A192F] transition-all" />
+              <input type="file" id="offerImage" onChange={onFileChange} className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:bg-[#BFA37E] file:text-white hover:file:bg-[#000000] transition-all" />
             </div>
             <div className="flex items-center gap-2 pt-2">
               <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="accent-[#BFA37E]" />
               <label htmlFor="isActive" className="text-xs font-bold text-slate-600 uppercase tracking-widest">Mark as Active</label>
             </div>
             <div className="pt-4">
-                <button type="submit" disabled={loading} className="w-full bg-[#0A192F] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] transition-all disabled:opacity-50">
+                <button type="submit" disabled={loading} className="w-full bg-[#000000] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] transition-all disabled:opacity-50">
                 {loading ? 'Saving...' : 'Publish Offer'}
                 </button>
                 {message && <p className={`text-[10px] font-bold uppercase tracking-widest mt-4 ${message.includes('success') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>}
@@ -170,7 +170,7 @@ const OfferManagement = () => {
                  <div className="flex-grow flex flex-col justify-between">
                     <div>
                         <div className="flex justify-between items-start">
-                            <h4 className="text-sm font-serif font-bold text-[#0A192F] uppercase">{offer.title}</h4>
+                            <h4 className="text-sm font-serif font-bold text-[#000000] uppercase">{offer.title}</h4>
                             <div className="flex gap-2">
                                 <button onClick={() => toggleStatus(offer)} title={offer.isActive ? 'Deactivate' : 'Activate'} className={`text-[10px] ${offer.isActive ? 'text-green-600 hover:text-green-800' : 'text-slate-400 hover:text-slate-600'}`}>
                                     {offer.isActive ? <CheckCircle size={16} /> : <XCircle size={16} />}

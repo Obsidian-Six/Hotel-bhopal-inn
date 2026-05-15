@@ -3,7 +3,7 @@ import { Mail, Phone, Instagram } from 'lucide-react';
 
 const TopBar = () => {
   return (
-    <div className="bg-[#0A192F]/40 backdrop-blur-md text-white py-2 px-4 border-b border-white/10 hidden lg:block">
+    <div className="bg-[#000000]/40 backdrop-blur-md text-white py-2 px-4 border-b border-white/10 hidden lg:block">
       <div className="container mx-auto flex items-center justify-between">
         <div className="flex items-center gap-8 text-[11px] font-medium tracking-wider">
           <a href="mailto:bhopalinn@gmail.com" className="flex items-center gap-2 hover:text-[#BFA37E] transition-colors">

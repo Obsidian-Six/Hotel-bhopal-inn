@@ -32,15 +32,15 @@ const SpecialOffers = () => {
   ];
 
   return (
-    <section className="py-24 bg-[#FDFBF7]">
+    <section className="py-16 md:py-24 bg-[#FDFBF7]">
       <div className="container mx-auto px-4 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-12 md:mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-[#0A192F] mb-6 uppercase tracking-tight">Special Offers & Deals</h2>
+          <h2 className="text-3xl md:text-5xl font-serif font-bold text-[#000000] mb-6 uppercase tracking-tight">Special Offers & Deals</h2>
           <div className="w-24 h-[2px] bg-[#BFA37E] mx-auto" />
         </motion.div>
 

@@ -43,23 +43,23 @@ const RoomCategories = () => {
 
 
   return (
-    <section className="py-24 bg-white">
+    <section className="py-16 md:py-24 bg-white">
       <div className="container mx-auto px-4 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-20"
+          className="text-center mb-12 md:mb-20"
         >
           <span className="text-[#BFA37E] text-xs font-bold tracking-[0.4em] uppercase mb-4 block">Luxury Accommodation</span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-[#0A192F] mb-6">Our Rooms</h2>
+          <h2 className="text-3xl md:text-5xl font-serif font-bold text-[#000000] mb-6">Our Rooms</h2>
           <div className="w-24 h-[2px] bg-[#BFA37E] mx-auto mb-6" />
           <p className="text-sm font-medium tracking-wide text-slate-500 uppercase">
             Choose comfort that fits your needs and budget
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
           {rooms.map((room, idx) => (
             <motion.div
               key={idx}
@@ -75,7 +75,7 @@ const RoomCategories = () => {
                 </div>
               )}
               
-              <div className="relative h-72 overflow-hidden">
+              <div className="relative h-64 md:h-72 overflow-hidden">
                 <img 
                   src={getFullUrl(room.images && room.images.length > 0 ? room.images[0] : null)} 
                   alt={room.title} 
@@ -83,7 +83,7 @@ const RoomCategories = () => {
                 />
                 <div className="absolute inset-0 bg-black/20" />
                 {room.tags && room.tags[0] && (
-                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm text-[#0A192F] text-[9px] font-bold px-3 py-1 uppercase tracking-widest border-l-2 border-[#BFA37E]">
+                  <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm text-[#000000] text-[9px] font-bold px-3 py-1 uppercase tracking-widest border-l-2 border-[#BFA37E]">
                     {room.tags[0]}
                   </div>
                 )}
@@ -91,7 +91,7 @@ const RoomCategories = () => {
               
               <div className="p-8 flex flex-col flex-grow">
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-serif font-bold text-[#0A192F] tracking-tight">{room.title}</h3>
+                  <h3 className="text-xl font-serif font-bold text-[#000000] tracking-tight">{room.title}</h3>
                 </div>
                 
                 <p className="text-xs leading-loose text-slate-500 mb-8 flex-grow italic line-clamp-3">
@@ -112,12 +112,12 @@ const RoomCategories = () => {
                       {room.details?.cutPrice > 0 && (
                         <span className="text-sm font-serif text-slate-400 line-through decoration-slate-400/50">₹{room.details.cutPrice.toLocaleString()}</span>
                       )}
-                      <span className="text-xl font-serif font-bold text-[#0A192F]">₹{(room.details?.startingPrice || room.details?.basePrice || room.price || 0).toLocaleString()}<span className="text-xs text-slate-400 font-normal">/night</span></span>
+                      <span className="text-xl font-serif font-bold text-[#000000]">₹{(room.details?.startingPrice || room.details?.basePrice || room.price || 0).toLocaleString()}<span className="text-xs text-slate-400 font-normal">/night</span></span>
                     </div>
                   </div>
                   <Link 
                     to={`/rooms/${room.category}`} 
-                    className="bg-[#0A192F] text-white text-[10px] font-bold px-6 py-3 uppercase tracking-widest hover:bg-[#BFA37E] transition-all"
+                    className="bg-[#000000] text-white text-[10px] font-bold px-6 py-3 uppercase tracking-widest hover:bg-[#BFA37E] transition-all"
                   >
                     View & Book
                   </Link>
@@ -128,7 +128,7 @@ const RoomCategories = () => {
         </div>
 
         <div className="text-center mt-16">
-          <Link to="/rooms" className="text-xs font-bold text-[#BFA37E] uppercase tracking-[0.3em] hover:text-[#0A192F] transition-colors inline-flex items-center gap-2 border-b border-transparent hover:border-[#0A192F] pb-1">
+          <Link to="/rooms" className="text-xs font-bold text-[#BFA37E] uppercase tracking-[0.3em] hover:text-[#000000] transition-colors inline-flex items-center gap-2 border-b border-transparent hover:border-[#000000] pb-1">
             View All Rooms
           </Link>
         </div>

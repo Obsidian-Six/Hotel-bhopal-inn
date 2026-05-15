@@ -56,7 +56,7 @@ const FAQItem = ({ faq, isOpen, onClick }) => {
         className="w-full text-left px-8 py-6 flex items-center justify-between gap-4 focus:outline-none"
         onClick={onClick}
       >
-        <h4 className="font-serif text-[#0A192F] text-lg uppercase tracking-wide">{faq.q}</h4>
+        <h4 className="font-serif text-[#000000] text-lg uppercase tracking-wide">{faq.q}</h4>
         <div className={`text-[#BFA37E] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
           <ChevronDown size={24} />
         </div>
@@ -127,7 +127,7 @@ const FAQ = () => {
         <section className="py-24 bg-white relative -mt-32 z-20 mx-4 lg:mx-16 shadow-2xl">
           <div className="p-8 lg:p-16 max-w-5xl mx-auto">
              <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-serif text-[#0A192F] mb-6 uppercase tracking-wide">
+              <h2 className="text-3xl md:text-5xl font-serif text-[#000000] mb-6 uppercase tracking-wide">
                 Common Questions
               </h2>
               <div className="h-[1px] w-24 bg-[#BFA37E] mx-auto"></div>
@@ -145,11 +145,11 @@ const FAQ = () => {
             </div>
 
             <div className="mt-16 text-center bg-[#FDFBF7] p-8 border border-slate-100">
-                <h4 className="text-xl font-serif text-[#0A192F] mb-4 uppercase tracking-wide">Still have questions?</h4>
+                <h4 className="text-xl font-serif text-[#000000] mb-4 uppercase tracking-wide">Still have questions?</h4>
                 <p className="text-slate-600 font-light mb-8">If you cannot find the answer to your question in our FAQ, you can always contact us. We will answer to you shortly!</p>
                 <Link 
                     to="/contact"
-                    className="inline-block bg-[#0A192F] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#8B735B] transition-all"
+                    className="inline-block bg-[#000000] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#8B735B] transition-all"
                 >
                     Contact Us
                 </Link>

@@ -28,7 +28,7 @@ const NewsletterSignup = () => {
   };
 
   return (
-    <section className="py-24 relative overflow-hidden bg-[#0A192F]">
+    <section className="py-16 md:py-24 relative overflow-hidden bg-[#000000]">
       {/* Background Decor */}
       <div className="absolute top-0 right-0 w-1/2 h-full opacity-10">
         <img 
@@ -43,12 +43,12 @@ const NewsletterSignup = () => {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="max-w-4xl mx-auto bg-white p-10 md:p-20 shadow-2xl rounded-sm"
+          className="max-w-4xl mx-auto bg-white p-8 md:p-20 shadow-2xl rounded-sm"
         >
           {!subscribed ? (
             <div className="flex flex-col items-center text-center">
               <span className="text-[#BFA37E] text-[10px] font-bold tracking-[0.5em] uppercase mb-6">Stay Connected</span>
-              <h2 className="text-3xl md:text-5xl font-serif font-bold text-[#0A192F] mb-6">Stay Updated with Exclusive Deals</h2>
+              <h2 className="text-3xl md:text-5xl font-serif font-bold text-[#000000] mb-6">Stay Updated with Exclusive Deals</h2>
               <p className="text-sm md:text-base text-slate-500 mb-12 max-w-xl mx-auto italic font-medium leading-relaxed">
                 Join our mailing list for special offers, seasonal discounts, and Bhopal travel tips.
               </p>
@@ -61,7 +61,7 @@ const NewsletterSignup = () => {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
-                    className="flex-1 bg-[#FDFBF7] border border-slate-100 p-4 text-[10px] font-bold tracking-widest text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                    className="flex-1 bg-[#FDFBF7] border border-slate-100 p-4 text-[10px] font-bold tracking-widest text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                   />
                   <input 
                     type="email" 
@@ -69,7 +69,7 @@ const NewsletterSignup = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="flex-1 bg-[#FDFBF7] border border-slate-100 p-4 text-[10px] font-bold tracking-widest text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                    className="flex-1 bg-[#FDFBF7] border border-slate-100 p-4 text-[10px] font-bold tracking-widest text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                   />
                 </div>
                 
@@ -90,7 +90,7 @@ const NewsletterSignup = () => {
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="bg-[#BFA37E] text-white py-5 text-xs font-bold uppercase tracking-[0.3em] hover:bg-[#0A192F] transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-50 cursor-pointer"
+                  className="bg-[#BFA37E] text-white py-5 text-xs font-bold uppercase tracking-[0.3em] hover:bg-[#000000] transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-50 cursor-pointer"
                 >
                   <Send size={16} />
                   {isSubmitting ? 'Subscribing...' : 'Subscribe Now'}
@@ -104,7 +104,7 @@ const NewsletterSignup = () => {
               className="flex flex-col items-center text-center py-10"
             >
               <CheckCircle size={80} className="text-[#BFA37E] mb-8" />
-              <h2 className="text-3xl font-serif font-bold text-[#0A192F] mb-4">Thank you!</h2>
+              <h2 className="text-3xl font-serif font-bold text-[#000000] mb-4">Thank you!</h2>
               <p className="text-slate-500 font-medium italic">Check your inbox for a welcome discount.</p>
             </motion.div>
           )}

@@ -130,7 +130,7 @@ const FoodMenuManagement = () => {
     return (
         <div className="space-y-12 pb-20">
             <div className="flex items-center justify-between border-b border-slate-100 pb-6">
-                <h2 className="text-3xl font-serif font-bold text-[#0A192F]">Food Menu CMS</h2>
+                <h2 className="text-3xl font-serif font-bold text-[#000000]">Food Menu CMS</h2>
                 {message && <p className="text-[10px] font-bold text-green-600 uppercase tracking-widest">{message}</p>}
             </div>
 
@@ -140,7 +140,7 @@ const FoodMenuManagement = () => {
                     <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Menu Categories</h3>
                     <button 
                         onClick={() => setShowCatForm(!showCatForm)}
-                        className="bg-[#0A192F] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#BFA37E] transition-all"
+                        className="bg-[#000000] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#BFA37E] transition-all"
                     >
                         {showCatForm ? 'Cancel' : <><Plus size={14} /> Add Category</>}
                     </button>
@@ -155,7 +155,7 @@ const FoodMenuManagement = () => {
                                 required
                                 value={catData.name} 
                                 onChange={(e) => setCatData({ ...catData, name: e.target.value })}
-                                className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]"
+                                className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]"
                             />
                         </div>
                         <div>
@@ -183,7 +183,7 @@ const FoodMenuManagement = () => {
                             <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-[#BFA37E] p-1">
                                 <img src={`${config.API_URL}${cat.image}`} className="w-full h-full object-cover rounded-full" alt={cat.name} />
                             </div>
-                            <p className="text-center mt-2 text-[9px] font-bold uppercase tracking-widest text-[#0A192F]">{cat.name}</p>
+                            <p className="text-center mt-2 text-[9px] font-bold uppercase tracking-widest text-[#000000]">{cat.name}</p>
                             <button 
                                 onClick={() => handleCatDelete(cat._id)}
                                 className="absolute -top-2 -right-2 bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg"
@@ -201,7 +201,7 @@ const FoodMenuManagement = () => {
                     <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Menu Items</h3>
                     <button 
                         onClick={() => { setShowItemForm(!showItemForm); setEditItem(null); }}
-                        className="bg-[#0A192F] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#BFA37E] transition-all"
+                        className="bg-[#000000] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#BFA37E] transition-all"
                     >
                         {showItemForm ? 'Cancel' : <><Plus size={14} /> Add Menu Item</>}
                     </button>
@@ -217,7 +217,7 @@ const FoodMenuManagement = () => {
                                     required
                                     value={itemData.name} 
                                     onChange={(e) => setItemData({ ...itemData, name: e.target.value })}
-                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]"
+                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]"
                                 />
                             </div>
                             <div>
@@ -226,7 +226,7 @@ const FoodMenuManagement = () => {
                                     required
                                     value={itemData.category} 
                                     onChange={(e) => setItemData({ ...itemData, category: e.target.value })}
-                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]"
+                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]"
                                 >
                                     <option value="">Select Category</option>
                                     {categories.map(cat => <option key={cat._id} value={cat._id}>{cat.name}</option>)}
@@ -239,7 +239,7 @@ const FoodMenuManagement = () => {
                                     placeholder="e.g. 1 Plate, 12 Pcs"
                                     value={itemData.quantity} 
                                     onChange={(e) => setItemData({ ...itemData, quantity: e.target.value })}
-                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]"
+                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]"
                                 />
                             </div>
                         </div>
@@ -250,7 +250,7 @@ const FoodMenuManagement = () => {
                                 <textarea 
                                     value={itemData.description} 
                                     onChange={(e) => setItemData({ ...itemData, description: e.target.value })}
-                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] h-24"
+                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] h-24"
                                 />
                             </div>
                             <div className="space-y-4">
@@ -279,7 +279,7 @@ const FoodMenuManagement = () => {
                         <button 
                             type="submit" 
                             disabled={loading}
-                            className="bg-[#0A192F] text-white px-10 py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-[#BFA37E]"
+                            className="bg-[#000000] text-white px-10 py-4 text-[10px] font-bold uppercase tracking-widest hover:bg-[#BFA37E]"
                         >
                             {editItem ? 'Update Item' : 'Add to Menu'}
                         </button>
@@ -295,7 +295,7 @@ const FoodMenuManagement = () => {
                             <div className="flex-grow">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h4 className="text-sm font-bold text-[#0A192F] uppercase tracking-tight">{item.name}</h4>
+                                        <h4 className="text-sm font-bold text-[#000000] uppercase tracking-tight">{item.name}</h4>
                                         <p className="text-[8px] font-bold text-[#BFA37E] uppercase tracking-widest">{item.category?.name}</p>
                                     </div>
                                     <div className={`w-3 h-3 border-2 p-[2px] flex items-center justify-center ${item.isVeg ? 'border-green-500' : 'border-red-500'}`}>

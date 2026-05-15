@@ -109,7 +109,7 @@ const Offers = () => {
                             </div>
                             
                             <div className="p-8 flex flex-col flex-grow">
-                                <h3 className="text-2xl font-serif text-[#0A192F] uppercase tracking-wide mb-4 line-clamp-2">
+                                <h3 className="text-2xl font-serif text-[#000000] uppercase tracking-wide mb-4 line-clamp-2">
                                     {offer.title}
                                 </h3>
                                 
@@ -132,7 +132,7 @@ const Offers = () => {
 
                                     <Link 
                                         to="/booking"
-                                        className="block w-full bg-[#0A192F] text-white text-center py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#8B735B] transition-all"
+                                        className="block w-full bg-[#000000] text-white text-center py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#8B735B] transition-all"
                                     >
                                         Book Now
                                     </Link>

@@ -39,7 +39,7 @@ const RoomCard = ({ room }) => {
       </div>
       
       <div className="flex flex-col flex-grow space-y-4">
-        <h3 className="text-2xl lg:text-3xl font-serif text-[#0A192F] uppercase tracking-wide">
+        <h3 className="text-2xl lg:text-3xl font-serif text-[#000000] uppercase tracking-wide">
           {room.title}
         </h3>
         
@@ -51,7 +51,7 @@ const RoomCard = ({ room }) => {
           {room.details?.cutPrice > 0 && (
             <span className="text-sm font-serif text-slate-400 line-through decoration-slate-400/60">₹{room.details.cutPrice.toLocaleString()}</span>
           )}
-          <span className="text-2xl font-serif font-bold text-[#0A192F]">
+          <span className="text-2xl font-serif font-bold text-[#000000]">
             ₹{(room.details?.startingPrice || 0).toLocaleString()}
             <span className="text-[10px] text-slate-400 font-normal uppercase tracking-widest ml-2">Starting Price</span>
           </span>
@@ -60,7 +60,7 @@ const RoomCard = ({ room }) => {
         <div className="flex gap-4 pt-4 mt-auto">
           <Link 
             to={`/rooms/${room.category}`}
-            className="flex-grow border border-[#0A192F] text-[#0A192F] py-3 text-[10px] font-bold uppercase tracking-widest text-center hover:bg-[#0A192F] hover:text-white transition-all"
+            className="flex-grow border border-[#000000] text-[#000000] py-3 text-[10px] font-bold uppercase tracking-widest text-center hover:bg-[#000000] hover:text-white transition-all"
           >
             Explore the Room
           </Link>
@@ -89,7 +89,7 @@ const ComparisonTable = ({ rooms }) => {
           <tr className="border-b border-slate-200">
             <th className="py-6 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">Features</th>
             {rooms.map((room) => (
-              <th key={room._id} className="py-6 text-center text-sm font-serif text-[#0A192F] uppercase px-4 whitespace-nowrap">
+              <th key={room._id} className="py-6 text-center text-sm font-serif text-[#000000] uppercase px-4 whitespace-nowrap">
                 {room.category}
               </th>
             ))}
@@ -144,7 +144,7 @@ const Rooms = () => {
       
       <main className="flex-grow">
         {/* Hero Section - Matching Reference Image 1 */}
-        <section className="relative min-h-[125vh] flex items-center justify-center overflow-hidden pt-20">
+        <section className="relative min-h-screen lg:min-h-[125vh] flex items-center justify-center overflow-hidden pt-20">
           <img 
             src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop" 
             alt="Luxury Hero" 
@@ -165,7 +165,7 @@ const Rooms = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-4xl md:text-7xl lg:text-8xl font-serif text-white mb-6 uppercase leading-tight tracking-wide"
+              className="text-3xl md:text-7xl lg:text-8xl font-serif text-white mb-6 uppercase leading-tight tracking-wide"
             >
               Rooms & Suites <br className="hidden md:block" /> That Define Luxury
             </motion.h1>
@@ -174,7 +174,7 @@ const Rooms = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-white/90 text-sm lg:text-lg uppercase tracking-[0.4em] font-light"
+              className="text-white/90 text-[10px] md:text-sm lg:text-lg uppercase tracking-[0.4em] font-light"
             >
               Choose from an array of options
             </motion.p>
@@ -187,10 +187,10 @@ const Rooms = () => {
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
               </svg>
             </a>
-            <a href="https://www.instagram.com/hoteltenontenstays/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0A192F] hover:bg-[#8B735B] hover:text-white transition-all shadow-lg">
+            <a href="https://www.instagram.com/hoteltenontenstays/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#000000] hover:bg-[#8B735B] hover:text-white transition-all shadow-lg">
               <Instagram size={18} />
             </a>
-            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0A192F] hover:bg-[#8B735B] hover:text-white transition-all shadow-lg">
+            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#000000] hover:bg-[#8B735B] hover:text-white transition-all shadow-lg">
               <Youtube size={18} />
             </button>
           </div>
@@ -217,7 +217,7 @@ const Rooms = () => {
         <section className="py-24 bg-slate-50">
           <div className="container mx-auto px-4 lg:px-8 max-w-5xl">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-serif text-[#0A192F] mb-4">
+              <h2 className="text-3xl md:text-5xl font-serif text-[#000000] mb-4">
                 Not sure which room to choose?
               </h2>
               <div className="h-[1px] w-24 bg-[#8B735B] mx-auto"></div>
@@ -238,7 +238,7 @@ const Rooms = () => {
               </a>
               <Link 
                 to="/booking"
-                className="w-full md:w-auto bg-[#0A192F] text-white px-10 py-4 text-xs font-bold uppercase tracking-widest hover:bg-[#8B735B] transition-all shadow-lg text-center"
+                className="w-full md:w-auto bg-[#000000] text-white px-10 py-4 text-xs font-bold uppercase tracking-widest hover:bg-[#8B735B] transition-all shadow-lg text-center"
               >
                 Book Your Room Now
               </Link>

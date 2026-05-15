@@ -48,7 +48,7 @@ const MyBookings = () => {
               <header className="fixed top-0 z-[200] w-full"><TopBar /><Navbar /></header>
               <main className="flex-grow pt-40 pb-24 flex items-center justify-center">
                   <div className="text-center">
-                      <h2 className="text-3xl font-serif text-[#0A192F] mb-4">Please log in</h2>
+                      <h2 className="text-3xl font-serif text-[#000000] mb-4">Please log in</h2>
                       <p className="text-slate-600 mb-6">You need to be logged in to view your bookings.</p>
                       <Link to="/" className="bg-[#8B735B] text-white px-8 py-3 rounded text-sm font-bold uppercase tracking-widest hover:bg-[#725e4a]">Go Home</Link>
                   </div>
@@ -71,7 +71,7 @@ const MyBookings = () => {
                 <motion.h1 
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-4xl font-serif text-[#0A192F] tracking-wide mb-2"
+                    className="text-4xl font-serif text-[#000000] tracking-wide mb-2"
                 >
                     My Bookings
                 </motion.h1>
@@ -83,9 +83,9 @@ const MyBookings = () => {
             ) : bookings.length === 0 ? (
                 <div className="bg-white p-12 text-center border border-slate-200 shadow-sm">
                     <Hotel size={48} className="mx-auto text-slate-300 mb-4" />
-                    <h3 className="text-xl font-serif text-[#0A192F] mb-2">No bookings found</h3>
+                    <h3 className="text-xl font-serif text-[#000000] mb-2">No bookings found</h3>
                     <p className="text-slate-500 mb-6">Looks like you haven't made any reservations yet.</p>
-                    <Link to="/booking" className="bg-[#0A192F] text-white px-8 py-3 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#8B735B] transition-all">Book a Room</Link>
+                    <Link to="/booking" className="bg-[#000000] text-white px-8 py-3 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#8B735B] transition-all">Book a Room</Link>
                 </div>
             ) : (
                 <div className="space-y-6">
@@ -105,15 +105,15 @@ const MyBookings = () => {
                                         <Calendar size={20} className="text-[#BFA37E] mt-1" />
                                         <div>
                                             <p className="text-[10px] font-black text-[#BFA37E] uppercase tracking-tighter">CHECK-IN</p>
-                                            <p className="text-lg font-serif font-bold text-[#0A192F]">{new Date(booking.checkInDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                                            <p className="text-[11px] font-black text-[#0A192F] bg-[#BFA37E]/20 px-2 py-0.5 rounded-full inline-block mt-1">FROM 12:00 PM</p>
+                                            <p className="text-lg font-serif font-bold text-[#000000]">{new Date(booking.checkInDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                            <p className="text-[11px] font-black text-[#000000] bg-[#BFA37E]/20 px-2 py-0.5 rounded-full inline-block mt-1">FROM 12:00 PM</p>
                                         </div>
                                     </div>
                                     <div className="flex items-start gap-3 bg-slate-100 p-3 rounded-sm border border-slate-200">
                                         <Calendar size={20} className="text-slate-400 mt-1" />
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">CHECK-OUT</p>
-                                            <p className="text-lg font-serif font-bold text-[#0A192F]">{new Date(booking.checkOutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                            <p className="text-lg font-serif font-bold text-[#000000]">{new Date(booking.checkOutDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                                             <p className="text-[11px] font-black text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full inline-block mt-1">UNTIL 11:00 AM</p>
                                         </div>
                                     </div>
@@ -133,7 +133,7 @@ const MyBookings = () => {
                                             }`}>
                                                 {booking.status}
                                             </span>
-                                            <h5 className="font-bold text-[#0A192F] mb-1">{booking.guestDetails?.firstName} {booking.guestDetails?.lastName}</h5>
+                                            <h5 className="font-bold text-[#000000] mb-1">{booking.guestDetails?.firstName} {booking.guestDetails?.lastName}</h5>
                                             {booking.roomUnit && (
                                                 <div className="flex items-center gap-1.5 text-[#8B735B] font-bold text-xs uppercase tracking-wider">
                                                     <Hotel size={12} />
@@ -143,7 +143,7 @@ const MyBookings = () => {
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm font-bold text-slate-700">Total Amount</p>
-                                            <p className="text-xl font-serif text-[#0A192F]">₹{booking.financials?.totalAmount?.toLocaleString()}</p>
+                                            <p className="text-xl font-serif text-[#000000]">₹{booking.financials?.totalAmount?.toLocaleString()}</p>
                                         </div>
                                     </div>
                                     
@@ -163,7 +163,7 @@ const MyBookings = () => {
                                             ))}
                                             <div className="flex justify-between text-xs pt-2 border-t border-slate-200">
                                                 <span className="font-bold text-slate-700 uppercase tracking-tighter">Grand Total</span>
-                                                <span className="font-bold text-[#0A192F]">₹{booking.financials?.totalAmount?.toLocaleString()}</span>
+                                                <span className="font-bold text-[#000000]">₹{booking.financials?.totalAmount?.toLocaleString()}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -243,7 +243,7 @@ const ExtensionPanel = ({ booking, onUpdate }) => {
     if (!show) return (
         <button 
             onClick={() => setShow(true)}
-            className="bg-[#0A192F] text-white px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-[#8B735B] transition-all rounded-sm"
+            className="bg-[#000000] text-white px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-[#8B735B] transition-all rounded-sm"
         >
             Extend Stay
         </button>
@@ -263,7 +263,7 @@ const ExtensionPanel = ({ booking, onUpdate }) => {
             </div>
             <div className="text-right whitespace-nowrap min-w-[120px]">
                 <p className="text-[9px] font-bold text-slate-400 uppercase">Extra to Pay</p>
-                <p className="text-lg font-serif text-[#0A192F]">₹{calculateExtra().toLocaleString()}</p>
+                <p className="text-lg font-serif text-[#000000]">₹{calculateExtra().toLocaleString()}</p>
             </div>
             <div className="flex gap-2">
                 <button 

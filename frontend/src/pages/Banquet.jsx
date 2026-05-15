@@ -161,8 +161,8 @@ const BanquetPage = () => {
           </div>
 
           <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-6 z-20">
-            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0A192F] hover:bg-[#BFA37E] hover:text-white transition-all shadow-lg"><Instagram size={18} /></button>
-            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#0A192F] hover:bg-[#BFA37E] hover:text-white transition-all shadow-lg"><Youtube size={18} /></button>
+            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#000000] hover:bg-[#BFA37E] hover:text-white transition-all shadow-lg"><Instagram size={18} /></button>
+            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#000000] hover:bg-[#BFA37E] hover:text-white transition-all shadow-lg"><Youtube size={18} /></button>
           </div>
         </section>
 
@@ -173,7 +173,7 @@ const BanquetPage = () => {
               <div className="space-y-12">
                 <div>
                   <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-[0.4em] mb-4 block">Elegance Redefined</span>
-                  <h2 className="text-4xl md:text-6xl font-serif font-bold mb-8 text-[#0A192F]">Our Banquet Hall</h2>
+                  <h2 className="text-4xl md:text-6xl font-serif font-bold mb-8 text-[#000000]">Our Banquet Hall</h2>
                   <p className="text-slate-600 text-lg leading-relaxed font-light">
                     Step into a world of sophisticated grandeur. Our banquet hall is a masterpiece of design, offering an unparalleled venue for your most precious moments.
                   </p>
@@ -189,7 +189,7 @@ const BanquetPage = () => {
                     <div key={i} className="p-6 bg-white border border-slate-100 shadow-sm">
                       <div className="text-[#BFA37E] mb-4">{item.icon}</div>
                       <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">{item.label}</h4>
-                      <p className="text-lg font-serif font-bold text-[#0A192F]">{item.value}</p>
+                      <p className="text-lg font-serif font-bold text-[#000000]">{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -215,7 +215,7 @@ const BanquetPage = () => {
         </section>
 
         {/* Section 2: Event Types */}
-        <section className="py-24 bg-[#0A192F] text-white">
+        <section className="py-24 bg-[#000000] text-white">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-20">
               <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-[0.4em] mb-4 block">Events We Host</span>
@@ -253,7 +253,7 @@ const BanquetPage = () => {
               <div className="lg:w-1/2 space-y-10">
                 <div>
                   <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-[0.4em] mb-4 block">Taste of Perfection</span>
-                  <h2 className="text-4xl md:text-5xl font-serif font-bold mb-8 text-[#0A192F]">In-House Catering</h2>
+                  <h2 className="text-4xl md:text-5xl font-serif font-bold mb-8 text-[#000000]">In-House Catering</h2>
                   <p className="text-slate-600 text-lg leading-relaxed italic border-l-4 border-[#BFA37E] pl-6 py-2">
                     "Our experienced kitchen team serves authentic Indian cuisine with a focus on quality and hygiene."
                   </p>
@@ -261,7 +261,7 @@ const BanquetPage = () => {
 
                 <div className="space-y-8">
                   <div>
-                    <h4 className="text-[10px] font-bold text-[#0A192F] uppercase tracking-widest mb-4 flex items-center gap-2"><Coffee size={14} className="text-[#BFA37E]" /> Meal Options Available</h4>
+                    <h4 className="text-[10px] font-bold text-[#000000] uppercase tracking-widest mb-4 flex items-center gap-2"><Coffee size={14} className="text-[#BFA37E]" /> Meal Options Available</h4>
                     <div className="flex flex-wrap gap-3">
                       {['Breakfast', 'Lunch', 'High Tea', 'Dinner', 'Cocktail Snacks'].map((opt) => (
                         <span key={opt} className="px-5 py-2 border border-slate-100 bg-[#FDFBF7] text-[10px] font-bold uppercase tracking-widest text-slate-500">{opt}</span>
@@ -269,7 +269,7 @@ const BanquetPage = () => {
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-[10px] font-bold text-[#0A192F] uppercase tracking-widest mb-4 flex items-center gap-2"><Pizza size={14} className="text-[#BFA37E]" /> Cuisine Types</h4>
+                    <h4 className="text-[10px] font-bold text-[#000000] uppercase tracking-widest mb-4 flex items-center gap-2"><Pizza size={14} className="text-[#BFA37E]" /> Cuisine Types</h4>
                     <div className="flex flex-wrap gap-3">
                       {['North Indian', 'South Indian', 'Chinese', 'Continental'].map((type) => (
                         <span key={type} className="flex items-center gap-2 px-5 py-2 bg-[#BFA37E]/10 text-[#BFA37E] text-[10px] font-bold uppercase tracking-widest font-bold">
@@ -283,7 +283,7 @@ const BanquetPage = () => {
                 <div className="pt-8 border-t border-slate-100">
                   <div className="flex items-center gap-4 p-4 bg-[#FDFBF7] border border-[#BFA37E]/20">
                     <Award size={24} className="text-[#BFA37E]" />
-                    <p className="text-[11px] font-bold text-[#0A192F] uppercase tracking-widest">Custom menus available on request. Contact for per-head pricing.</p>
+                    <p className="text-[11px] font-bold text-[#000000] uppercase tracking-widest">Custom menus available on request. Contact for per-head pricing.</p>
                   </div>
                 </div>
               </div>
@@ -297,7 +297,7 @@ const BanquetPage = () => {
             {Object.entries(groupedGallery).map(([category, images]) => (
               <div key={category} className="mb-32 last:mb-0">
                 <div className="text-center mb-16">
-                  <h2 className="text-4xl font-serif font-bold text-[#0A192F] uppercase tracking-widest mb-4">{category}</h2>
+                  <h2 className="text-4xl font-serif font-bold text-[#000000] uppercase tracking-widest mb-4">{category}</h2>
                   <div className="h-[2px] w-24 bg-[#BFA37E] mx-auto opacity-30" />
                 </div>
                 
@@ -313,7 +313,7 @@ const BanquetPage = () => {
                         <img src={`${config.API_URL}${img.imageUrl}`} className="w-full h-full object-cover" alt={img.title} />
                       </div>
                       <div className="mt-6 text-center">
-                        <h4 className="text-lg font-serif text-[#0A192F]">{img.title}</h4>
+                        <h4 className="text-lg font-serif text-[#000000]">{img.title}</h4>
                       </div>
                     </motion.div>
                   ))}
@@ -327,7 +327,7 @@ const BanquetPage = () => {
         <section id="book" className="py-24 px-6 lg:px-24 bg-white">
           <div className="max-w-4xl mx-auto bg-white p-10 md:p-20 shadow-2xl border border-slate-100 relative">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-serif font-bold text-[#0A192F] mb-4 uppercase tracking-tighter">Plan Your Event</h2>
+              <h2 className="text-4xl font-serif font-bold text-[#000000] mb-4 uppercase tracking-tighter">Plan Your Event</h2>
               <div className="h-[1px] w-20 bg-[#BFA37E] mx-auto" />
             </div>
             
@@ -374,7 +374,7 @@ const BanquetPage = () => {
                 <textarea name="specialRequirements" value={formData.specialRequirements} onChange={handleInputChange} className="w-full bg-[#FDFBF7] border border-slate-100 p-4 text-xs font-bold focus:outline-none focus:border-[#BFA37E]" rows="4" placeholder="Any specific needs..." />
               </div>
               <div className="md:col-span-2 pt-6">
-                <button disabled={isSubmitting} className="w-full bg-[#0A192F] text-white py-6 text-xs font-bold uppercase tracking-[0.3em] hover:bg-[#BFA37E] transition-all duration-500 disabled:opacity-50">
+                <button disabled={isSubmitting} className="w-full bg-[#000000] text-white py-6 text-xs font-bold uppercase tracking-[0.3em] hover:bg-[#BFA37E] transition-all duration-500 disabled:opacity-50">
                   {isSubmitting ? 'Processing...' : 'Submit Enquiry'}
                 </button>
                 {submitMessage.text && <p className={`mt-6 text-center text-[10px] font-bold uppercase tracking-widest ${submitMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>{submitMessage.text}</p>}

@@ -82,7 +82,7 @@ router.post('/', async (req, res) => {
         // Update Inventory
         const start = new Date(checkInDate);
         const end = new Date(checkOutDate);
-        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        for (let d = new Date(start); d < end; d.setUTCDate(d.getUTCDate() + 1)) {
             const dateStr = d.toISOString().split('T')[0];
             await DailyInventory.findOneAndUpdate(
                 { roomCategory, date: new Date(dateStr) },
@@ -125,7 +125,7 @@ router.post('/walk-in', async (req, res) => {
         // Update Inventory
         const start = new Date(checkInDate);
         const end = new Date(checkOutDate);
-        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+        for (let d = new Date(start); d < end; d.setUTCDate(d.getUTCDate() + 1)) {
             const dateStr = d.toISOString().split('T')[0];
             await DailyInventory.findOneAndUpdate(
                 { roomCategory, date: new Date(dateStr) },

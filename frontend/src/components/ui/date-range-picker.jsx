@@ -56,10 +56,10 @@ export function DateRangePicker({
             disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
             className="rounded-md border shadow-lg"
             classNames={{
-              day_selected: "bg-[#0A192F] text-white hover:bg-[#0A192F] hover:text-white focus:bg-[#0A192F] focus:text-white",
-              day_today: "bg-slate-100 text-[#0A192F]",
-              range_start: "bg-[#0A192F] text-white rounded-l-md",
-              range_end: "bg-[#0A192F] text-white rounded-r-md",
+              day_selected: "bg-[#000000] text-white hover:bg-[#000000] hover:text-white focus:bg-[#000000] focus:text-white",
+              day_today: "bg-slate-100 text-[#000000]",
+              range_start: "bg-[#000000] text-white rounded-l-md",
+              range_end: "bg-[#000000] text-white rounded-r-md",
               range_middle: "bg-[#fcf8f2] text-[#665038] rounded-none",
             }}
           />

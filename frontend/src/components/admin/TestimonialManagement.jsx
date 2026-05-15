@@ -42,26 +42,41 @@ const TestimonialManagement = () => {
 
   const handleImportGoogleReviews = async () => {
     const googleReviews = [
+      { "name": "Sahil Vicky", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Good service Rooms: 5 Service: 5" },
+      { "name": "Aniket Bhalavi", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Nice room and service is also good Rooms: 5 Service: 5 Location: 5" },
+      { "name": "Rishabh Pandey", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "I really enjoyed my stay here. The hotel offers a clean and comfortable environment with good service quality. What stood out the most was the receptionist’s behavior—very professional, kind, and always willing to assist." },
       { "name": "Ramjuraja Parmar", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Have a good hotel 🎀" },
-      { "name": "Abhi Verma", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Vishal gave the best service, I really liked it. Rooms: 5" },
-      { "name": "AMIT RATHORE", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "I had a very good stay at this hotel. The rooms were clean and comfortable. The staff was polite and helpful." },
-      { "name": "Rahul Raisinghani", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Amazing stay. Their food is very tasty. Had comfortable stay with family. Nice staff and very nice location. Highly recommend." },
-      { "name": "Prathviraj Patil", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Best hotel to stay in Bhopal & great service by Vishal!" }
+      { "name": "Maestro", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Good" },
+      { "name": "Kirtan Shrivastava", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "The rooms and service here are excellent for wedding guests. Everyone really enjoyed their stay." },
+      { "name": "paglu smily", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Very nice low price dhamaka room quality" },
+      { "name": "Azad Khan", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Very good service and cooperation Rooms: 5 Service: 5 Location: 5" },
+      { "name": "VISHAL KUMAR", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Excellent service and well-maintained rooms." },
+      { "name": "chaitanya patil", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Nice location with good staff. Highly recommended for family stays." },
+      { "name": "Tushar Sharma", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "It was great. Rooms were clean and the location is convenient." },
+      { "name": "Shashank Singh Chauhan", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Very good hospitality and friendly staff." },
+      { "name": "ram Meena", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Excellent" },
+      { "name": "Santosh kumar ojha", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Very nice service and clean rooms." },
+      { "name": "Yogesh", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "good stay experience." },
+      { "name": "Bhavya Chourasiya", "rating": 5, "city": "Bhopal", "source": "Via Google", "text": "Celebrated my birthday here. The staff made it very special." },
+      { "name": "Saumya", "rating": 4, "city": "Bhopal", "source": "Via Google", "text": "Overall it is a decent place for worth the money we pay." }
     ];
 
     setLoading(true);
     try {
+      let importedCount = 0;
       for (const review of googleReviews) {
-        const exists = testimonials.find(t => t.name === review.name && t.text.substring(0, 10) === review.text.substring(0, 10));
+        const exists = testimonials.find(t => t.name === review.name && t.text.substring(0, 15) === review.text.substring(0, 15));
         if (!exists) {
-          await axios.post(API_URL, review);
+          await axios.post(API_URL, { ...review, isVisible: true });
+          importedCount++;
         }
       }
-      setMessage('Google reviews imported successfully!');
+      setMessage(importedCount > 0 ? `${importedCount} Google reviews imported successfully!` : 'No new reviews to import.');
       fetchTestimonials();
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('Import error:', err);
+      setMessage('Error importing reviews');
     } finally {
       setLoading(false);
     }
@@ -142,20 +157,20 @@ const TestimonialManagement = () => {
       {/* Header Section */}
       <div className="flex items-center justify-between border-b border-[#F1E9DA] pb-8">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-[#0A192F]">Testimonial Management</h1>
+          <h1 className="text-3xl font-serif font-bold text-[#000000]">Testimonial Management</h1>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-2">Add, modify and manage guest experiences</p>
         </div>
         <div className="flex gap-4">
           <button 
             onClick={handleImportGoogleReviews}
-            className="flex items-center gap-2 bg-[#BFA37E] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#0A192F] transition-all"
+            className="flex items-center gap-2 bg-[#BFA37E] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#000000] transition-all"
           >
             <Star size={16}/>
             Import Google Reviews
           </button>
           <button 
             onClick={resetForm}
-            className="flex items-center gap-2 bg-[#0A192F] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#BFA37E] transition-all"
+            className="flex items-center gap-2 bg-[#000000] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#BFA37E] transition-all"
           >
             <Plus size={16}/>
             Add New Testimonial
@@ -167,7 +182,7 @@ const TestimonialManagement = () => {
         {/* Form Section */}
         <div className="lg:col-span-8 space-y-8">
           <div className="bg-white p-10 border border-[#F1E9DA] shadow-sm">
-            <h2 className="text-sm font-bold text-[#0A192F] uppercase tracking-[0.2em] mb-10 pb-4 border-b border-[#F1E9DA] flex items-center gap-3">
+            <h2 className="text-sm font-bold text-[#000000] uppercase tracking-[0.2em] mb-10 pb-4 border-b border-[#F1E9DA] flex items-center gap-3">
               <Edit3 size={18} className="text-[#BFA37E]" />
               {editingTestimonial ? `Editing: ${editingTestimonial.name}` : 'Testimonial Details'}
             </h2>
@@ -182,7 +197,7 @@ const TestimonialManagement = () => {
                       value={name} 
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Anand T."
-                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                       required
                     />
                   </div>
@@ -193,7 +208,7 @@ const TestimonialManagement = () => {
                       value={city} 
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="e.g. Delhi"
-                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                       required
                     />
                   </div>
@@ -207,7 +222,7 @@ const TestimonialManagement = () => {
                       value={source} 
                       onChange={(e) => setSource(e.target.value)}
                       placeholder="e.g. Via Google / Via TripAdvisor"
-                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                       required
                     />
                   </div>
@@ -216,7 +231,7 @@ const TestimonialManagement = () => {
                     <select 
                       value={rating} 
                       onChange={(e) => setRating(e.target.value)}
-                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                     >
                       <option value="5">5 Stars</option>
                       <option value="4">4 Stars</option>
@@ -235,7 +250,7 @@ const TestimonialManagement = () => {
                   value={text} 
                   onChange={(e) => setText(e.target.value)}
                   placeholder="The guest experience comment..."
-                  className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors leading-relaxed"
+                  className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors leading-relaxed"
                   required
                 />
               </div>
@@ -244,7 +259,7 @@ const TestimonialManagement = () => {
                 <button 
                   type="submit" 
                   disabled={loading}
-                  className="bg-[#0A192F] text-white px-12 py-5 text-xs font-bold uppercase tracking-[0.3em] hover:bg-[#BFA37E] transition-all disabled:opacity-50 flex items-center gap-3 shadow-xl"
+                  className="bg-[#000000] text-white px-12 py-5 text-xs font-bold uppercase tracking-[0.3em] hover:bg-[#BFA37E] transition-all disabled:opacity-50 flex items-center gap-3 shadow-xl"
                 >
                   <Save size={18}/>
                   {loading ? 'Processing...' : 'Commit Changes'}
@@ -283,7 +298,7 @@ const TestimonialManagement = () => {
                 <div key={t._id} className="bg-white p-6 border border-[#F1E9DA] group hover:border-[#BFA37E] transition-all duration-500 shadow-sm hover:shadow-md flex flex-col justify-between">
                   <div>
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-sm font-bold text-[#0A192F] uppercase tracking-wider">{t.name}</h4>
+                      <h4 className="text-sm font-bold text-[#000000] uppercase tracking-wider">{t.name}</h4>
                       <div className="flex gap-1 items-center bg-[#FDFBF7] px-2 py-1">
                         <span className="text-[9px] font-bold text-[#BFA37E] uppercase">{t.rating}</span>
                         <Star size={10} fill="#BFA37E" className="text-[#BFA37E]" />
@@ -303,7 +318,7 @@ const TestimonialManagement = () => {
                     <button 
                       type="button"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(t); }} 
-                      className="flex items-center gap-1 text-[10px] font-bold text-[#0A192F] hover:text-[#BFA37E] uppercase tracking-widest transition-colors"
+                      className="flex items-center gap-1 text-[10px] font-bold text-[#000000] hover:text-[#BFA37E] uppercase tracking-widest transition-colors"
                     >
                       <Edit3 size={12}/> Edit
                     </button>

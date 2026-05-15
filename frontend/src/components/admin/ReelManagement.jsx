@@ -78,10 +78,10 @@ const ReelManagement = () => {
     return (
         <div className="space-y-8">
             <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-serif font-bold text-[#0A192F]">Reels Management</h2>
+                <h2 className="text-3xl font-serif font-bold text-[#000000]">Reels Management</h2>
                 <button 
                     onClick={() => { setShowAddForm(!showAddForm); setEditReel(null); setFormData({ title: '', video: null }); }}
-                    className="bg-[#0A192F] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#BFA37E] transition-all"
+                    className="bg-[#000000] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-[#BFA37E] transition-all"
                 >
                     {showAddForm ? 'Cancel' : <><Plus size={14} /> Add New Reel</>}
                 </button>
@@ -101,7 +101,7 @@ const ReelManagement = () => {
                                     required
                                     value={formData.title} 
                                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]"
+                                    className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]"
                                 />
                             </div>
                             {!editReel && (
@@ -112,7 +112,7 @@ const ReelManagement = () => {
                                         accept="video/*"
                                         required
                                         onChange={handleFileChange}
-                                        className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:bg-[#BFA37E] file:text-white hover:file:bg-[#0A192F] transition-all"
+                                        className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:bg-[#BFA37E] file:text-white hover:file:bg-[#000000] transition-all"
                                     />
                                 </div>
                             )}
@@ -120,7 +120,7 @@ const ReelManagement = () => {
                         <button 
                             type="submit" 
                             disabled={loading}
-                            className="bg-[#0A192F] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] transition-all disabled:opacity-50"
+                            className="bg-[#000000] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] transition-all disabled:opacity-50"
                         >
                             {loading ? 'Processing...' : editReel ? 'Update Reel' : 'Upload Reel'}
                         </button>
@@ -147,7 +147,7 @@ const ReelManagement = () => {
                                 <div className="flex gap-2">
                                     <button 
                                         onClick={() => handleEdit(reel)}
-                                        className="flex-grow bg-white text-[#0A192F] py-2 text-[8px] font-bold uppercase tracking-widest flex items-center justify-center gap-1 hover:bg-[#BFA37E] hover:text-white transition-all"
+                                        className="flex-grow bg-white text-[#000000] py-2 text-[8px] font-bold uppercase tracking-widest flex items-center justify-center gap-1 hover:bg-[#BFA37E] hover:text-white transition-all"
                                     >
                                         <Edit2 size={12} /> Edit
                                     </button>

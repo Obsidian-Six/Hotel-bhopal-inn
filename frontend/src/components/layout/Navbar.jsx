@@ -58,12 +58,12 @@ const Navbar = ({ light = false }) => {
           
           {/* Logo */}
           <Link to="/" className="relative z-[100] group">
-            <div className={`transition-all duration-500 ${isScrolled ? 'h-12' : 'h-16 lg:h-20'}`}>
+            <div className={`transition-all duration-500 ${isScrolled ? 'h-10 lg:h-12' : 'h-12 lg:h-20'}`}>
                 <div className="h-full w-auto overflow-hidden flex items-center justify-center">
                     <img 
                         src="/logo.png" 
                         alt="Bhopal Inn Logo" 
-                        className="h-full w-auto object-contain scale-[2.4]"
+                        className={`h-full w-auto object-contain transition-transform duration-500 ${isScrolled ? 'scale-[1.8] lg:scale-[2.4]' : 'scale-[2.0] lg:scale-[2.4]'}`}
                     />
                 </div>
             </div>
@@ -81,7 +81,7 @@ const Navbar = ({ light = false }) => {
               >
                 <Link 
                   to={link.path} 
-                  className={`flex items-center gap-1 text-[12px] font-bold tracking-widest transition-colors ${showDarkText ? 'text-[#0A192F] hover:text-[#BFA37E]' : 'text-white/90 hover:text-white'}`}
+                  className={`flex items-center gap-1 text-[12px] font-bold tracking-widest transition-colors ${showDarkText ? 'text-[#000000] hover:text-[#BFA37E]' : 'text-white/90 hover:text-white'}`}
                 >
                   {link.name}
                   {link.dropdown && <ChevronDown size={14} className={`transition-transform duration-300 ${activeDropdown === link.name ? 'rotate-180' : ''}`} />}
@@ -101,7 +101,7 @@ const Navbar = ({ light = false }) => {
                           <Link
                             key={item.name}
                             to={item.path}
-                            className="block px-6 py-2 text-[11px] font-bold text-[#0A192F] hover:bg-[#FDFBF7] hover:text-[#BFA37E] transition-all"
+                            className="block px-6 py-2 text-[11px] font-bold text-[#000000] hover:bg-[#FDFBF7] hover:text-[#BFA37E] transition-all"
                           >
                             {item.name}
                           </Link>
@@ -120,7 +120,7 @@ const Navbar = ({ light = false }) => {
                 <div>
                     <button 
                         onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                        className={`flex items-center gap-2 px-6 py-2 rounded-sm text-[12px] font-bold tracking-widest transition-all ${showDarkText ? 'text-[#0A192F] border border-[#0A192F]' : 'text-white border border-white hover:bg-white/10'}`}
+                        className={`flex items-center gap-2 px-6 py-2 rounded-sm text-[12px] font-bold tracking-widest transition-all ${showDarkText ? 'text-[#000000] border border-[#000000]' : 'text-white border border-white hover:bg-white/10'}`}
                     >
                         <UserIcon size={16} />
                         {user.firstName?.toUpperCase()}
@@ -137,7 +137,7 @@ const Navbar = ({ light = false }) => {
                                 <Link 
                                     to="/my-bookings"
                                     onClick={() => setProfileDropdownOpen(false)}
-                                    className="block px-6 py-3 text-[11px] font-bold text-[#0A192F] hover:bg-[#FDFBF7] hover:text-[#BFA37E] transition-all"
+                                    className="block px-6 py-3 text-[11px] font-bold text-[#000000] hover:bg-[#FDFBF7] hover:text-[#BFA37E] transition-all"
                                 >
                                     MY BOOKINGS
                                 </Link>
@@ -154,7 +154,7 @@ const Navbar = ({ light = false }) => {
             ) : (
                 <Link 
                   to="/booking" 
-                  className={`px-8 py-3 rounded-sm text-[12px] font-bold tracking-widest transition-all shadow-md hover:shadow-lg ${showDarkText ? 'bg-[#BFA37E] text-white hover:bg-[#a68d6d]' : 'bg-white text-[#0A192F] hover:bg-[#BFA37E] hover:text-white'}`}
+                  className={`px-8 py-3 rounded-sm text-[12px] font-bold tracking-widest transition-all shadow-md hover:shadow-lg ${showDarkText ? 'bg-[#BFA37E] text-white hover:bg-[#a68d6d]' : 'bg-white text-[#000000] hover:bg-[#BFA37E] hover:text-white'}`}
                 >
                   BOOK NOW
                 </Link>
@@ -163,7 +163,7 @@ const Navbar = ({ light = false }) => {
 
           {/* Mobile Menu Toggle */}
           <button 
-            className={`lg:hidden transition-colors ${showDarkText ? 'text-[#0A192F]' : 'text-white'}`}
+            className={`lg:hidden transition-colors ${showDarkText ? 'text-[#000000]' : 'text-white'}`}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
@@ -185,7 +185,7 @@ const Navbar = ({ light = false }) => {
                 <img src="/logo.png" alt="Bhopal Inn" className="h-full w-full object-contain scale-[2.1] transition-transform" />
               </Link>
               <button onClick={() => setMobileMenuOpen(false)}>
-                <X size={32} className="text-[#0A192F]" />
+                <X size={32} className="text-[#000000]" />
               </button>
             </div>
             <div className="flex flex-col gap-6 overflow-y-auto">
@@ -193,7 +193,7 @@ const Navbar = ({ light = false }) => {
                 <div key={link.name} className="flex flex-col gap-4">
                   <Link 
                     to={link.path} 
-                    className="text-2xl font-serif font-medium text-[#0A192F]"
+                    className="text-2xl font-serif font-medium text-[#000000]"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {link.name}
@@ -204,7 +204,7 @@ const Navbar = ({ light = false }) => {
                         <Link
                           key={item.name}
                           to={item.path}
-                          className="text-lg text-[#0A192F]/70"
+                          className="text-lg text-[#000000]/70"
                           onClick={() => setMobileMenuOpen(false)}
                         >
                           {item.name}

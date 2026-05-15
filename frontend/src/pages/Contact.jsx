@@ -86,7 +86,7 @@ const Contact = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-0">
             {/* Contact Info */}
             <div className="p-8 lg:p-16 flex flex-col justify-center">
-                <h2 className="text-3xl font-serif text-[#0A192F] mb-10 uppercase tracking-wide">
+                <h2 className="text-3xl font-serif text-[#000000] mb-10 uppercase tracking-wide">
                     Contact Information
                 </h2>
                 
@@ -94,7 +94,7 @@ const Contact = () => {
                     <div className="flex items-start gap-4">
                         <div className="mt-1 text-[#BFA37E]"><MapPin size={24} /></div>
                         <div>
-                            <h4 className="text-sm font-bold text-[#0A192F] uppercase tracking-widest mb-1">Address</h4>
+                            <h4 className="text-sm font-bold text-[#000000] uppercase tracking-widest mb-1">Address</h4>
                             <p className="text-slate-600 font-light leading-relaxed">
                                 Hotel Bhopal Inn<br />
                                 <a 
@@ -113,7 +113,7 @@ const Contact = () => {
                     <div className="flex items-start gap-4">
                         <div className="mt-1 text-[#BFA37E]"><Phone size={24} /></div>
                         <div>
-                            <h4 className="text-sm font-bold text-[#0A192F] uppercase tracking-widest mb-1">Phone</h4>
+                            <h4 className="text-sm font-bold text-[#000000] uppercase tracking-widest mb-1">Phone</h4>
                             <p className="text-slate-600 font-light">Reception: +91 62672 76957</p>
                             <p className="text-slate-600 font-light">Reservations: +91 96302 52729</p>
                         </div>
@@ -122,7 +122,7 @@ const Contact = () => {
                     <div className="flex items-start gap-4">
                         <div className="mt-1 text-[#BFA37E]"><Mail size={24} /></div>
                         <div>
-                            <h4 className="text-sm font-bold text-[#0A192F] uppercase tracking-widest mb-1">Email</h4>
+                            <h4 className="text-sm font-bold text-[#000000] uppercase tracking-widest mb-1">Email</h4>
                             <p className="text-slate-600 font-light">bhopalinn@gmail.com</p>
                         </div>
                     </div>
@@ -130,7 +130,7 @@ const Contact = () => {
                     <div className="flex items-start gap-4">
                         <div className="mt-1 text-[#25D366]"><WhatsAppIcon size={24} /></div>
                         <div>
-                            <h4 className="text-sm font-bold text-[#0A192F] uppercase tracking-widest mb-1">WhatsApp</h4>
+                            <h4 className="text-sm font-bold text-[#000000] uppercase tracking-widest mb-1">WhatsApp</h4>
                             <a href="https://wa.me/916267276957" className="text-slate-600 font-light hover:text-[#25D366] transition-colors">
                                 +91 62672 76957 (Click to Chat)
                             </a>
@@ -140,7 +140,7 @@ const Contact = () => {
                     <div className="flex items-start gap-4">
                         <div className="mt-1 text-[#BFA37E]"><Clock size={24} /></div>
                         <div>
-                            <h4 className="text-sm font-bold text-[#0A192F] uppercase tracking-widest mb-1">Hours</h4>
+                            <h4 className="text-sm font-bold text-[#000000] uppercase tracking-widest mb-1">Hours</h4>
                             <p className="text-slate-600 font-light">Check-in: 12:00 PM | Check-out: 11:00 AM</p>
                             <p className="text-slate-600 font-light">Front Desk: 24 hours</p>
                         </div>
@@ -169,24 +169,24 @@ const Contact = () => {
                     
                     {/* How to Reach Us */}
                     <div>
-                        <h2 className="text-3xl font-serif text-[#0A192F] mb-10 uppercase tracking-wide">
+                        <h2 className="text-3xl font-serif text-[#000000] mb-10 uppercase tracking-wide">
                             How to Reach Us
                         </h2>
                         <div className="space-y-8">
                             <div className="bg-white p-6 shadow-sm border border-slate-100 border-l-4 border-l-[#BFA37E]">
-                                <h4 className="text-lg font-serif font-bold text-[#0A192F] mb-2">From Rani Kamlapati Station</h4>
+                                <h4 className="text-lg font-serif font-bold text-[#000000] mb-2">From Rani Kamlapati Station</h4>
                                 <p className="text-slate-600 font-light leading-relaxed">
                                     Hotel Bhopal Inn is extremely well connected. It takes approximately 10 minutes by auto-rickshaw or cab from Rani Kamlapati Railway Station.
                                 </p>
                             </div>
                             <div className="bg-white p-6 shadow-sm border border-slate-100 border-l-4 border-l-[#BFA37E]">
-                                <h4 className="text-lg font-serif font-bold text-[#0A192F] mb-2">From Raja Bhoj Airport</h4>
+                                <h4 className="text-lg font-serif font-bold text-[#000000] mb-2">From Raja Bhoj Airport</h4>
                                 <p className="text-slate-600 font-light leading-relaxed">
                                     The airport is around 18 kms away. You can easily get a prepaid taxi or an app-based cab which takes approx. 25–30 minutes to reach the hotel.
                                 </p>
                             </div>
                             <div className="bg-white p-6 shadow-sm border border-slate-100 border-l-4 border-l-[#BFA37E]">
-                                <h4 className="text-lg font-serif font-bold text-[#0A192F] mb-2">From ISBT Bus Stand</h4>
+                                <h4 className="text-lg font-serif font-bold text-[#000000] mb-2">From ISBT Bus Stand</h4>
                                 <p className="text-slate-600 font-light leading-relaxed">
                                     Just a 15-minute drive from the Inter State Bus Terminal (ISBT). Local transport is readily available 24/7.
                                 </p>
@@ -196,7 +196,7 @@ const Contact = () => {
 
                     {/* Contact Form */}
                     <div className="bg-white p-8 lg:p-10 shadow-xl border border-slate-100">
-                        <h2 className="text-2xl font-serif text-[#0A192F] mb-8 uppercase tracking-wide">
+                        <h2 className="text-2xl font-serif text-[#000000] mb-8 uppercase tracking-wide">
                             Send us a message
                         </h2>
                         <form onSubmit={handleSubmit} className="space-y-6">

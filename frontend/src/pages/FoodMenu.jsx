@@ -88,7 +88,7 @@ const FoodMenu = () => {
                 <div className="container mx-auto px-4 lg:px-8">
                     {/* Header */}
                     <div className="text-center mb-12">
-                        <h1 className="text-4xl md:text-6xl font-serif text-[#0A192F] mb-4 uppercase">Our <span className="text-[#BFA37E]">Menu</span></h1>
+                        <h1 className="text-4xl md:text-6xl font-serif text-[#000000] mb-4 uppercase">Our <span className="text-[#BFA37E]">Menu</span></h1>
                         <p className="text-slate-500 font-light text-sm">Delicious food delivered to your room or table.</p>
                     </div>
 
@@ -146,7 +146,7 @@ const FoodMenu = () => {
                                     </div>
                                     <div className="p-8 flex-grow flex flex-col">
                                         <div className="flex justify-between items-start mb-2">
-                                            <h3 className="text-xl font-serif font-bold text-[#0A192F]">{item.name}</h3>
+                                            <h3 className="text-xl font-serif font-bold text-[#000000]">{item.name}</h3>
                                         </div>
                                         <div className="flex items-center gap-2 mb-6">
                                             <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest">{item.quantity}</span>
@@ -157,7 +157,7 @@ const FoodMenu = () => {
                                         
                                         <button 
                                             onClick={() => addToCart(item)}
-                                            className="mt-auto w-full bg-[#0A192F] text-white py-5 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[#BFA37E] hover:shadow-xl transition-all duration-300"
+                                            className="mt-auto w-full bg-[#000000] text-white py-5 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-[#BFA37E] hover:shadow-xl transition-all duration-300"
                                         >
                                             <Plus size={16} /> Add to Order
                                         </button>
@@ -204,7 +204,7 @@ const FoodMenu = () => {
                             className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[400] shadow-2xl flex flex-col"
                         >
                             <div className="p-8 border-b border-slate-100 flex items-center justify-between">
-                                <h2 className="text-2xl font-serif text-[#0A192F]">Your Order</h2>
+                                <h2 className="text-2xl font-serif text-[#000000]">Your Order</h2>
                                 <button onClick={() => setIsCartOpen(false)}><X size={24} /></button>
                             </div>
 
@@ -215,7 +215,7 @@ const FoodMenu = () => {
                                             <img src={`${config.API_URL}${item.picture}`} className="w-full h-full object-cover" alt={item.name} />
                                         </div>
                                         <div className="flex-grow">
-                                            <h4 className="text-sm font-bold text-[#0A192F] uppercase">{item.name}</h4>
+                                            <h4 className="text-sm font-bold text-[#000000] uppercase">{item.name}</h4>
                                         </div>
                                         <div className="flex items-center gap-3 bg-slate-50 px-3 py-1 rounded-full">
                                             <button onClick={() => removeFromCart(item._id)} className="text-[#BFA37E]"><Minus size={14} /></button>
@@ -229,7 +229,7 @@ const FoodMenu = () => {
                             <div className="p-8 bg-slate-50 border-t border-slate-100 space-y-6">
                                 <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Items</span>
-                                    <span className="text-2xl font-bold text-[#0A192F]">{cart.reduce((acc, i) => acc + i.quantity, 0)}</span>
+                                    <span className="text-2xl font-bold text-[#000000]">{cart.reduce((acc, i) => acc + i.quantity, 0)}</span>
                                 </div>
                                 {showOrderForm ? (
                                     <div className="space-y-4">
@@ -262,7 +262,7 @@ const FoodMenu = () => {
                                 ) : (
                                     <button 
                                         onClick={() => setShowOrderForm(true)}
-                                        className="w-full bg-[#0A192F] text-white py-5 rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-[#BFA37E] transition-all"
+                                        className="w-full bg-[#000000] text-white py-5 rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-[#BFA37E] transition-all"
                                     >
                                         Proceed to Checkout
                                     </button>

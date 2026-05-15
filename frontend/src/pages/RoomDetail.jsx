@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import config from '../config';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '@/components/layout/Navbar';
 import TopBar from '@/components/layout/TopBar';
 import Footer from '@/components/layout/Footer';
@@ -19,6 +19,8 @@ const RoomDetail = () => {
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentImg, setCurrentImg] = useState(0);
+  const [reviews, setReviews] = useState([]);
+  const [currentReview, setCurrentReview] = useState(0);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -32,8 +34,29 @@ const RoomDetail = () => {
         setLoading(false);
       }
     };
+
+    const fetchReviews = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/api/testimonials?visible=true`);
+        setReviews(res.data);
+      } catch (err) {
+        console.error('Error fetching reviews:', err);
+      }
+    };
+
     fetchRoom();
+    fetchReviews();
   }, [category]);
+
+  // Auto-slide reviews
+  useEffect(() => {
+    if (reviews.length > 1) {
+      const timer = setInterval(() => {
+        setCurrentReview((prev) => (prev + 1) % reviews.length);
+      }, 4000);
+      return () => clearInterval(timer);
+    }
+  }, [reviews]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-white">
@@ -44,7 +67,7 @@ const RoomDetail = () => {
   if (!room) return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="text-center">
-        <h2 className="text-2xl font-serif text-[#0A192F] mb-4">Room not found</h2>
+        <h2 className="text-2xl font-serif text-[#000000] mb-4">Room not found</h2>
         <Link to="/rooms" className="text-[#8B735B] font-bold uppercase tracking-widest underline">Back to Rooms</Link>
       </div>
     </div>
@@ -81,7 +104,7 @@ const RoomDetail = () => {
 
       <main className="flex-grow">
         {/* Hero Section - Image 1 Reference */}
-        <section className="relative min-h-[125vh] flex items-center justify-center overflow-hidden pt-20">
+        <section className="relative min-h-screen lg:min-h-[125vh] flex items-center justify-center overflow-hidden pt-20">
           <img 
             src={getFullUrl(room.images[0])} 
             alt={room.title} 
@@ -102,10 +125,27 @@ const RoomDetail = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-5xl md:text-8xl font-serif text-white mb-12 uppercase leading-tight tracking-wide"
+              className="text-4xl md:text-8xl font-serif text-white mb-8 md:mb-12 uppercase leading-tight tracking-wide"
             >
               {room.title}
             </motion.h1>
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex flex-col items-center mb-8"
+            >
+              <div className="flex items-center gap-4">
+                {room.details?.cutPrice > 0 && (
+                  <span className="text-xl md:text-2xl font-serif text-white/50 line-through decoration-white/30">₹{room.details.cutPrice.toLocaleString()}</span>
+                )}
+                <span className="text-3xl md:text-5xl font-serif font-bold text-white">
+                  ₹{(room.details?.startingPrice || 0).toLocaleString()}
+                </span>
+              </div>
+              <span className="text-[10px] text-white/60 font-bold uppercase tracking-[0.3em] mt-2 italic">Per Night Starting</span>
+            </motion.div>
             
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -114,7 +154,7 @@ const RoomDetail = () => {
             >
               <Link 
                 to="/booking" state={{ roomId: room._id }}
-                className="bg-white text-[#0A192F] px-12 py-5 text-[11px] font-bold uppercase tracking-[0.4em] hover:bg-[#8B735B] hover:text-white transition-all shadow-2xl inline-block rounded-full"
+                className="bg-white text-[#000000] px-12 py-5 text-[11px] font-bold uppercase tracking-[0.4em] hover:bg-[#8B735B] hover:text-white transition-all shadow-2xl inline-block rounded-full"
               >
                 Reserve This Room
               </Link>
@@ -124,7 +164,7 @@ const RoomDetail = () => {
 
         {/* Info Bar - Image 2 Reference */}
         <section className="bg-[#4A4A4A] py-6 text-white">
-          <div className="container mx-auto px-4 lg:px-8 max-w-7xl flex items-center justify-between">
+          <div className="container mx-auto px-4 lg:px-8 max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <Users size={20} className="text-white/60" />
@@ -143,14 +183,14 @@ const RoomDetail = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
               <div className="space-y-8">
                 <div className="space-y-4">
-                  <h2 className="text-3xl lg:text-4xl font-serif text-[#0A192F] uppercase tracking-wide">Room Description</h2>
+                  <h2 className="text-3xl lg:text-4xl font-serif text-[#000000] uppercase tracking-wide">Room Description</h2>
                   <div className="h-[1px] w-12 bg-[#8B735B]"></div>
                 </div>
                 <div className="flex flex-col mb-4">
                   {room.details?.cutPrice > 0 && (
                     <span className="text-lg font-serif text-slate-400 line-through decoration-slate-400/60">₹{room.details.cutPrice.toLocaleString()}</span>
                   )}
-                  <span className="text-4xl font-serif font-bold text-[#0A192F]">
+                  <span className="text-4xl font-serif font-bold text-[#000000]">
                     ₹{(room.details?.startingPrice || 0).toLocaleString()}
                     <span className="text-xs text-slate-400 font-normal uppercase tracking-[0.2em] ml-4 italic">Per Night Starting</span>
                   </span>
@@ -215,7 +255,7 @@ const RoomDetail = () => {
         <section className="py-24 bg-slate-50">
           <div className="container mx-auto px-4 lg:px-8 max-w-7xl text-center">
             <div className="space-y-4 mb-20">
-              <h2 className="text-4xl lg:text-6xl font-serif text-[#0A192F] uppercase tracking-wide">Amenities</h2>
+              <h2 className="text-4xl lg:text-6xl font-serif text-[#000000] uppercase tracking-wide">Amenities</h2>
               <div className="h-[1px] w-24 bg-[#8B735B] mx-auto"></div>
               <p className="text-slate-500 max-w-2xl mx-auto mt-6">Our rooms are well appointed with amenities that ensure a comfortable and productive stay</p>
             </div>
@@ -226,11 +266,11 @@ const RoomDetail = () => {
                   const { icon: Icon, label } = getAmenityData(amenity);
                   return (
                     <div key={idx} className="flex flex-col items-center gap-4 group">
-                      <div className="w-16 h-16 flex items-center justify-center bg-white shadow-sm rounded-full text-[#0A192F] group-hover:bg-[#8B735B] group-hover:text-white transition-all border border-slate-100">
+                      <div className="w-16 h-16 flex items-center justify-center bg-white shadow-sm rounded-full text-[#000000] group-hover:bg-[#8B735B] group-hover:text-white transition-all border border-slate-100">
                         <Icon size={28} strokeWidth={1.5} className="relative z-10" />
                       </div>
                       <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-600 group-hover:text-[#0A192F] transition-colors leading-tight">
+                          <span className="text-xs font-bold text-slate-600 group-hover:text-[#000000] transition-colors leading-tight">
                           {label}
                           </span>
                       </div>
@@ -244,29 +284,55 @@ const RoomDetail = () => {
           </div>
         </section>
 
-        {/* Testimonial - Image 4 Reference */}
-        <section className="bg-[#8B735B] py-24 text-white text-center">
+        {/* Testimonial - Dynamic Slider */}
+        <section className="bg-black py-24 text-white text-center min-h-[400px] flex items-center">
           <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
-            <Star size={32} className="mx-auto mb-8 fill-white" />
-            <p className="text-xl md:text-2xl font-light italic leading-relaxed mb-12">
-              "Hotel Bhopal Inn truly lives up to its name! The ambiance is serene, the rooms are immaculate, and the staff made me feel right at home. I'll definitely be coming back."
-            </p>
-            <div className="space-y-2">
-              <h4 className="text-lg font-bold tracking-widest uppercase">Priya Mehta</h4>
-              <div className="flex justify-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-white"></div>
-                <div className="w-2 h-2 rounded-full bg-white/40"></div>
-                <div className="w-2 h-2 rounded-full bg-white/40"></div>
-              </div>
-            </div>
+            <AnimatePresence mode="wait">
+              {reviews.length > 0 ? (
+                <motion.div
+                  key={currentReview}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <div className="flex justify-center gap-1 mb-8">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} size={24} fill="white" className="text-white" />
+                    ))}
+                  </div>
+                  <p className="text-xl md:text-2xl font-light italic leading-relaxed mb-12">
+                    "{reviews[currentReview].text}"
+                  </p>
+                  <div className="space-y-2">
+                    <h4 className="text-lg font-bold tracking-widest uppercase">{reviews[currentReview].name}</h4>
+                    <div className="flex justify-center gap-2 mt-4">
+                      {reviews.map((_, idx) => (
+                        <button 
+                          key={idx}
+                          onClick={() => setCurrentReview(idx)}
+                          className={`w-2 h-2 rounded-full transition-all ${currentReview === idx ? 'bg-white scale-125' : 'bg-white/40'}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="flex justify-center items-center h-40">
+                  <p className="text-white/50 text-sm italic">
+                    {reviews.length === 0 ? "No guest reviews available yet." : "Loading guest reviews..."}
+                  </p>
+                </div>
+              )}
+            </AnimatePresence>
           </div>
         </section>
       </main>
 
       {/* Floating Elements */}
       <div className="fixed right-8 top-1/2 -translate-y-1/2 hidden lg:flex flex-col gap-4 z-[210]">
-        <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-[#0A192F] shadow-xl hover:bg-[#8B735B] hover:text-white transition-all"><Star size={20} /></button>
-        <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-[#0A192F] shadow-xl hover:bg-[#8B735B] hover:text-white transition-all"><Info size={20} /></button>
+        <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-[#000000] shadow-xl hover:bg-[#8B735B] hover:text-white transition-all"><Star size={20} /></button>
+        <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-[#000000] shadow-xl hover:bg-[#8B735B] hover:text-white transition-all"><Info size={20} /></button>
       </div>
 
 

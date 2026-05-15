@@ -1,61 +1,165 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Calendar, Users, Home, Search } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, Users, Home, Search, Plus, Minus, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const BookingWidget = () => {
+  const navigate = useNavigate();
+  const [showGuests, setShowGuests] = useState(false);
+  const [guests, setGuests] = useState({
+    adults: 2,
+    children: 0,
+    rooms: 1
+  });
+  const [dates, setDates] = useState({
+    checkIn: new Date().toISOString().split('T')[0],
+    checkOut: new Date(Date.now() + 86400000).toISOString().split('T')[0]
+  });
+  const [roomType, setRoomType] = useState('All Rooms');
+  const guestRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (guestRef.current && !guestRef.current.contains(event.target)) {
+        setShowGuests(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearch = () => {
+    navigate('/booking', { 
+      state: { 
+        checkIn: dates.checkIn, 
+        checkOut: dates.checkOut,
+        adults: guests.adults,
+        children: guests.children,
+        rooms: guests.rooms,
+        roomType: roomType
+      } 
+    });
+  };
+
+  const updateCount = (type, delta) => {
+    setGuests(prev => ({
+      ...prev,
+      [type]: Math.max(type === 'adults' || type === 'rooms' ? 1 : 0, prev[type] + delta)
+    }));
+  };
+
   return (
     <div className="relative z-30 container mx-auto px-4 -mt-16 lg:-mt-24">
       <motion.div 
         initial={{ y: 30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.8 }}
-        className="bg-white p-6 lg:p-2 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-sm"
+        className="bg-white p-6 lg:p-0 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-sm overflow-visible"
       >
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center">
           
           {/* Check In */}
-          <div className="flex-1 px-6 py-4 border-b lg:border-b-0 lg:border-r border-slate-100 group">
-            <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-2 group-hover:text-[#0A192F] transition-colors">
+          <div className="flex-1 px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group">
+            <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-3 group-hover:text-black transition-colors">
               <Calendar size={12} /> Check In
             </label>
             <input 
               type="date" 
-              className="w-full bg-transparent text-[#0A192F] text-sm font-bold focus:outline-none appearance-none cursor-pointer"
-              defaultValue={new Date().toISOString().split('T')[0]}
+              value={dates.checkIn}
+              onChange={(e) => setDates({...dates, checkIn: e.target.value})}
+              className="w-full bg-transparent text-black text-sm font-bold focus:outline-none appearance-none cursor-pointer"
             />
           </div>
 
           {/* Check Out */}
-          <div className="flex-1 px-6 py-4 border-b lg:border-b-0 lg:border-r border-slate-100 group">
-            <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-2 group-hover:text-[#0A192F] transition-colors">
+          <div className="flex-1 px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group">
+            <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-3 group-hover:text-black transition-colors">
               <Calendar size={12} /> Check Out
             </label>
             <input 
               type="date" 
-              className="w-full bg-transparent text-[#0A192F] text-sm font-bold focus:outline-none appearance-none cursor-pointer"
-              defaultValue={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+              value={dates.checkOut}
+              onChange={(e) => setDates({...dates, checkOut: e.target.value})}
+              className="w-full bg-transparent text-black text-sm font-bold focus:outline-none appearance-none cursor-pointer"
             />
           </div>
 
-          {/* Guests */}
-          <div className="flex-1 px-6 py-4 border-b lg:border-b-0 lg:border-r border-slate-100 group">
-            <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-2 group-hover:text-[#0A192F] transition-colors">
+          {/* Guests Popover (Image 2 style) */}
+          <div className="flex-1 px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group relative" ref={guestRef}>
+            <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-3 group-hover:text-black transition-colors">
               <Users size={12} /> Guests
             </label>
-            <select className="w-full bg-transparent text-[#0A192F] text-sm font-bold focus:outline-none cursor-pointer appearance-none">
-              <option>1 Guest</option>
-              <option>2 Guests</option>
-              <option>3 Guests</option>
-              <option>4 Guests</option>
-            </select>
+            <div 
+              onClick={() => setShowGuests(!showGuests)}
+              className="w-full flex items-center justify-between text-black text-sm font-bold cursor-pointer"
+            >
+              <span>{guests.adults} Adults · {guests.children} Children · {guests.rooms} Room</span>
+              <ChevronDown size={14} className={`transition-transform ${showGuests ? 'rotate-180' : ''}`} />
+            </div>
+
+            <AnimatePresence>
+              {showGuests && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute left-0 lg:left-auto lg:right-0 top-full mt-2 w-full lg:w-80 bg-white shadow-[0_10px_40px_rgba(0,0,0,0.15)] p-6 z-50 border border-slate-100 rounded-lg"
+                >
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-bold text-black">Adults</div>
+                        <div className="text-[10px] text-slate-400 uppercase tracking-wider">Ages 12+</div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <button onClick={() => updateCount('adults', -1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={14}/></button>
+                        <span className="w-4 text-center font-bold">{guests.adults}</span>
+                        <button onClick={() => updateCount('adults', 1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={14}/></button>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-bold text-black">Children</div>
+                        <div className="text-[10px] text-slate-400 uppercase tracking-wider">Ages 0-11</div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <button onClick={() => updateCount('children', -1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={14}/></button>
+                        <span className="w-4 text-center font-bold">{guests.children}</span>
+                        <button onClick={() => updateCount('children', 1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={14}/></button>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-bold text-black">Rooms</div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <button onClick={() => updateCount('rooms', -1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={14}/></button>
+                        <span className="w-4 text-center font-bold">{guests.rooms}</span>
+                        <button onClick={() => updateCount('rooms', 1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={14}/></button>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setShowGuests(false)}
+                      className="w-full py-3 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-black/80 transition-all rounded-md mt-2"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Room Type */}
-          <div className="flex-1 px-6 py-4 border-b lg:border-b-0 lg:border-r border-slate-100 group">
-            <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-2 group-hover:text-[#0A192F] transition-colors">
+          <div className="flex-1 px-8 py-6 border-b lg:border-b-0 lg:border-r border-slate-100 group">
+            <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-3 group-hover:text-black transition-colors">
               <Home size={12} /> Room Type
             </label>
-            <select className="w-full bg-transparent text-[#0A192F] text-sm font-bold focus:outline-none cursor-pointer appearance-none">
+            <select 
+              value={roomType}
+              onChange={(e) => setRoomType(e.target.value)}
+              className="w-full bg-transparent text-black text-sm font-bold focus:outline-none cursor-pointer appearance-none"
+            >
               <option>All Rooms</option>
               <option>Standard Deluxe</option>
               <option>Balcony Deluxe</option>
@@ -63,15 +167,21 @@ const BookingWidget = () => {
             </select>
           </div>
 
-          {/* Search Button */}
-          <button className="lg:w-64 bg-[#BFA37E] text-white py-6 lg:py-10 px-8 flex items-center justify-center gap-3 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#0A192F] transition-all duration-500">
-            <Search size={16} />
-            Check Availability
+          {/* Search Button (Image 3 style) */}
+          <button 
+            onClick={handleSearch}
+            className="lg:w-72 bg-[#BFA37E] text-white py-10 lg:py-14 px-10 flex items-center justify-center gap-4 text-xs font-bold uppercase tracking-[0.3em] hover:bg-black transition-all duration-500"
+          >
+            <Search size={18} />
+            <div className="flex flex-col items-start leading-none">
+                <span>Check</span>
+                <span className="mt-1">Availability</span>
+            </div>
           </button>
 
         </div>
       </motion.div>
-      <p className="text-center mt-6 text-[10px] md:text-xs font-bold text-[#0A192F]/60 uppercase tracking-widest">
+      <p className="text-center mt-8 text-[10px] md:text-xs font-bold text-black/60 uppercase tracking-[0.2em]">
         Best rate guaranteed when you book direct. No commission, no hidden charges.
       </p>
     </div>

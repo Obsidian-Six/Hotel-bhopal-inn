@@ -30,16 +30,16 @@ const InstagramFeed = () => {
   ];
 
   return (
-    <section className="py-24 bg-white">
+    <section className="py-16 md:py-24 bg-white">
       <div className="container mx-auto px-4 lg:px-8 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mb-16"
+          className="mb-12 md:mb-16"
         >
           <span className="text-[#BFA37E] text-xs font-bold tracking-[0.4em] uppercase mb-4 block">Social Media</span>
-          <h2 className="text-4xl md:text-5xl font-serif font-bold text-[#0A192F] mb-4">Follow Our Journey</h2>
+          <h2 className="text-3xl md:text-5xl font-serif font-bold text-[#000000] mb-4">Follow Our Journey</h2>
           <p className="text-sm font-bold tracking-widest text-[#BFA37E]">@hoteltenontenstays</p>
         </motion.div>
 
@@ -61,7 +61,7 @@ const InstagramFeed = () => {
                 alt="Instagram post" 
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
               />
-              <div className="absolute inset-0 bg-[#0A192F]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-[#000000]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </motion.a>
           ))}
         </div>
@@ -71,7 +71,7 @@ const InstagramFeed = () => {
             href={instagramUrl} 
             target="_blank" 
             rel="noreferrer"
-            className="inline-flex items-center gap-3 bg-[#0A192F] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] rounded-sm hover:bg-[#BFA37E] transition-all shadow-xl"
+            className="inline-flex items-center gap-3 bg-[#000000] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] rounded-sm hover:bg-[#BFA37E] transition-all shadow-xl"
           >
             <Instagram size={16} />
             Follow on Instagram

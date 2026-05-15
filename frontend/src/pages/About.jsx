@@ -66,7 +66,7 @@ const About = () => {
         {/* Our Story Section */}
         <section className="py-24 bg-[#FDFBF7]">
           <div className="container mx-auto px-4 lg:px-8 max-w-4xl text-center">
-            <h2 className="text-3xl md:text-5xl font-serif text-[#0A192F] mb-6 uppercase tracking-wide">
+            <h2 className="text-3xl md:text-5xl font-serif text-[#000000] mb-6 uppercase tracking-wide">
               Our Story
             </h2>
             <div className="h-[1px] w-24 bg-[#BFA37E] mx-auto mb-10"></div>
@@ -80,7 +80,7 @@ const About = () => {
         <section className="py-24 bg-white">
           <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-serif text-[#0A192F] mb-6 uppercase tracking-wide">
+              <h2 className="text-3xl md:text-5xl font-serif text-[#000000] mb-6 uppercase tracking-wide">
                 Why Choose Hotel Bhopal Inn
               </h2>
               <div className="h-[1px] w-24 bg-[#BFA37E] mx-auto"></div>
@@ -107,7 +107,7 @@ const About = () => {
         </section>
 
         {/* Ten on Ten Stays Brand */}
-        <section className="py-24 bg-[#0A192F] text-white">
+        <section className="py-24 bg-[#000000] text-white">
           <div className="container mx-auto px-4 lg:px-8 max-w-4xl text-center">
             <div className="flex justify-center mb-6">
                 <img src="/logo.png" alt="Hotel Bhopal Inn Logo" className="h-32 md:h-48 w-auto object-contain bg-white rounded-sm" />

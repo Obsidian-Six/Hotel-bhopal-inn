@@ -174,8 +174,12 @@ router.post('/calculate-price', async (req, res) => {
             date: { $gte: start, $lt: end } // Dates are stored as UTC midnight
         });
 
+        const unitCount = await RoomUnit.countDocuments({ category: roomCategory });
+        
         let totalPrice = 0;
         let currentDate = new Date(start);
+        let isAvailable = true;
+        let minAvailable = Infinity;
 
         // Loop through each night using UTC
         while (currentDate < end) {
@@ -187,11 +191,46 @@ router.post('/calculate-price', async (req, res) => {
             } else {
                 totalPrice += room.details.startingPrice;
             }
+
+            // Availability Check
+            // Priority: 1. DailyInventory.roomsToSell, 2. Room.details.noOfRooms, 3. Physical RoomUnit count
+            let capacity = 10; // Extreme fallback
+            if (override?.roomsToSell !== null && override?.roomsToSell !== undefined) {
+                capacity = override.roomsToSell;
+            } else if (room.details?.noOfRooms > 0) {
+                capacity = room.details.noOfRooms;
+            } else {
+                capacity = unitCount || 10;
+            }
+
+            const blocked = override?.blockedCount || 0;
+            
+            // Dynamic Booking Calculation (Sync with Booking collection)
+            const bookedCount = await Booking.countDocuments({
+                roomCategory: roomCategory,
+                status: { $ne: 'Cancelled' },
+                checkInDate: { $lte: currentDate },
+                checkOutDate: { $gt: currentDate }
+            });
+            
+            const booked = Math.max(override?.bookingsCount || 0, bookedCount);
+            
+            const available = capacity - booked - blocked;
+            
+            if (available < minAvailable) minAvailable = available;
+            if (available <= 0 || (override && override.status === 'Closed')) {
+                isAvailable = false;
+            }
             
             currentDate.setUTCDate(currentDate.getUTCDate() + 1);
         }
 
-        res.json({ totalPrice, nights: Math.round((end - start) / (1000 * 60 * 60 * 24)) });
+        res.json({ 
+            totalPrice, 
+            nights: Math.round((end - start) / (1000 * 60 * 60 * 24)),
+            isAvailable,
+            minAvailable: minAvailable === Infinity ? (room.details?.noOfRooms || unitCount || 10) : minAvailable
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

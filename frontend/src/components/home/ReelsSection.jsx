@@ -29,7 +29,7 @@ const ReelsSection = () => {
                 <div className="flex flex-col md:flex-row items-end justify-between mb-12 gap-6">
                     <div>
                         <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-[0.6em] mb-4 block">Visual Stories</span>
-                        <h2 className="text-4xl md:text-6xl font-serif text-[#0A192F] uppercase tracking-tight">
+                        <h2 className="text-4xl md:text-6xl font-serif text-[#000000] uppercase tracking-tight">
                             Experience <span className="italic text-[#BFA37E]">Bhopal Inn</span>
                         </h2>
                     </div>

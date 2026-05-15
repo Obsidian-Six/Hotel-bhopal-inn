@@ -69,7 +69,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                     </button>
                     
                     <div className="p-8">
-                        <h2 className="text-2xl font-serif text-[#0A192F] mb-6 text-center">
+                        <h2 className="text-2xl font-serif text-[#000000] mb-6 text-center">
                             {isLogin ? 'Sign In To Book Faster' : 'Create an Account'}
                         </h2>
                         
@@ -126,7 +126,7 @@ const LoginModal = ({ isOpen, onClose }) => {
                                 onSuccess={handleGoogleSuccess}
                                 onError={() => setError('Google Login Failed')}
                                 useOneTap
-                                theme="filled_blue"
+                                theme="filled_black"
                                 size="large"
                                 shape="pill"
                                 width="300px"

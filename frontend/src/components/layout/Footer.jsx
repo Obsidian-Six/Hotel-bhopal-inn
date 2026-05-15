@@ -22,37 +22,21 @@ const Footer = () => {
   );
 
   return (
-    <footer className="bg-[#FDFBF7] text-[#0A192F] pt-20 pb-10 border-t border-slate-100">
+    <footer className="bg-[#FDFBF7] text-[#000000] pt-20 pb-10 border-t border-slate-100">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           
           {/* Column 1 - Brand */}
           <div className="flex flex-col gap-6">
             <Link to="/" className="flex flex-col">
-              <div className="h-28 w-56 overflow-hidden flex items-start justify-start">
-                <img src="/logo.png" alt="Bhopal Inn Logo" className="h-full w-auto object-contain scale-[2.2] origin-left" />
+              <div className="h-20 md:h-28 w-48 md:w-56 overflow-hidden flex items-start justify-start">
+                <img src="/logo.png" alt="Bhopal Inn Logo" className="h-full w-auto object-contain scale-[1.8] md:scale-[2.2] origin-left" />
               </div>
             </Link>
 
             <p className="text-xs leading-loose text-slate-600 font-medium italic">
               Budget Comfort. Top-Notch Hospitality. City Centre Bhopal.
             </p>
-              <div className="flex items-center gap-4 mt-2">
-                <div className="bg-slate-100 p-2 rounded-sm border border-slate-200 flex items-center gap-3">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" className="w-5 h-5" />
-                  <div>
-                    <span className="text-[10px] block font-bold text-[#BFA37E]">4.5/5</span>
-                    <span className="text-[8px] uppercase tracking-tighter text-slate-500">Google Rating</span>
-                  </div>
-                </div>
-                <div className="bg-slate-100 p-2 rounded-sm border border-slate-200 flex items-center gap-3">
-                  <img src="https://www.vectorlogo.zone/logos/tripadvisor/tripadvisor-icon.svg" alt="TripAdvisor" className="w-6 h-6" />
-                  <div>
-                    <span className="text-[10px] block font-bold text-[#BFA37E]">TripAdvisor</span>
-                    <span className="text-[8px] uppercase tracking-tighter text-slate-600 font-bold">Excellence</span>
-                  </div>
-                </div>
-              </div>
           </div>
 
           {/* Column 2 - Quick Links */}
@@ -150,7 +134,7 @@ const Footer = () => {
       {showQueryModal && (
         <div className="fixed inset-0 bg-black/80 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm">
             <div className="bg-white rounded-sm shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-300">
-                <div className="bg-[#0A192F] p-6 text-white flex justify-between items-center">
+                <div className="bg-[#000000] p-6 text-white flex justify-between items-center">
                     <h3 className="font-serif text-xl font-bold uppercase tracking-widest text-[#BFA37E]">Post a Query</h3>
                     <button onClick={() => setShowQueryModal(false)} className="hover:text-[#BFA37E] transition-colors">
                         <X size={24} />
@@ -164,7 +148,7 @@ const Footer = () => {
                             required 
                             value={queryData.name}
                             onChange={(e) => setQueryData({...queryData, name: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]" 
+                            className="w-full bg-slate-50 border border-slate-200 p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]" 
                             placeholder="John Doe"
                         />
                     </div>
@@ -175,7 +159,7 @@ const Footer = () => {
                             required 
                             value={queryData.mobile}
                             onChange={(e) => setQueryData({...queryData, mobile: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]" 
+                            className="w-full bg-slate-50 border border-slate-200 p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]" 
                             placeholder="+91 00000 00000"
                         />
                     </div>
@@ -186,7 +170,7 @@ const Footer = () => {
                             rows="4"
                             value={queryData.message}
                             onChange={(e) => setQueryData({...queryData, message: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] resize-none" 
+                            className="w-full bg-slate-50 border border-slate-200 p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] resize-none" 
                             placeholder="Tell us what you need..."
                         ></textarea>
                     </div>

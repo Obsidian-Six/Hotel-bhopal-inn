@@ -24,6 +24,7 @@ const RoomManagement = () => {
   const [bedType, setBedType] = useState('');
   const [view, setView] = useState('');
   const [extraPersonCharge, setExtraPersonCharge] = useState('');
+  const [noOfRooms, setNoOfRooms] = useState('');
   const [files, setFiles] = useState([]);
   const [replaceImages, setReplaceImages] = useState(false);
 
@@ -71,6 +72,7 @@ const RoomManagement = () => {
     setBedType('');
     setView('');
     setExtraPersonCharge('');
+    setNoOfRooms('');
     setSelectedAmenities([]);
     setSelectedTags([]);
     setFiles([]);
@@ -91,6 +93,7 @@ const RoomManagement = () => {
     setBedType(room.details?.bedType || '');
     setView(room.details?.view || '');
     setExtraPersonCharge(room.details?.extraPersonCharge || '');
+    setNoOfRooms(room.details?.noOfRooms || '');
     setSelectedAmenities(room.amenities || []);
     setSelectedTags(room.tags || []);
     setReplaceImages(false);
@@ -118,7 +121,8 @@ const RoomManagement = () => {
       maxOccupancy,
       bedType,
       view,
-      extraPersonCharge: Number(extraPersonCharge)
+      extraPersonCharge: Number(extraPersonCharge),
+      noOfRooms: Number(noOfRooms)
     }));
 
     for (let i = 0; i < files.length; i++) {
@@ -176,12 +180,12 @@ const RoomManagement = () => {
       {/* Header Section */}
       <div className="flex items-center justify-between border-b border-[#F1E9DA] pb-8">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-[#0A192F]">Room Management</h1>
+          <h1 className="text-3xl font-serif font-bold text-[#000000]">Room Management</h1>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-2">Create and edit your property's room inventory</p>
         </div>
         <button 
           onClick={resetForm}
-          className="flex items-center gap-2 bg-[#0A192F] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#BFA37E] transition-all"
+          className="flex items-center gap-2 bg-[#000000] text-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#BFA37E] transition-all"
         >
           <Plus size={16}/>
           Add New Room
@@ -192,7 +196,7 @@ const RoomManagement = () => {
         {/* Form Section */}
         <div className="lg:col-span-8 space-y-8">
           <div className="bg-white p-10 border border-[#F1E9DA] shadow-sm">
-            <h2 className="text-sm font-bold text-[#0A192F] uppercase tracking-[0.2em] mb-10 pb-4 border-b border-[#F1E9DA] flex items-center gap-3">
+            <h2 className="text-sm font-bold text-[#000000] uppercase tracking-[0.2em] mb-10 pb-4 border-b border-[#F1E9DA] flex items-center gap-3">
               <Edit3 size={18} className="text-[#BFA37E]" />
               {editingRoom ? `Editing: ${editingRoom.title}` : 'Room Details'}
             </h2>
@@ -209,7 +213,7 @@ const RoomManagement = () => {
                           setCategory(e.target.value);
                           setShowNewCategory(e.target.value === 'NEW');
                         }}
-                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                       >
                         <option>Standard Deluxe</option>
                         <option>Balcony Deluxe</option>
@@ -224,7 +228,7 @@ const RoomManagement = () => {
                           value={newCategory} 
                           onChange={(e) => setNewCategory(e.target.value)}
                           placeholder="Enter new category name..."
-                          className="w-full bg-white border border-[#BFA37E] p-4 text-xs font-bold text-[#0A192F] focus:outline-none shadow-inner"
+                          className="w-full bg-white border border-[#BFA37E] p-4 text-xs font-bold text-[#000000] focus:outline-none shadow-inner"
                           required
                         />
                       )}
@@ -237,7 +241,7 @@ const RoomManagement = () => {
                       value={title} 
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="e.g. Executive King Suite"
-                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                       required
                     />
                   </div>
@@ -251,7 +255,7 @@ const RoomManagement = () => {
                         type="number" 
                         value={startingPrice} 
                         onChange={(e) => setStartingPrice(e.target.value)}
-                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                         required
                       />
                     </div>
@@ -262,7 +266,7 @@ const RoomManagement = () => {
                         value={cutPrice} 
                         onChange={(e) => setCutPrice(e.target.value)}
                         placeholder="e.g. 8500"
-                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                       />
                     </div>
                     <div>
@@ -271,8 +275,18 @@ const RoomManagement = () => {
                         type="number" 
                         value={extraPersonCharge} 
                         onChange={(e) => setExtraPersonCharge(e.target.value)}
-                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                         required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total Rooms</label>
+                      <input 
+                        type="number" 
+                        value={noOfRooms} 
+                        onChange={(e) => setNoOfRooms(e.target.value)}
+                        placeholder="e.g. 10"
+                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                       />
                     </div>
                   </div>
@@ -284,7 +298,7 @@ const RoomManagement = () => {
                         value={maxOccupancy} 
                         onChange={(e) => setMaxOccupancy(e.target.value)}
                         placeholder="2 Adults"
-                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                         required
                       />
                     </div>
@@ -295,7 +309,7 @@ const RoomManagement = () => {
                         value={bedType} 
                         onChange={(e) => setBedType(e.target.value)}
                         placeholder="King / Twin"
-                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors"
+                        className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
                         required
                       />
                     </div>
@@ -310,7 +324,7 @@ const RoomManagement = () => {
                   value={description} 
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe the luxury and comfort of this room..."
-                  className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E] transition-colors leading-relaxed"
+                  className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors leading-relaxed"
                   required
                 />
               </div>
@@ -326,7 +340,7 @@ const RoomManagement = () => {
                         onClick={() => toggleAmenity(amenity)}
                         className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest border transition-all ${
                           selectedAmenities.includes(amenity)
-                            ? 'bg-[#0A192F] text-white border-[#0A192F]'
+                            ? 'bg-[#000000] text-white border-[#000000]'
                             : 'bg-white text-slate-400 border-slate-100 hover:border-[#BFA37E]'
                         }`}
                       >
@@ -387,7 +401,7 @@ const RoomManagement = () => {
                 <button 
                   type="submit" 
                   disabled={loading}
-                  className="bg-[#0A192F] text-white px-12 py-5 text-xs font-bold uppercase tracking-[0.3em] hover:bg-[#BFA37E] transition-all disabled:opacity-50 flex items-center gap-3 shadow-xl"
+                  className="bg-[#000000] text-white px-12 py-5 text-xs font-bold uppercase tracking-[0.3em] hover:bg-[#BFA37E] transition-all disabled:opacity-50 flex items-center gap-3 shadow-xl"
                 >
                   <Save size={18}/>
                   {loading ? 'Processing...' : 'Commit Changes'}
@@ -432,8 +446,8 @@ const RoomManagement = () => {
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
                       alt={room.title} 
                     />
-                    <div className="absolute inset-0 bg-[#0A192F]/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-4">
-                      <button onClick={() => onEdit(room)} className="p-3 bg-white text-[#0A192F] rounded-full hover:bg-[#BFA37E] hover:text-white transition-all shadow-xl transform translate-y-4 group-hover:translate-y-0 duration-500">
+                    <div className="absolute inset-0 bg-[#000000]/60 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-4">
+                      <button onClick={() => onEdit(room)} className="p-3 bg-white text-[#000000] rounded-full hover:bg-[#BFA37E] hover:text-white transition-all shadow-xl transform translate-y-4 group-hover:translate-y-0 duration-500">
                         <Edit3 size={18}/>
                       </button>
                       <button onClick={() => onDelete(room.category)} className="p-3 bg-white text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-xl transform translate-y-4 group-hover:translate-y-0 duration-500 delay-75">
@@ -443,7 +457,7 @@ const RoomManagement = () => {
                   </div>
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="text-sm font-bold text-[#0A192F] uppercase tracking-wider">{room.title}</h4>
+                      <h4 className="text-sm font-bold text-[#000000] uppercase tracking-wider">{room.title}</h4>
                       <span className="text-[9px] font-bold text-[#BFA37E] bg-[#FDFBF7] px-2 py-1 uppercase">{room.category}</span>
                     </div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">₹{room.details?.startingPrice} / Night</p>

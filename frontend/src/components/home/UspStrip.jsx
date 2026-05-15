@@ -28,7 +28,7 @@ const USPStrip = () => {
               <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-[#BFA37E] group-hover:bg-[#BFA37E] group-hover:text-white transition-all duration-300">
                 <usp.icon size={20} strokeWidth={1.5} />
               </div>
-              <span className="text-[10px] md:text-[11px] font-bold text-[#0A192F] uppercase tracking-widest leading-relaxed">
+              <span className="text-[10px] md:text-[11px] font-bold text-[#000000] uppercase tracking-widest leading-relaxed">
                 {usp.text}
               </span>
             </motion.div>

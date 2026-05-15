@@ -20,7 +20,7 @@ const AnnouncementBar = () => {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          className="bg-[#0A192F] text-white py-2 px-4 text-center relative z-[100] border-b border-[#BFA37E]/20"
+          className="bg-[#000000] text-white py-2 px-4 text-center relative z-[100] border-b border-[#BFA37E]/20"
         >
           <div className="container mx-auto flex items-center justify-center gap-4">
             <div className="flex-grow overflow-hidden h-5 flex items-center justify-center">

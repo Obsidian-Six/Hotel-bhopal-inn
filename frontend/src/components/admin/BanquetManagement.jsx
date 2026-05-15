@@ -216,7 +216,7 @@ const BanquetManagement = () => {
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-serif font-bold text-[#0A192F]">Banquet & Events CMS</h2>
+          <h2 className="text-3xl font-serif font-bold text-[#000000]">Banquet & Events CMS</h2>
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-2">Manage hall details, catering, and event galleries</p>
         </div>
         
@@ -225,7 +225,7 @@ const BanquetManagement = () => {
             <button 
               key={tab}
               onClick={() => setActiveSubTab(tab)}
-              className={`px-6 py-2 text-[9px] font-bold uppercase tracking-widest transition-all ${activeSubTab === tab ? 'bg-[#0A192F] text-white shadow-lg' : 'text-slate-400 hover:text-[#0A192F]'}`}
+              className={`px-6 py-2 text-[9px] font-bold uppercase tracking-widest transition-all ${activeSubTab === tab ? 'bg-[#000000] text-white shadow-lg' : 'text-slate-400 hover:text-[#000000]'}`}
             >
               {tab === 'details' ? 'Hall Details' : tab === 'photos' ? 'Hall Photos' : 'Event Gallery'}
             </button>
@@ -243,30 +243,30 @@ const BanquetManagement = () => {
               <form onSubmit={handleUpdateDetails} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Page Title (H1)</label>
-                  <input type="text" value={banquetData.title} onChange={(e) => setBanquetData({...banquetData, title: e.target.value})} className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]" />
+                  <input type="text" value={banquetData.title} onChange={(e) => setBanquetData({...banquetData, title: e.target.value})} className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]" />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Sub Headline</label>
-                  <textarea value={banquetData.subHeadline} onChange={(e) => setBanquetData({...banquetData, subHeadline: e.target.value})} rows="2" className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]" />
+                  <textarea value={banquetData.subHeadline} onChange={(e) => setBanquetData({...banquetData, subHeadline: e.target.value})} rows="2" className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Theatre Capacity</label>
-                  <input type="text" value={banquetData.capacityTheatre} onChange={(e) => setBanquetData({...banquetData, capacityTheatre: e.target.value})} className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]" />
+                  <input type="text" value={banquetData.capacityTheatre} onChange={(e) => setBanquetData({...banquetData, capacityTheatre: e.target.value})} className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Banquet Capacity</label>
-                  <input type="text" value={banquetData.capacityBanquet} onChange={(e) => setBanquetData({...banquetData, capacityBanquet: e.target.value})} className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]" />
+                  <input type="text" value={banquetData.capacityBanquet} onChange={(e) => setBanquetData({...banquetData, capacityBanquet: e.target.value})} className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Hall Dimensions</label>
-                  <input type="text" value={banquetData.dimensions} onChange={(e) => setBanquetData({...banquetData, dimensions: e.target.value})} className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]" />
+                  <input type="text" value={banquetData.dimensions} onChange={(e) => setBanquetData({...banquetData, dimensions: e.target.value})} className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Parking Slots</label>
-                  <input type="text" value={banquetData.parking} onChange={(e) => setBanquetData({...banquetData, parking: e.target.value})} className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#0A192F] focus:outline-none focus:border-[#BFA37E]" />
+                  <input type="text" value={banquetData.parking} onChange={(e) => setBanquetData({...banquetData, parking: e.target.value})} className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]" />
                 </div>
                 <div className="md:col-span-2 mt-4">
-                  <button type="submit" disabled={loading} className="bg-[#0A192F] text-white px-10 py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#BFA37E] transition-all disabled:opacity-50">
+                  <button type="submit" disabled={loading} className="bg-[#000000] text-white px-10 py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#BFA37E] transition-all disabled:opacity-50">
                     {loading ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
@@ -302,7 +302,7 @@ const BanquetManagement = () => {
           <div className="bg-white p-8 rounded-sm shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Hero Slider Images</h3>
-              <label className="bg-[#0A192F] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-[#BFA37E] transition-all shadow-md">
+              <label className="bg-[#000000] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-[#BFA37E] transition-all shadow-md">
                 <Plus size={14} className="inline mr-2" /> Add Hero Photo
                 <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'hero')} />
               </label>
@@ -322,7 +322,7 @@ const BanquetManagement = () => {
           <div className="bg-white p-8 rounded-sm shadow-sm border border-slate-100">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em]">Hall Overview Photos</h3>
-              <label className="bg-[#BFA37E] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-[#0A192F] transition-all shadow-md">
+              <label className="bg-[#BFA37E] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:bg-[#000000] transition-all shadow-md">
                 <Plus size={14} className="inline mr-2" /> Add Overview Photo
                 <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, 'overview')} />
               </label>
@@ -350,7 +350,7 @@ const BanquetManagement = () => {
             </div>
             <button 
               onClick={() => openGalleryModal()}
-              className="bg-[#0A192F] text-white px-8 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#BFA37E] transition-all shadow-lg flex items-center gap-2"
+              className="bg-[#000000] text-white px-8 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#BFA37E] transition-all shadow-lg flex items-center gap-2"
             >
               <Plus size={14} /> Upload Multiple Photos
             </button>
@@ -365,7 +365,7 @@ const BanquetManagement = () => {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-grow min-w-0">
                     <span className="text-[8px] font-bold text-[#BFA37E] uppercase tracking-widest">{img.category}</span>
-                    <p className="text-[10px] font-bold uppercase text-[#0A192F] truncate" title={img.title}>{img.title}</p>
+                    <p className="text-[10px] font-bold uppercase text-[#000000] truncate" title={img.title}>{img.title}</p>
                   </div>
                   <div className="flex gap-3 flex-shrink-0 pt-1">
                     <button onClick={() => openGalleryModal(img)} className="text-slate-400 hover:text-[#BFA37E] transition-colors p-1"><Edit size={14} /></button>
@@ -382,11 +382,11 @@ const BanquetManagement = () => {
       <AnimatePresence>
         {showGalleryModal && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowGalleryModal(false)} className="absolute inset-0 bg-[#0A192F]/60 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowGalleryModal(false)} className="absolute inset-0 bg-[#000000]/60 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white w-full max-w-2xl p-10 shadow-2xl rounded-sm border border-slate-100 max-h-[90vh] overflow-y-auto">
-              <button onClick={() => setShowGalleryModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-[#0A192F]"><X size={20} /></button>
+              <button onClick={() => setShowGalleryModal(false)} className="absolute top-6 right-6 text-slate-400 hover:text-[#000000]"><X size={20} /></button>
               
-              <h3 className="text-2xl font-serif font-bold text-[#0A192F] mb-2">{editingImage ? 'Edit Photo Details' : 'Upload Multiple Photos'}</h3>
+              <h3 className="text-2xl font-serif font-bold text-[#000000] mb-2">{editingImage ? 'Edit Photo Details' : 'Upload Multiple Photos'}</h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Select multiple images and assign a category</p>
               
               <form onSubmit={handleGallerySubmit} className="space-y-6">
@@ -436,7 +436,7 @@ const BanquetManagement = () => {
                   </div>
                 )}
                 
-                <button type="submit" disabled={loading} className="w-full bg-[#0A192F] text-white py-5 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#BFA37E] transition-all shadow-xl disabled:opacity-50">
+                <button type="submit" disabled={loading} className="w-full bg-[#000000] text-white py-5 text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-[#BFA37E] transition-all shadow-xl disabled:opacity-50">
                   {loading ? 'Processing Uploads...' : editingImage ? 'Save Changes' : `Upload ${galleryFormData.images.length} Photos`}
                 </button>
               </form>
