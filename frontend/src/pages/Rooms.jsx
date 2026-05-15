@@ -146,13 +146,13 @@ const Rooms = () => {
         {/* Hero Section - Matching Reference Image 1 */}
         <section className="relative min-h-screen lg:min-h-[125vh] flex items-center justify-center overflow-hidden pt-20">
           <img 
-            src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop" 
+            src="HEro_room.jpeg" 
             alt="Luxury Hero" 
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-black/40" />
           
-          <div className="relative z-10 text-center px-4 max-w-6xl">
+          <div className="relative z-10 text-center px-4 max-w-6xl -mt-20 lg:-mt-32">
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

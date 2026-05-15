@@ -48,12 +48,12 @@ const AmenitiesOverview = () => {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.05 }}
-                className="flex flex-col items-center gap-6 group"
+                className="flex flex-col items-center gap-6 group text-center"
               >
-                <div className="w-20 h-20 rounded-full bg-white border border-slate-100 flex items-center justify-center text-[#BFA37E] group-hover:bg-[#000000] group-hover:text-white transition-all duration-500 shadow-sm group-hover:shadow-xl">
+                <div className="w-20 h-20 rounded-full bg-white border border-slate-100 flex items-center justify-center text-[#BFA37E] group-hover:bg-[#000000] group-hover:text-white transition-all duration-500 shadow-sm group-hover:shadow-xl mx-auto">
                   <Icon size={32} strokeWidth={1.2} />
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#000000] group-hover:text-[#BFA37E] transition-colors leading-relaxed">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#000000] group-hover:text-[#BFA37E] transition-colors leading-relaxed max-w-[120px]">
                   {item.label}
                 </span>
               </motion.div>

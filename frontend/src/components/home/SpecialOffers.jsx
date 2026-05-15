@@ -66,7 +66,7 @@ const SpecialOffers = () => {
               
               <Link 
                 to={offer.path} 
-                className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] border-b-2 border-[#BFA37E] pb-1 hover:text-[#BFA37E] transition-colors"
+                className="mt-4 text-[10px] font-bold uppercase tracking-[0.2em] border-b-2 border-black/30 pb-1 hover:text-black hover:border-black transition-all"
               >
                 {offer.cta}
               </Link>

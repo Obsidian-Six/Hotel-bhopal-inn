@@ -265,12 +265,12 @@ const RoomDetail = () => {
                 room.amenities.map((amenity, idx) => {
                   const { icon: Icon, label } = getAmenityData(amenity);
                   return (
-                    <div key={idx} className="flex flex-col items-center gap-4 group">
-                      <div className="w-16 h-16 flex items-center justify-center bg-white shadow-sm rounded-full text-[#000000] group-hover:bg-[#8B735B] group-hover:text-white transition-all border border-slate-100">
-                        <Icon size={28} strokeWidth={1.5} className="relative z-10" />
+                    <div key={idx} className="flex flex-col items-center gap-4 group text-center">
+                      <div className="w-16 h-16 flex items-center justify-center bg-white shadow-sm rounded-full text-[#000000] group-hover:bg-[#8B735B] group-hover:text-white transition-all border border-slate-100 mx-auto">
+                        <Icon size={28} strokeWidth={1.5} />
                       </div>
-                      <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-600 group-hover:text-[#000000] transition-colors leading-tight">
+                      <div className="flex flex-col items-center">
+                          <span className="text-xs font-bold text-slate-600 group-hover:text-[#000000] transition-colors leading-tight max-w-[120px]">
                           {label}
                           </span>
                       </div>

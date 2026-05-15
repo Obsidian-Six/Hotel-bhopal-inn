@@ -95,41 +95,67 @@ const BookingWidget = () => {
                   exit={{ opacity: 0, y: 10 }}
                   className="absolute left-0 lg:left-auto lg:right-0 top-full mt-2 w-full lg:w-80 bg-white shadow-[0_10px_40px_rgba(0,0,0,0.15)] p-6 z-50 border border-slate-100 rounded-lg"
                 >
-                  <div className="space-y-6">
+                  <div className="space-y-4">
+                    {/* Adults Row */}
                     <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm font-bold text-black">Adults</div>
-                        <div className="text-[10px] text-slate-400 uppercase tracking-wider">Ages 12+</div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <button onClick={() => updateCount('adults', -1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={14}/></button>
-                        <span className="w-4 text-center font-bold">{guests.adults}</span>
-                        <button onClick={() => updateCount('adults', 1)} className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={14}/></button>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-8">
-                      <div className="flex-1 flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-bold text-black">Children</div>
-                          <div className="text-[10px] text-slate-400 uppercase tracking-wider">Ages 0-11</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => updateCount('children', -1)} className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={12}/></button>
-                          <span className="w-3 text-center font-bold text-sm">{guests.children}</span>
-                          <button onClick={() => updateCount('children', 1)} className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={12}/></button>
-                        </div>
-                      </div>
-                      <div className="flex-1 flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-bold text-black whitespace-nowrap">Rooms</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => updateCount('rooms', -1)} className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Minus size={12}/></button>
-                          <span className="w-3 text-center font-bold text-sm">{guests.rooms}</span>
-                          <button onClick={() => updateCount('rooms', 1)} className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center hover:bg-slate-50"><Plus size={12}/></button>
-                        </div>
+                      <span className="text-sm font-bold text-black uppercase tracking-wider">Adults</span>
+                      <div className="flex items-center justify-between w-32 px-3 py-2 border border-slate-200 rounded-md">
+                        <button 
+                          onClick={() => updateCount('adults', -1)} 
+                          className="text-blue-400 hover:text-blue-600 transition-colors"
+                        >
+                          <Minus size={16}/>
+                        </button>
+                        <span className="font-bold text-sm">{guests.adults}</span>
+                        <button 
+                          onClick={() => updateCount('adults', 1)} 
+                          className="text-blue-400 hover:text-blue-600 transition-colors"
+                        >
+                          <Plus size={16}/>
+                        </button>
                       </div>
                     </div>
+
+                    {/* Children Row */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-black uppercase tracking-wider">Children</span>
+                      <div className="flex items-center justify-between w-32 px-3 py-2 border border-slate-200 rounded-md">
+                        <button 
+                          onClick={() => updateCount('children', -1)} 
+                          className="text-slate-300 hover:text-slate-500 transition-colors"
+                        >
+                          <Minus size={16}/>
+                        </button>
+                        <span className="font-bold text-sm">{guests.children}</span>
+                        <button 
+                          onClick={() => updateCount('children', 1)} 
+                          className="text-blue-400 hover:text-blue-600 transition-colors"
+                        >
+                          <Plus size={16}/>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Rooms Row */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-black uppercase tracking-wider">Rooms</span>
+                      <div className="flex items-center justify-between w-32 px-3 py-2 border border-slate-200 rounded-md">
+                        <button 
+                          onClick={() => updateCount('rooms', -1)} 
+                          className="text-slate-300 hover:text-slate-500 transition-colors"
+                        >
+                          <Minus size={16}/>
+                        </button>
+                        <span className="font-bold text-sm">{guests.rooms}</span>
+                        <button 
+                          onClick={() => updateCount('rooms', 1)} 
+                          className="text-blue-400 hover:text-blue-600 transition-colors"
+                        >
+                          <Plus size={16}/>
+                        </button>
+                      </div>
+                    </div>
+
                     <button 
                       onClick={() => setShowGuests(false)}
                       className="w-full py-3 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-black/80 transition-all rounded-md mt-2"
@@ -147,16 +173,19 @@ const BookingWidget = () => {
             <label className="flex items-center gap-2 text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mb-3 group-hover:text-black transition-colors">
               <Home size={12} /> Room Type
             </label>
-            <select 
-              value={roomType}
-              onChange={(e) => setRoomType(e.target.value)}
-              className="w-full bg-transparent text-black text-sm font-bold focus:outline-none cursor-pointer appearance-none"
-            >
-              <option>All Rooms</option>
-              <option>Standard Deluxe</option>
-              <option>Balcony Deluxe</option>
-              <option>Super Deluxe</option>
-            </select>
+            <div className="relative">
+              <select 
+                value={roomType}
+                onChange={(e) => setRoomType(e.target.value)}
+                className="w-full bg-transparent text-black text-sm font-bold focus:outline-none cursor-pointer appearance-none pr-8"
+              >
+                <option>All Rooms</option>
+                <option>Standard Deluxe</option>
+                <option>Balcony Deluxe</option>
+                <option>Super Deluxe</option>
+              </select>
+              <ChevronDown size={14} className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+            </div>
           </div>
 
           {/* Search Button (Image 3 style) */}
@@ -173,9 +202,11 @@ const BookingWidget = () => {
 
         </div>
       </motion.div>
-      <p className="text-center mt-8 text-[10px] md:text-xs font-bold text-black/60 uppercase tracking-[0.2em]">
-        Best rate guaranteed when you book direct. No commission, no hidden charges.
-      </p>
+      <div className="pb-12 lg:pb-16">
+        <p className="text-center mt-8 text-[10px] md:text-xs font-bold text-black/60 uppercase tracking-[0.2em]">
+          Best rate guaranteed when you book direct. No commission, no hidden charges.
+        </p>
+      </div>
     </div>
   );
 };
