@@ -30,8 +30,8 @@ const BanquetTeaser = () => {
                 className="w-full h-[300px] md:h-[500px] object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-700 shadow-2xl"
               />
               <div className="absolute bottom-6 left-6 md:bottom-10 md:left-10 bg-white p-4 md:p-8 shadow-2xl">
-                <span className="text-2xl md:text-4xl font-serif font-bold text-[#000000]">50+</span>
-                <p className="text-[8px] md:text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mt-1 md:mt-2">Guest Capacity</p>
+                <span className="text-xl md:text-2xl font-serif font-bold text-[#000000] block">upto 50</span>
+                <p className="text-[8px] md:text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest mt-1">Guests Capacity</p>
               </div>
             </div>
           </motion.div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import config from '../config';
@@ -9,7 +9,8 @@ import Footer from '@/components/layout/Footer';
 import { 
   Users, Info, ChevronLeft, ChevronRight, 
   Check, MessageCircle, Star, Utensils, 
-  ShieldCheck, Clock, Coffee, Wind, Wifi, Tv, ThermometerSun, X, Maximize2
+  ShieldCheck, Clock, Coffee, Wind, Wifi, Tv, ThermometerSun, X, Maximize2,
+  DoorOpen, ParkingCircle, MapPin
 } from 'lucide-react';
 
 const WhatsAppIcon = ({ className = "w-5 h-5" }) => (
@@ -28,7 +29,7 @@ const RoomDetail = () => {
   const [reviews, setReviews] = useState([]);
   const [currentReview, setCurrentReview] = useState(0);
   const [showZoom, setShowZoom] = useState(false);
-  const descriptionRef = React.useRef(null);
+  const descriptionRef = useRef(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -89,18 +90,21 @@ const RoomDetail = () => {
 
   const getAmenityData = (amenity) => {
     const a = amenity.toLowerCase();
-    if (a.includes('ac') || a.includes('air')) return { icon: Wind, label: amenity };
-    if (a.includes('wi-fi') || a.includes('wifi') || a.includes('internet')) return { icon: Wifi, label: amenity };
-    if (a.includes('water') || a.includes('hot')) return { icon: ThermometerSun, label: amenity };
-    if (a.includes('tv') || a.includes('television')) return { icon: Tv, label: amenity };
-    if (a.includes('coffee') || a.includes('tea') || a.includes('kettle')) return { icon: Coffee, label: amenity };
-    if (a.includes('room service') || a.includes('service')) return { icon: Utensils, label: amenity };
-    if (a.includes('toiletries') || a.includes('bathroom')) return { icon: ShieldCheck, label: amenity };
-    if (a.includes('bed') || a.includes('linen') || a.includes('interior')) return { icon: Star, label: amenity };
-    if (a.includes('family')) return { icon: Users, label: amenity };
-    if (a.includes('parking')) return { icon: ShieldCheck, label: amenity };
-    if (a.includes('support') || a.includes('24x7') || a.includes('clock') || a.includes('service')) return { icon: Clock, label: amenity };
-    return { icon: Info, label: amenity };
+    if (a.includes('ac') || a.includes('air')) return { icon: Wind, label: amenity, title: 'Air conditioning', desc: 'Stay cool and comfortable with central cooling.' };
+    if (a.includes('wi-fi') || a.includes('wifi') || a.includes('internet')) return { icon: Wifi, label: amenity, title: 'High-speed Wi-Fi', desc: 'Stay connected with reliable internet access.' };
+    if (a.includes('water') || a.includes('hot')) return { icon: ThermometerSun, label: amenity, title: 'Hot water', desc: '24/7 hot and cold water availability.' };
+    if (a.includes('tv') || a.includes('television')) return { icon: Tv, label: amenity, title: 'Premium TV', desc: 'Enjoy your favorite shows on a large flat-screen TV.' };
+    if (a.includes('coffee') || a.includes('tea') || a.includes('kettle')) return { icon: Coffee, label: amenity, title: 'Tea & Coffee', desc: 'In-room refreshment kit provided.' };
+    if (a.includes('room service') || a.includes('service')) return { icon: Utensils, label: amenity, title: 'Room Service', desc: 'Delicious food delivered to your door.' };
+    if (a.includes('toiletries') || a.includes('bathroom')) return { icon: ShieldCheck, label: amenity, title: 'Free Toiletries', desc: 'Complimentary essentials for your comfort.' };
+    if (a.includes('bed') || a.includes('linen') || a.includes('interior')) return { icon: Star, label: amenity, title: 'Premium Linen', desc: 'High-quality bedding for a restful sleep.' };
+    if (a.includes('family')) return { icon: Users, label: amenity, title: 'Family Friendly', desc: 'Suitable for guests traveling with family.' };
+    if (a.includes('parking')) return { icon: ParkingCircle, label: amenity, title: 'Free Parking', desc: 'Complimentary parking space for all guests.' };
+    if (a.includes('support') || a.includes('24x7') || a.includes('clock') || a.includes('service')) return { icon: Clock, label: amenity, title: '24/7 Support', desc: 'Round-the-clock assistance at your service.' };
+    if (a.includes('check-in')) return { icon: DoorOpen, label: amenity, title: 'Self check-in', desc: 'Check yourself in with the lockbox.' };
+    if (a.includes('quiet')) return { icon: MapPin, label: amenity, title: 'Peace and quiet', desc: 'Guests say this home is in a quiet area.' };
+    
+    return { icon: Info, label: amenity, title: amenity, desc: 'Quality amenity provided for your stay.' };
   };
 
   return (
@@ -188,50 +192,24 @@ const RoomDetail = () => {
           </div>
         </section>
 
-        {/* Room Description & Slider - Image 2 Reference */}
+        {/* Room Description & Slider - Redesigned to match Explore Page structure */}
         <section ref={descriptionRef} className="py-24 bg-white">
           <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <h2 className="text-3xl lg:text-4xl font-serif text-[#000000] uppercase tracking-wide">Room Description</h2>
-                  <div className="h-[1px] w-12 bg-[#8B735B]"></div>
-                </div>
-                <div className="flex flex-col mb-4">
-                  {room.details?.cutPrice > 0 && (
-                    <span className="text-lg font-serif text-slate-400 line-through decoration-slate-400/60">₹{room.details.cutPrice.toLocaleString()}</span>
-                  )}
-                  <span className="text-4xl font-serif font-bold text-[#000000]">
-                    ₹{(room.details?.startingPrice || 0).toLocaleString()}
-                    <span className="text-xs text-slate-400 font-normal uppercase tracking-[0.2em] ml-4 italic">Per Night Starting</span>
-                  </span>
-                </div>
-                <p className="text-slate-600 text-lg leading-relaxed font-light">
-                  {room.description}
-                </p>
-                <div className="pt-4">
-                  <Link 
-                    to="/booking" state={{ roomId: room._id }}
-                    className="bg-[#8B735B] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#725e4a] transition-all shadow-lg inline-block rounded-sm"
-                  >
-                    Reserve This Room
-                  </Link>
-                </div>
-              </div>
-
-              {/* Image Slider */}
-              <div className="relative group">
-                <div className="aspect-[4/3] overflow-hidden bg-slate-100 relative">
+            {/* Desktop View (lg+) */}
+            <div className="hidden lg:flex flex-row gap-16 items-start">
+              {/* Left: Image Slider & Thumbnails */}
+              <div className="w-1/2 space-y-6">
+                <div className="relative group aspect-[4/3] overflow-hidden bg-slate-100">
                   <img 
-                    src={getFullUrl(room.images[currentImg])} 
+                    src={getFullUrl(room.images?.[currentImg])} 
                     className="w-full h-full object-cover transition-all duration-700 cursor-zoom-in" 
-                    alt="Room detail" 
+                    alt={room.title} 
                     onClick={() => setShowZoom(true)}
                   />
                   
                   <button 
                     onClick={() => setShowZoom(true)}
-                    className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-[#000000] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-[#000000] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
                   >
                     <Maximize2 size={18} />
                   </button>
@@ -239,13 +217,13 @@ const RoomDetail = () => {
                   {/* Slider Controls */}
                   <div className="absolute inset-0 flex items-center justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
-                      onClick={() => setCurrentImg(prev => (prev - 1 + room.images.length) % room.images.length)}
+                      onClick={() => setCurrentImg(prev => (prev - 1 + (room.images?.length || 0)) % (room.images?.length || 1))}
                       className="w-10 h-10 bg-black/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-[#8B735B] transition-all"
                     >
                       <ChevronLeft size={24} />
                     </button>
                     <button 
-                      onClick={() => setCurrentImg(prev => (prev + 1) % room.images.length)}
+                      onClick={() => setCurrentImg(prev => (prev + 1) % (room.images?.length || 1))}
                       className="w-10 h-10 bg-black/20 backdrop-blur-sm text-white flex items-center justify-center hover:bg-[#8B735B] transition-all"
                     >
                       <ChevronRight size={24} />
@@ -254,8 +232,8 @@ const RoomDetail = () => {
                 </div>
                 
                 {/* Thumbnails */}
-                <div className="flex gap-4 mt-4 overflow-x-auto pb-2">
-                  {room.images.map((img, idx) => (
+                <div className="flex gap-4 overflow-x-auto pb-2">
+                  {room.images?.map((img, idx) => (
                     <button 
                       key={idx}
                       onClick={() => setCurrentImg(idx)}
@@ -264,6 +242,137 @@ const RoomDetail = () => {
                       <img src={getFullUrl(img)} className="w-full h-full object-cover" alt="" />
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Right: Content */}
+              <div className="w-1/2 flex flex-col">
+                <div className="mb-8">
+                  <h2 className="text-4xl font-serif text-[#000000] uppercase tracking-wide mb-4">Room Description</h2>
+                  <div className="h-[1px] w-12 bg-[#8B735B]"></div>
+                </div>
+
+                <div className="mb-8">
+                  {room.details?.cutPrice > 0 && (
+                    <div className="text-lg font-serif text-slate-400 line-through decoration-slate-400/60 mb-1">₹{room.details.cutPrice.toLocaleString()}</div>
+                  )}
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-5xl font-serif font-bold text-[#000000]">
+                      ₹{(room.details?.startingPrice || 0).toLocaleString()}
+                    </span>
+                    <span className="text-xs text-slate-400 font-normal uppercase tracking-[0.2em] italic">Per Night Starting</span>
+                  </div>
+                </div>
+
+                <p className="text-slate-600 text-lg leading-relaxed font-light mb-10">
+                  {room.description || "Spacious and well-appointed, our rooms offer a king-size bed, air conditioning, premium linen, and all essential amenities for a comfortable stay."}
+                </p>
+
+                <div className="mb-12">
+                  <Link 
+                    to="/booking" state={{ roomId: room._id }}
+                    className="bg-[#8B735B] text-white px-12 py-5 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#725e4a] transition-all shadow-lg inline-block rounded-sm"
+                  >
+                    Reserve This Room
+                  </Link>
+                </div>
+
+                <div className="h-[1px] w-full bg-slate-100 mb-10"></div>
+
+                {/* Detailed Amenities List - Dynamic from CMS */}
+                <div className="space-y-8">
+                  {(room.amenities || []).slice(0, 3).map((amenityStr, idx) => {
+                    const amenity = getAmenityData(amenityStr);
+                    return (
+                      <div key={idx} className="flex items-start gap-5 group">
+                        <div className="text-slate-600 group-hover:text-[#8B735B] transition-colors mt-1">
+                          <amenity.icon size={26} strokeWidth={1.5} />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-bold text-black leading-tight mb-1">{amenity.title}</h4>
+                          <p className="text-sm text-slate-500">{amenity.desc}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile View (<lg) */}
+            <div className="lg:hidden flex flex-col space-y-8">
+              {/* Image */}
+              <div className="relative aspect-[4/3] overflow-hidden group">
+                <img 
+                  src={getFullUrl(room.images?.[currentImg])} 
+                  className="w-full h-full object-cover" 
+                  alt={room.title} 
+                />
+                <button 
+                  onClick={() => setShowZoom(true)}
+                  className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-black shadow-lg"
+                >
+                  <Maximize2 size={18} />
+                </button>
+                
+                {/* Dots for slider */}
+                <div className="absolute inset-x-0 bottom-4 flex justify-center gap-2">
+                  {room.images?.map((_, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => setCurrentImg(idx)}
+                      className={`w-2 h-2 rounded-full transition-all ${currentImg === idx ? 'bg-white scale-125' : 'bg-white/40'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex flex-col space-y-6">
+                <h3 className="text-3xl font-serif text-black uppercase tracking-wide">
+                  {room.title}
+                </h3>
+                
+                <p className="text-slate-500 text-base leading-relaxed">
+                  {room.description}
+                </p>
+
+                {/* Amenity Tags */}
+                <div className="flex flex-wrap gap-2">
+                  {(room.amenities || []).slice(0, 4).map((amenity, idx) => (
+                    <span key={idx} className="inline-flex items-center px-4 py-2 border border-slate-200 text-xs font-medium text-slate-600 rounded-sm">
+                      {amenity}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Price */}
+                <div className="flex flex-col pt-2">
+                  {room.details?.cutPrice > 0 && (
+                    <span className="text-base font-serif text-slate-400 line-through mb-1">₹{room.details.cutPrice.toLocaleString()}</span>
+                  )}
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-3xl font-serif font-bold text-black">
+                      ₹{(room.details?.startingPrice || 0).toLocaleString()}
+                    </span>
+                    <span className="text-xs text-slate-400 font-normal uppercase tracking-widest italic">Starting Price</span>
+                  </div>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-4 pt-4">
+                  <Link 
+                    to="/booking" state={{ roomId: room._id }}
+                    className="flex-grow bg-[#8B735B] text-white py-4 text-xs font-bold uppercase tracking-widest text-center hover:bg-[#725e4a] transition-all rounded-sm"
+                  >
+                    Book Now
+                  </Link>
+                  <button 
+                    onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+                    className="flex-grow border border-black text-black py-4 text-xs font-bold uppercase tracking-widest text-center hover:bg-black hover:text-white transition-all rounded-sm"
+                  >
+                    Contact Us
+                  </button>
                 </div>
               </div>
             </div>
