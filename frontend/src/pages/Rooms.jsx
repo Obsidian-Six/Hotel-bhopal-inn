@@ -10,13 +10,13 @@ import {
   Wifi, Wind, ThermometerSun, 
   Tv, UtensilsCrossed, Waves, Check, 
   MessageCircle, Star, Info, ShieldCheck, 
-  Clock, Coffee, MapPin, Instagram, Youtube
+  Clock, Coffee, MapPin, Instagram, X, Maximize2
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const API_BASE = config.API_URL;
 
-const RoomCard = ({ room }) => {
+const RoomCard = ({ room, onZoom }) => {
   const getFullUrl = (path) => {
     if (!path) return 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=2070&auto=format&fit=crop';
     if (path.startsWith('http')) return path;
@@ -30,12 +30,20 @@ const RoomCard = ({ room }) => {
       viewport={{ once: true }}
       className="bg-white group flex flex-col h-full"
     >
-      <div className="relative overflow-hidden aspect-[4/3] mb-6">
-        <img 
-          src={getFullUrl(room.images[0])} 
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-          alt={room.title} 
-        />
+      <div className="relative overflow-hidden aspect-[4/3] mb-6 block">
+        <Link to={`/rooms/${room.category}`}>
+          <img 
+            src={getFullUrl(room.images[0])} 
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+            alt={room.title} 
+          />
+        </Link>
+        <button 
+          onClick={() => onZoom(room)}
+          className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-[#000000] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 hover:bg-[#8B735B] hover:text-white"
+        >
+          <Maximize2 size={18} />
+        </button>
       </div>
       
       <div className="flex flex-col flex-grow space-y-4">
@@ -119,6 +127,7 @@ const ComparisonTable = ({ rooms }) => {
 const Rooms = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [zoomRoom, setZoomRoom] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -134,6 +143,12 @@ const Rooms = () => {
     };
     fetchRooms();
   }, []);
+
+  const getFullUrl = (path) => {
+    if (!path) return 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=2070&auto=format&fit=crop';
+    if (path.startsWith('http')) return path;
+    return `${API_BASE}${path}`;
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -190,9 +205,6 @@ const Rooms = () => {
             <a href="https://www.instagram.com/hoteltenontenstays/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#000000] hover:bg-[#8B735B] hover:text-white transition-all shadow-lg">
               <Instagram size={18} />
             </a>
-            <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#000000] hover:bg-[#8B735B] hover:text-white transition-all shadow-lg">
-              <Youtube size={18} />
-            </button>
           </div>
         </section>
 
@@ -206,12 +218,41 @@ const Rooms = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-16">
                 {rooms.map((room) => (
-                  <RoomCard key={room._id} room={room} />
+                  <RoomCard key={room._id} room={room} onZoom={(r) => setZoomRoom(r)} />
                 ))}
               </div>
             )}
           </div>
         </section>
+
+        {/* Zoom Modal */}
+        <AnimatePresence>
+          {zoomRoom && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[1000] bg-black/95 flex items-center justify-center p-4 lg:p-12"
+              onClick={() => setZoomRoom(null)}
+            >
+              <button 
+                onClick={() => setZoomRoom(null)}
+                className="absolute top-8 right-8 text-white hover:text-[#8B735B] transition-colors z-10"
+              >
+                <X size={40} />
+              </button>
+              
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img 
+                  src={getFullUrl(zoomRoom.images[0])} 
+                  className="max-w-full max-h-full object-contain shadow-2xl" 
+                  alt="Room zoom" 
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Comparison Section */}
         <section className="py-24 bg-slate-50">
@@ -231,9 +272,13 @@ const Rooms = () => {
             <div className="mt-16 flex flex-col md:flex-row items-center justify-center gap-6">
               <a 
                 href="https://wa.me/916267276957"
-                className="w-full md:w-auto flex items-center justify-center gap-3 bg-[#25D366] text-white px-10 py-4 text-xs font-bold uppercase tracking-widest hover:bg-[#128C7E] transition-all shadow-lg"
+                className="w-full md:w-auto flex items-center justify-center gap-3 bg-[#25D366] text-white px-10 py-4 text-xs font-bold uppercase tracking-widest hover:bg-[#128C7E] transition-all shadow-lg rounded-sm"
               >
-                <MessageCircle size={20} />
+                <div className="w-5 h-5 fill-white">
+                  <svg viewBox="0 0 448 512" fill="currentColor">
+                    <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3 18.7-68.1-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.2-8.5-44.2-27.1-16.4-14.6-27.4-32.7-30.6-38.2-3.2-5.6-.3-8.6 2.5-11.3 2.5-2.5 5.6-6.5 8.3-9.7 2.8-3.3 3.7-5.6 5.6-9.3 1.9-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.3 5.7 23.7 9.1 31.7 11.7 13.3 4.2 25.4 3.6 35 2.2 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+                  </svg>
+                </div>
                 Speak to Us on WhatsApp
               </a>
               <Link 

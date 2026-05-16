@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { Wind, Wifi, ThermometerSun, Tv, UtensilsCrossed, Waves, Check, X, Maximize2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import config from '../../config';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Wind, Wifi, ThermometerSun, Tv, UtensilsCrossed, Waves, Check } from 'lucide-react';
 
 const API_BASE = config.API_URL;
 
 const RoomCategories = () => {
   const [rooms, setRooms] = useState([]);
+  const [zoomRoom, setZoomRoom] = useState(null);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -75,13 +76,21 @@ const RoomCategories = () => {
                 </div>
               )}
               
-              <div className="relative h-64 md:h-72 overflow-hidden">
-                <img 
-                  src={getFullUrl(room.images && room.images.length > 0 ? room.images[0] : null)} 
-                  alt={room.title} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-black/20" />
+              <div className="relative h-64 md:h-72 overflow-hidden block">
+                <Link to={`/rooms/${room.category}`}>
+                  <img 
+                    src={getFullUrl(room.images && room.images.length > 0 ? room.images[0] : null)} 
+                    alt={room.title} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                </Link>
+                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+                <button 
+                  onClick={() => setZoomRoom(room)}
+                  className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-[#000000] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10 hover:bg-[#BFA37E] hover:text-white"
+                >
+                  <Maximize2 size={18} />
+                </button>
                 {room.tags && room.tags[0] && (
                   <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm text-[#000000] text-[9px] font-bold px-3 py-1 uppercase tracking-widest border-l-2 border-[#BFA37E]">
                     {room.tags[0]}
@@ -132,6 +141,35 @@ const RoomCategories = () => {
             View All Rooms
           </Link>
         </div>
+
+        {/* Zoom Modal */}
+        <AnimatePresence>
+          {zoomRoom && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[1000] bg-black/95 flex items-center justify-center p-4 lg:p-12"
+              onClick={() => setZoomRoom(null)}
+            >
+              <button 
+                onClick={() => setZoomRoom(null)}
+                className="absolute top-8 right-8 text-white hover:text-[#BFA37E] transition-colors z-10"
+              >
+                <X size={40} />
+              </button>
+              
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img 
+                  src={getFullUrl(zoomRoom.images && zoomRoom.images.length > 0 ? zoomRoom.images[0] : null)} 
+                  className="max-w-full max-h-full object-contain shadow-2xl" 
+                  alt="Room zoom" 
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </section>
   );

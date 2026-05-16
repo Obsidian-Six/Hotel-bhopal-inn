@@ -77,16 +77,16 @@ const Footer = () => {
               <li className="flex flex-col gap-3">
                 <div className="flex items-center gap-3">
                     <div className="w-5 h-5 text-[#25D366] shrink-0"><WhatsAppIcon /></div>
-                    <span className="font-bold uppercase tracking-widest text-[10px]">WhatsApp Support</span>
+                    <span className="font-bold uppercase tracking-widest text-[10px]">Support & Reservations</span>
                 </div>
-                <div className="flex flex-col gap-2 pl-7 text-[11px]">
+                <div className="flex flex-col gap-2 pl-7 text-[11px] font-bold">
                     <a href="https://wa.me/916267276957" target="_blank" rel="noopener noreferrer" className="hover:text-[#25D366] transition-colors flex items-center gap-2">
                         +91 62672 76957 (Primary)
                     </a>
-                    <a href="https://wa.me/919630252729" target="_blank" rel="noopener noreferrer" className="hover:text-[#25D366] transition-colors">
+                    <a href="https://wa.me/919630252729" target="_blank" rel="noopener noreferrer" className="hover:text-[#25D366] transition-colors flex items-center gap-2">
                         +91 96302 52729
                     </a>
-                    <a href="https://wa.me/917225888650" target="_blank" rel="noopener noreferrer" className="hover:text-[#25D366] transition-colors">
+                    <a href="https://wa.me/917225888650" target="_blank" rel="noopener noreferrer" className="hover:text-[#25D366] transition-colors flex items-center gap-2">
                         +91 72258 88650
                     </a>
                 </div>
@@ -101,7 +101,7 @@ const Footer = () => {
               <a href="https://www.instagram.com/hoteltenontenstays/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 border border-slate-200 flex items-center justify-center hover:bg-[#E4405F] hover:text-white transition-all rounded-sm bg-slate-100">
                 <Instagram size={18} />
               </a>
-              <a href="https://wa.me/916267276957" target="_blank" rel="noopener noreferrer" className="w-10 h-10 border border-slate-200 flex items-center justify-center hover:bg-[#25D366] hover:text-white transition-all rounded-sm bg-slate-100">
+              <a href="https://wa.me/916267276957" target="_blank" rel="noopener noreferrer" className="w-10 h-10 border border-slate-200 flex items-center justify-center hover:bg-[#25D366] hover:text-white transition-all rounded-sm bg-slate-100 text-[#25D366]">
                 <WhatsAppIcon className="w-5 h-5" />
               </a>
             </div>

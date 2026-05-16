@@ -9,8 +9,14 @@ import Footer from '@/components/layout/Footer';
 import { 
   Users, Info, ChevronLeft, ChevronRight, 
   Check, MessageCircle, Star, Utensils, 
-  ShieldCheck, Clock, Coffee, Wind, Wifi, Tv, ThermometerSun
+  ShieldCheck, Clock, Coffee, Wind, Wifi, Tv, ThermometerSun, X, Maximize2
 } from 'lucide-react';
+
+const WhatsAppIcon = ({ className = "w-5 h-5" }) => (
+  <svg viewBox="0 0 448 512" className={className} fill="currentColor">
+      <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3 18.7-68.1-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.2-8.5-44.2-27.1-16.4-14.6-27.4-32.7-30.6-38.2-3.2-5.6-.3-8.6 2.5-11.3 2.5-2.5 5.6-6.5 8.3-9.7 2.8-3.3 3.7-5.6 5.6-9.3 1.9-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.3 5.7 23.7 9.1 31.7 11.7 13.3 4.2 25.4 3.6 35 2.2 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+  </svg>
+);
 
 const API_BASE = config.API_URL;
 
@@ -21,6 +27,8 @@ const RoomDetail = () => {
   const [currentImg, setCurrentImg] = useState(0);
   const [reviews, setReviews] = useState([]);
   const [currentReview, setCurrentReview] = useState(0);
+  const [showZoom, setShowZoom] = useState(false);
+  const descriptionRef = React.useRef(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -171,14 +179,17 @@ const RoomDetail = () => {
                 <span className="text-sm font-medium tracking-wide">Sleeps {room.details.maxOccupancy}</span>
               </div>
             </div>
-            <button className="border border-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-[#4A4A4A] transition-all rounded-full">
+            <button 
+              onClick={() => descriptionRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              className="border border-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-[#4A4A4A] transition-all rounded-full"
+            >
               More Info
             </button>
           </div>
         </section>
 
         {/* Room Description & Slider - Image 2 Reference */}
-        <section className="py-24 bg-white">
+        <section ref={descriptionRef} className="py-24 bg-white">
           <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
               <div className="space-y-8">
@@ -213,9 +224,17 @@ const RoomDetail = () => {
                 <div className="aspect-[4/3] overflow-hidden bg-slate-100 relative">
                   <img 
                     src={getFullUrl(room.images[currentImg])} 
-                    className="w-full h-full object-cover transition-all duration-700" 
+                    className="w-full h-full object-cover transition-all duration-700 cursor-zoom-in" 
                     alt="Room detail" 
+                    onClick={() => setShowZoom(true)}
                   />
+                  
+                  <button 
+                    onClick={() => setShowZoom(true)}
+                    className="absolute top-4 right-4 w-10 h-10 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center text-[#000000] opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                  >
+                    <Maximize2 size={18} />
+                  </button>
                   
                   {/* Slider Controls */}
                   <div className="absolute inset-0 flex items-center justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -260,12 +279,12 @@ const RoomDetail = () => {
               <p className="text-slate-500 max-w-2xl mx-auto mt-6">Our rooms are well appointed with amenities that ensure a comfortable and productive stay</p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 max-w-6xl mx-auto">
+            <div className="flex flex-wrap justify-center gap-8 md:gap-12 max-w-6xl mx-auto">
               {room.amenities && room.amenities.length > 0 ? (
                 room.amenities.map((amenity, idx) => {
                   const { icon: Icon, label } = getAmenityData(amenity);
                   return (
-                    <div key={idx} className="flex flex-col items-center gap-4 group text-center">
+                    <div key={idx} className="flex flex-col items-center gap-4 group text-center min-w-[120px]">
                       <div className="w-16 h-16 flex items-center justify-center bg-white shadow-sm rounded-full text-[#000000] group-hover:bg-[#8B735B] group-hover:text-white transition-all border border-slate-100 mx-auto">
                         <Icon size={28} strokeWidth={1.5} />
                       </div>
@@ -327,6 +346,130 @@ const RoomDetail = () => {
             </AnimatePresence>
           </div>
         </section>
+        <section className="py-24 bg-white border-t border-slate-100">
+          <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
+            {/* Header Section */}
+            <div className="flex flex-col items-center text-center mb-16">
+              <div className="flex items-center gap-2 mb-4">
+                {/* Dark Laurel Wreath Left */}
+                <svg viewBox="0 0 24 24" className="w-16 h-16 text-[#222222]">
+                  <path fill="currentColor" d="M7 16c.1.4-.4 1.1-1.3 1.5-1.1.4-2.1.4-2.3.2-.2-.2.1-1.1.9-2 1-1 2.2-1.7 2.7-1.4.5.3.3 1.3.3 1.7zm1.3-4.5c.1.4-.6 1-1.6 1.4-1.1.4-2.1.2-2.3-.1-.2-.3.3-1.2 1.3-1.9 1-1 2.3-1.3 2.8-.9.5.4.1 1.2-.2 1.5zm2-4.5c.1.4-.8.8-2 1.1-1.2.3-2.1 0-2.3-.4-.2-.4.6-1.1 1.8-1.5 1.2-.4 2.5-.4 2.8 0 .3.4.1.7-.3.8z"/>
+                </svg>
+                <span className="text-8xl font-bold text-[#222222] tracking-tighter">5.0</span>
+                {/* Dark Laurel Wreath Right */}
+                <svg viewBox="0 0 24 24" className="w-16 h-16 text-[#222222] transform scale-x-[-1]">
+                  <path fill="currentColor" d="M7 16c.1.4-.4 1.1-1.3 1.5-1.1.4-2.1.4-2.3.2-.2-.2.1-1.1.9-2 1-1 2.2-1.7 2.7-1.4.5.3.3 1.3.3 1.7zm1.3-4.5c.1.4-.6 1-1.6 1.4-1.1.4-2.1.2-2.3-.1-.2-.3.3-1.2 1.3-1.9 1-1 2.3-1.3 2.8-.9.5.4.1 1.2-.2 1.5zm2-4.5c.1.4-.8.8-2 1.1-1.2.3-2.1 0-2.3-.4-.2-.4.6-1.1 1.8-1.5 1.2-.4 2.5-.4 2.8 0 .3.4.1.7-.3.8z"/>
+                </svg>
+              </div>
+              <h3 className="text-3xl font-bold text-[#222222] mb-1">Guest favourite</h3>
+              <p className="text-[#666666] max-w-lg mx-auto text-[17px] leading-tight font-normal">
+                This home is a guest favourite based on<br />ratings, reviews and reliability
+              </p>
+              <button className="text-[#717171] text-sm underline mt-3 hover:text-black transition-colors font-medium">How reviews work</button>
+            </div>
+
+            {/* Ratings Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-0 border-t border-slate-100 py-8">
+              {[
+                { label: 'Overall rating', value: '', bars: [90, 15, 0, 0, 0] },
+                { label: 'Cleanliness', value: '4.6', icon: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8 text-[#222222]">
+                        <path fill="none" stroke="currentColor" strokeWidth="2" d="M22 6c0-2.2-1.8-4-4-4s-4 1.8-4 4v2h8V6zm-8 4v16c0 2.2 1.8 4 4 4s4-1.8 4-4V10h-8zM8 12c-1.1 0-2 .9-2 2s.9 2 2 2h2v-4H8zm0 8c-1.1 0-2 .9-2 2s.9 2 2 2h2v-4H8z" />
+                    </svg>
+                ) },
+                { label: 'Accuracy', value: '4.9', icon: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8 text-[#222222]">
+                        <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" strokeWidth="2" />
+                        <path fill="none" stroke="currentColor" strokeWidth="2" d="M10 16l4 4 8-8" />
+                    </svg>
+                ) },
+                { label: 'Check-in', value: '4.9', icon: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8 text-[#222222]">
+                        <path fill="none" stroke="currentColor" strokeWidth="2" d="M12 18c-3.3 0-6-2.7-6-6s2.7-6 6-6s6 2.7 6 6s-2.7 6-6 6zm6-6h8v4h-4v4h-4v-8z" />
+                    </svg>
+                ) },
+                { label: 'Communication', value: '4.8', icon: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8 text-[#222222]">
+                        <path fill="none" stroke="currentColor" strokeWidth="2" d="M4 6h24v16H12l-6 6V22H4V6z" />
+                    </svg>
+                ) },
+                { label: 'Location', value: '4.9', icon: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8 text-[#222222]">
+                        <path fill="none" stroke="currentColor" strokeWidth="2" d="M4 6v22l8-4l8 4l8-4V2l-8 4l-8-4l-8 4z" />
+                    </svg>
+                ) },
+                { label: 'Value', value: '4.8', icon: (
+                    <svg viewBox="0 0 32 32" className="w-8 h-8 text-[#222222]">
+                        <path fill="none" stroke="currentColor" strokeWidth="2" d="M6 6h10l10 10l-10 10l-10-10V6z" />
+                        <circle cx="10" cy="10" r="2" fill="currentColor" />
+                    </svg>
+                ) }
+              ].map((item, idx) => (
+                <div key={idx} className={`flex flex-col items-start px-6 py-4 h-full ${idx !== 0 ? 'border-l border-slate-100' : ''}`}>
+                  <h4 className="text-[14px] font-semibold text-[#222222] mb-1">{item.label}</h4>
+                  {item.bars ? (
+                    <div className="w-full space-y-2.5 pt-1">
+                      {item.bars.map((bar, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-[11px] text-[#222222] w-2 leading-none">{5-i}</span>
+                          <div className="flex-grow h-[3px] bg-[#EBEBEB] rounded-full overflow-hidden">
+                            <div className="h-full bg-[#222222]" style={{ width: `${bar}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-start gap-8 mt-1">
+                      <span className="text-xl font-bold text-[#222222]">{item.value}</span>
+                      <div className="text-[#222222] mt-auto">
+                        {item.icon}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Zoom Modal */}
+        <AnimatePresence>
+          {showZoom && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[1000] bg-black/95 flex items-center justify-center p-4 lg:p-12"
+              onClick={() => setShowZoom(false)}
+            >
+              <button 
+                onClick={() => setShowZoom(false)}
+                className="absolute top-8 right-8 text-white hover:text-[#BFA37E] transition-colors z-10"
+              >
+                <X size={40} />
+              </button>
+              
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img 
+                  src={getFullUrl(room.images[currentImg])} 
+                  className="max-w-full max-h-full object-contain shadow-2xl" 
+                  alt="Room zoom" 
+                  onClick={(e) => e.stopPropagation()}
+                />
+                
+                <div className="absolute inset-x-0 bottom-8 flex justify-center gap-4">
+                  {room.images.map((_, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={(e) => { e.stopPropagation(); setCurrentImg(idx); }}
+                      className={`w-3 h-3 rounded-full transition-all ${currentImg === idx ? 'bg-white scale-125' : 'bg-white/30'}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Floating Elements */}

@@ -116,6 +116,7 @@ const Contact = () => {
                             <h4 className="text-sm font-bold text-[#000000] uppercase tracking-widest mb-1">Phone</h4>
                             <p className="text-slate-600 font-light">Reception: +91 62672 76957</p>
                             <p className="text-slate-600 font-light">Reservations: +91 96302 52729</p>
+                            <p className="text-slate-600 font-light">Support: +91 72258 88650</p>
                         </div>
                     </div>
 
@@ -131,9 +132,17 @@ const Contact = () => {
                         <div className="mt-1 text-[#25D366]"><WhatsAppIcon size={24} /></div>
                         <div>
                             <h4 className="text-sm font-bold text-[#000000] uppercase tracking-widest mb-1">WhatsApp</h4>
-                            <a href="https://wa.me/916267276957" className="text-slate-600 font-light hover:text-[#25D366] transition-colors">
-                                +91 62672 76957 (Click to Chat)
-                            </a>
+                            <div className="flex flex-col gap-1">
+                                <a href="https://wa.me/916267276957" className="text-slate-600 font-light hover:text-[#25D366] transition-colors">
+                                    +91 62672 76957 (Primary)
+                                </a>
+                                <a href="https://wa.me/919630252729" className="text-slate-600 font-light hover:text-[#25D366] transition-colors">
+                                    +91 96302 52729
+                                </a>
+                                <a href="https://wa.me/917225888650" className="text-slate-600 font-light hover:text-[#25D366] transition-colors">
+                                    +91 72258 88650
+                                </a>
+                            </div>
                         </div>
                     </div>
 

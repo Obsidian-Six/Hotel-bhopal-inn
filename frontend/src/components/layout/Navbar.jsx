@@ -59,11 +59,11 @@ const Navbar = ({ light = false }) => {
           {/* Logo */}
           <Link to="/" className="relative z-[100] group">
             <div className={`transition-all duration-500 ${isScrolled ? 'h-10 lg:h-12' : 'h-12 lg:h-20'}`}>
-                <div className="h-full w-auto overflow-hidden flex items-center justify-center">
+                <div className="h-full w-auto flex items-center justify-start">
                     <img 
                         src="/logo.png" 
                         alt="Bhopal Inn Logo" 
-                        className={`h-full w-auto object-contain transition-transform duration-500 ${isScrolled ? 'scale-[1.8] lg:scale-[2.4]' : 'scale-[2.0] lg:scale-[2.4]'}`}
+                        className={`h-full w-auto object-contain transition-transform duration-500 origin-left ${isScrolled ? 'scale-[1.6] lg:scale-[2.2]' : 'scale-[1.8] lg:scale-[2.2]'}`}
                     />
                 </div>
             </div>
