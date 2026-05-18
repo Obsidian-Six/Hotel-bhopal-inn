@@ -115,10 +115,10 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-          <p>© 2026 Hotel Bhopal Inn by <a href="https://www.tenontenstays.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">Ten on Ten Stays</a></p>
+          <p>© 2026 Hotel Bhopal Inn by <a href="https://www.tenontenstays.com" target="_blank" rel="noopener noreferrer" className="hover:text-black">Ten on Ten Stays</a></p>
           <div className="flex gap-6">
-            <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-white transition-colors">Terms & Conditions</Link>
+            <Link to="/privacy" className="hover:text-black transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-black transition-colors">Terms & Conditions</Link>
           </div>
         </div>
       </div>

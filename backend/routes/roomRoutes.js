@@ -77,7 +77,7 @@ router.get('/:category', async (req, res) => {
 // Create/Update Room (Admin)
 router.post('/', upload.array('images', 10), async (req, res) => {
     try {
-        const { category, title, description, amenities, details, tags } = req.body;
+        const { category, title, description, amenities, details, tags, icalUrls } = req.body;
         
         console.log('--- Room Save Request ---');
         console.log('Category:', category);
@@ -107,6 +107,13 @@ router.post('/', upload.array('images', 10), async (req, res) => {
             parsedTags = tags ? [tags] : [];
         }
 
+        let parsedIcalUrls = { bookingCom: '', makeMyTrip: '' };
+        try {
+            parsedIcalUrls = typeof icalUrls === 'string' ? JSON.parse(icalUrls) : (icalUrls || { bookingCom: '', makeMyTrip: '' });
+        } catch (e) {
+            console.error('Error parsing icalUrls:', e.message);
+        }
+
         const imageUrls = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
         let room = await Room.findOne({ category });
@@ -119,6 +126,7 @@ router.post('/', upload.array('images', 10), async (req, res) => {
             room.amenities = parsedAmenities;
             room.details = { ...room.details.toObject(), ...parsedDetails };
             room.tags = parsedTags;
+            room.icalUrls = parsedIcalUrls;
             
             if (imageUrls.length > 0) {
                 if (req.body.replaceImages === 'true') {
@@ -138,7 +146,8 @@ router.post('/', upload.array('images', 10), async (req, res) => {
                 images: imageUrls,
                 amenities: parsedAmenities,
                 details: parsedDetails,
-                tags: parsedTags
+                tags: parsedTags,
+                icalUrls: parsedIcalUrls
             });
             await room.save();
             console.log('New room created successfully');

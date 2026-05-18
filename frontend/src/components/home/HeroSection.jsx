@@ -119,7 +119,7 @@ const HeroSection = () => {
             Premium Boutique Hotel | City Centre | 10 Min from Station
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center gap-6 mb-16">
+          <div className="flex flex-col sm:flex-row items-center gap-6 mb-10">
             <Link 
               to="/booking" 
               className="bg-[#BFA37E] text-white px-10 py-4 text-xs font-bold tracking-[0.2em] uppercase rounded-sm hover:bg-[#a68d6d] transition-all shadow-2xl min-w-[200px]"
@@ -139,7 +139,7 @@ const HeroSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.8 }}
-            className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 pt-8 border-t border-white/20"
+            className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 py-5 border-t border-white/20"
           >
             <div className="flex items-center gap-2 text-white/80">
               <Star size={16} className="text-[#BFA37E]" fill="#BFA37E" />

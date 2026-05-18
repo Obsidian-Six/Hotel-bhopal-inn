@@ -63,8 +63,12 @@ const BookingSchema = new mongoose.Schema({
     },
     source: {
         type: String,
-        enum: ['Website', 'Walk-in', 'Booking.com', 'Other', 'Offline', 'OTA'],
+        enum: ['Website', 'Walk-in', 'Booking.com', 'MakeMyTrip', 'Other', 'Offline', 'OTA'],
         default: 'Website'
+    },
+    otaReferenceId: {
+        type: String,
+        default: ''
     }
 }, { timestamps: true });
 

@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom';
 const API_BASE = config.API_URL;
 
 const RoomCard = ({ room, onZoom }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const getFullUrl = (path) => {
     if (!path) return 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?q=80&w=2070&auto=format&fit=crop';
     if (path.startsWith('http')) return path;
@@ -47,15 +48,25 @@ const RoomCard = ({ room, onZoom }) => {
       </div>
       
       <div className="flex flex-col flex-grow space-y-4">
-        <h3 className="text-2xl lg:text-3xl font-serif text-[#000000] uppercase tracking-wide">
+        <h3 className="text-2xl lg:text-3xl font-serif text-[#000000] uppercase tracking-wide min-h-[4rem] lg:min-h-[5rem] flex items-center">
           {room.title}
         </h3>
         
-        <p className="text-slate-500 text-sm leading-relaxed line-clamp-3">
-          {room.description}
-        </p>
+        <div className="flex-grow">
+          <p className={`text-slate-500 text-sm leading-relaxed ${isExpanded ? '' : 'line-clamp-3'}`}>
+            {room.description}
+          </p>
+          {room.description && room.description.length > 120 && (
+            <button 
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-[10px] font-black uppercase tracking-widest text-[#8B735B] hover:text-[#725e4a] transition-colors mt-2 block"
+            >
+              {isExpanded ? 'Read Less —' : 'Read More +'}
+            </button>
+          )}
+        </div>
 
-        <div className="flex flex-col pt-4">
+        <div className="flex flex-col pt-4 border-t border-slate-100">
           {room.details?.cutPrice > 0 && (
             <span className="text-sm font-serif text-slate-400 line-through decoration-slate-400/60">₹{room.details.cutPrice.toLocaleString()}</span>
           )}

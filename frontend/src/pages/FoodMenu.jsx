@@ -106,15 +106,15 @@ const FoodMenu = () => {
                         </div>
 
                         {/* Categories */}
-                        <div className="flex gap-8 md:gap-12 overflow-x-auto pb-4 no-scrollbar justify-start md:justify-center px-4">
+                        <div className="flex gap-8 md:gap-12 overflow-x-auto pt-6 pb-6 no-scrollbar justify-start md:justify-center px-4 -mt-6">
                             {categories.map((cat) => (
                                 <button
                                     key={cat._id}
                                     onClick={() => setActiveCategory(cat._id)}
                                     className="flex flex-col items-center gap-3 flex-shrink-0 group"
                                 >
-                                    <div className={`w-20 h-20 md:w-32 md:h-32 rounded-full p-1 border-[6px] transition-all duration-500 ${activeCategory === cat._id ? 'border-green-500 scale-110 shadow-2xl rotate-6' : 'border-slate-100 grayscale hover:grayscale-0 hover:border-[#BFA37E]'}`}>
-                                        <div className="w-full h-full rounded-full overflow-hidden border-[6px] border-white shadow-inner bg-white">
+                                    <div className={`w-20 h-20 md:w-28 md:h-28 rounded-full transition-all duration-500 flex items-center justify-center p-1.5 border-4 ${activeCategory === cat._id ? 'border-green-500 scale-110 shadow-2xl rotate-6' : 'border-slate-100 hover:border-[#BFA37E] hover:scale-105'}`}>
+                                        <div className="w-full h-full rounded-full overflow-hidden shadow-inner bg-white">
                                             <img src={`${config.API_URL}${cat.image}`} alt={cat.name} className="w-full h-full object-cover" />
                                         </div>
                                     </div>

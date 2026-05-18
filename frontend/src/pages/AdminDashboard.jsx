@@ -12,7 +12,8 @@ import FinanceManagement from '@/components/admin/FinanceManagement';
 import ReelManagement from '@/components/admin/ReelManagement';
 import FoodMenuManagement from '@/components/admin/FoodMenuManagement';
 import PostManagement from '@/components/admin/PostManagement';
-import { Tag, Calendar, Users, IndianRupee, Film, Utensils, Camera } from 'lucide-react';
+import OTAChannelManagement from '@/components/admin/OTAChannelManagement';
+import { Tag, Calendar, Users, IndianRupee, Film, Utensils, Camera, Globe } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('hero'); // 'hero', 'rooms', or 'banquet'
@@ -141,6 +142,13 @@ const AdminDashboard = () => {
           >
             <Calendar size={16} />
             Inventory Calendar
+          </button>
+          <button 
+            onClick={() => setActiveTab('ota')}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'ota' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+          >
+            <Globe size={16} />
+            OTA Channels
           </button>
           <button 
             onClick={() => setActiveTab('finance')}
@@ -279,6 +287,8 @@ const AdminDashboard = () => {
             <FrontDeskManagement />
           ) : activeTab === 'inventory' ? (
             <InventoryManagement />
+          ) : activeTab === 'ota' ? (
+            <OTAChannelManagement />
           ) : activeTab === 'finance' ? (
             <FinanceManagement role="Admin" />
           ) : activeTab === 'reels' ? (

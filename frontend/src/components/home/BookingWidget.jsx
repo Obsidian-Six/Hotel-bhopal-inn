@@ -202,8 +202,8 @@ const BookingWidget = () => {
 
         </div>
       </motion.div>
-      <div className="pb-12 lg:pb-16">
-        <p className="text-center mt-8 text-[10px] md:text-xs font-bold text-black/60 uppercase tracking-[0.2em]">
+      <div className="pt-6 pb-6 lg:pt-8 lg:pb-8 flex justify-center items-center">
+        <p className="text-center text-[10px] md:text-xs font-bold text-black/60 uppercase tracking-[0.2em]">
           Best rate guaranteed when you book direct. No commission, no hidden charges.
         </p>
       </div>

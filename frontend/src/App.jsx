@@ -1,5 +1,5 @@
-import React, { lazy, Suspense } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import React, { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider } from '@/lib/AuthContext'
 import ProtectedRoute from '@/lib/ProtectedRoute'
 import { GoogleOAuthProvider } from '@react-oauth/google'
@@ -19,6 +19,8 @@ const Gallery = lazy(() => import('@/pages/Gallery'))
 const About = lazy(() => import('@/pages/About'))
 const AdminLogin = lazy(() => import('@/pages/AdminLogin'))
 const FoodMenu = lazy(() => import('@/pages/FoodMenu'))
+const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'))
+const TermsAndConditions = lazy(() => import('@/pages/TermsAndConditions'))
 import WhatsAppFloat from '@/components/layout/WhatsAppFloat'
 
 // Loading component
@@ -41,13 +43,25 @@ const PlaceholderPage = ({ title }) => (
   </div>
 )
 
+// Scroll restoration helper
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 function App() {
   return (
     <GoogleOAuthProvider clientId="473199157851-81idd74itd3v99n3oqdhhd42vgpot4s4.apps.googleusercontent.com">
       <AuthProvider>
         <Router>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
+          <ScrollToTop />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/rooms" element={<Rooms />} />
             <Route path="/rooms/:category" element={<RoomDetail />} />
@@ -71,8 +85,9 @@ function App() {
             <Route path="/admin-login" element={<AdminLogin />} />
             
             <Route path="/faq" element={<FAQ />} />
-            <Route path="/privacy-policy" element={<PlaceholderPage title="Privacy Policy" />} />
-            <Route path="/terms" element={<PlaceholderPage title="Terms & Conditions" />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsAndConditions />} />
             
             <Route path="*" element={<PlaceholderPage title="404 - Page Not Found" />} />
           </Routes>
