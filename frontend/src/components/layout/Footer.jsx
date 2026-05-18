@@ -22,7 +22,7 @@ const Footer = () => {
   );
 
   return (
-    <footer className="bg-[#FDFBF7] text-[#000000] pt-20 pb-10 border-t border-slate-100">
+    <footer className="bg-[#FDFBF7] text-[#000000] pt-20 pb-20 lg:pb-24 border-t border-slate-100">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           

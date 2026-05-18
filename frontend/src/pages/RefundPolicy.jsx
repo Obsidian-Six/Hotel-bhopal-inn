@@ -2,7 +2,7 @@ import React from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import TopBar from '@/components/layout/TopBar';
-import { ShieldCheck, Mail, Globe, BadgePercent, XCircle, RotateCcw } from 'lucide-react';
+import { ShieldCheck, Mail, Globe, BadgePercent, XCircle, RotateCcw, AlertTriangle, HelpCircle, FileText } from 'lucide-react';
 
 const RefundPolicy = () => {
   return (
@@ -20,39 +20,21 @@ const RefundPolicy = () => {
               <RotateCcw className="text-[#BFA37E]" size={32} />
             </div>
             <h1 className="text-4xl md:text-6xl font-serif text-[#000000] mb-4 uppercase">
-              Refund <span className="text-[#BFA37E]">Policy</span>
+              Refund & <span className="text-[#BFA37E]">Cancellation</span>
             </h1>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
               Effective Date: May 18, 2026 | Hotel Bhopal Inn
             </p>
           </div>
 
-          {/* Core Policy Highlight Card */}
+          {/* Intro Card */}
           <div className="bg-white border border-[#F1E9DA] p-8 md:p-10 mb-12 shadow-sm rounded-sm">
-            <h2 className="text-xs font-black uppercase text-[#BFA37E] tracking-widest mb-4 flex items-center gap-2">
-              <ShieldCheck size={16} /> Core Motto & Principle
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-start gap-4 p-4 bg-emerald-50 border border-emerald-100 rounded-sm">
-                <BadgePercent className="text-emerald-600 shrink-0 mt-0.5" size={20} />
-                <div>
-                  <h4 className="text-sm font-black text-emerald-800 uppercase tracking-wider">100% Refund Guarantee</h4>
-                  <p className="text-xs text-emerald-700 font-bold uppercase tracking-wider mt-1 leading-relaxed">
-                    Get a full 100% refund of your booking amount if the cancellation is made more than 30 days prior to your scheduled check-in date.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4 p-4 bg-red-50 border border-red-100 rounded-sm">
-                <XCircle className="text-red-600 shrink-0 mt-0.5" size={20} />
-                <div>
-                  <h4 className="text-sm font-black text-red-800 uppercase tracking-wider">No Refund or Amendment Zone</h4>
-                  <p className="text-xs text-red-700 font-bold uppercase tracking-wider mt-1 leading-relaxed">
-                    Strictly no refunds, amendments, or date modifications are permitted if booking is cancelled or altered within 30 days of the scheduled check-in date.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <p className="text-[#1A2B48] text-sm md:text-base font-medium leading-relaxed italic">
+              Welcome to Hotel Bhopal Inn by Ten On Ten Stays. We are committed to providing a seamless and transparent booking experience for all our guests. This Refund & Cancellation Policy outlines the terms and conditions applicable to all reservations made directly through our website, booking platforms, or through our reservation team.
+            </p>
+            <p className="text-[#1A2B48] text-sm md:text-base font-semibold leading-relaxed mt-4">
+              By confirming a reservation with Hotel Bhopal Inn by Ten On Ten Stays, guests acknowledge and agree to the policies stated below.
+            </p>
           </div>
 
           {/* Detailed Policy Sections */}
@@ -61,102 +43,187 @@ const RefundPolicy = () => {
             {/* Section 1 */}
             <section className="space-y-4">
               <h2 className="text-xl font-serif font-black text-[#1A2B48] flex items-center gap-3 border-b border-slate-100 pb-3">
-                <span className="text-[#BFA37E]">1.</span> Cancellation Windows
+                <span className="text-[#BFA37E]">1.</span> Cancellation Policy
               </h2>
-              <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                At Hotel Bhopal Inn, we aim to balance absolute transparency with high operational excellence. Our detailed cancellation timeline is defined below:
-              </p>
-              <div className="space-y-3 pl-4">
-                <div className="border-l-2 border-[#BFA37E] pl-4 py-1">
-                  <p className="text-xs font-black uppercase text-[#1A2B48] tracking-widest">More than 30 Days before Check-In</p>
-                  <p className="text-slate-500 text-xs mt-1 leading-relaxed">
-                    Guests are eligible for a complete 100% refund of the room tariff paid. No cancellation processing fee is charged.
-                  </p>
-                </div>
-                <div className="border-l-2 border-red-500 pl-4 py-1">
-                  <p className="text-xs font-black uppercase text-red-700 tracking-widest">Within 30 Days of Check-In (0-30 Days)</p>
-                  <p className="text-slate-500 text-xs mt-1 leading-relaxed">
-                    No refund will be issued. The entire paid booking amount will be retained as a booking retention/cancellation charge.
-                  </p>
-                </div>
+              <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-sm mb-4">
+                <h3 className="text-xs font-black uppercase text-emerald-800 tracking-widest mb-2 flex items-center gap-2">
+                  <BadgePercent size={16} /> Free Cancellation Eligibility
+                </h3>
+                <p className="text-emerald-700 text-xs font-bold uppercase tracking-wider leading-relaxed">
+                  Guests are eligible for a 100% refund of the booking amount if the reservation is canceled more than 30 days prior to the scheduled check-in date.
+                </p>
               </div>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                The cancellation request must be submitted through the same platform used for the reservation or directly through our official support channels. Once the cancellation request is verified and approved, the refund process will be initiated accordingly.
+              </p>
             </section>
 
             {/* Section 2 */}
             <section className="space-y-4">
               <h2 className="text-xl font-serif font-black text-[#1A2B48] flex items-center gap-3 border-b border-slate-100 pb-3">
-                <span className="text-[#BFA37E]">2.</span> Booking Amendment & Modifications
+                <span className="text-[#BFA37E]">2.</span> Non-Refundable Period
               </h2>
+              <div className="bg-red-50 border border-red-100 p-6 rounded-sm mb-4">
+                <h3 className="text-xs font-black uppercase text-red-800 tracking-widest mb-2 flex items-center gap-2">
+                  <XCircle size={16} /> Strict 30-Day Cancellation Policy
+                </h3>
+                <p className="text-red-700 text-xs font-bold uppercase tracking-wider leading-relaxed">
+                  Reservations canceled within 30 days of the check-in date will be considered non-refundable.
+                </p>
+              </div>
+              
               <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                We understand that travel plans can change unexpectedly. Below is our policy regarding reservation adjustments:
+                During this period:
               </p>
-              <ul className="space-y-2.5 text-xs font-bold text-slate-600 uppercase tracking-wider list-disc list-inside pl-4 leading-relaxed">
-                <li>Amendments requested more than 30 days prior to check-in are allowed free of charge, subject to room availability and seasonal price variations.</li>
-                <li>No date changes or category downgrades are permitted within 30 days of the check-in date.</li>
-                <li>Splitting check-in dates or reducing the number of rooms booked is treated as a partial cancellation.</li>
+              <ul className="space-y-3 text-xs font-bold text-slate-600 uppercase tracking-wider list-disc list-inside pl-4 leading-relaxed">
+                <li>No refund will be issued for cancellation requests.</li>
+                <li>No partial refund will be applicable for unused nights or early check-outs.</li>
+                <li>Amendments such as date changes, room modifications, or reduction in stay duration may not be accepted.</li>
+                <li>Failure to arrive at the property on the scheduled check-in date (“No Show”) will result in complete forfeiture of the booking amount.</li>
               </ul>
+              
+              <div className="bg-[#FDFBF7] border-l-2 border-[#BFA37E] p-4 mt-4">
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+                  This policy is implemented to manage room inventory, operational commitments, staffing, and reservation planning effectively.
+                </p>
+              </div>
             </section>
 
             {/* Section 3 */}
             <section className="space-y-4">
               <h2 className="text-xl font-serif font-black text-[#1A2B48] flex items-center gap-3 border-b border-slate-100 pb-3">
-                <span className="text-[#BFA37E]">3.</span> No-Show Policy
+                <span className="text-[#BFA37E]">3.</span> Booking Amendments & Rescheduling
               </h2>
               <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                If you fail to arrive at Hotel Bhopal Inn on your scheduled check-in date without prior notification:
+                Requests related to:
               </p>
-              <ul className="space-y-2.5 text-xs font-bold text-slate-600 uppercase tracking-wider list-disc list-inside pl-4 leading-relaxed">
-                <li>The reservation will be classified as a "No-Show".</li>
-                <li>100% of the room booking amount will be forfeited.</li>
-                <li>The remaining nights of the booking (if any) will be automatically cancelled.</li>
+              <ul className="space-y-2 text-xs font-bold text-slate-600 uppercase tracking-wider list-disc list-inside pl-4 leading-relaxed">
+                <li>Change of check-in or check-out dates</li>
+                <li>Room category changes</li>
+                <li>Guest detail modifications</li>
+                <li>Stay duration adjustments</li>
               </ul>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                will be subject to room availability and management approval.
+              </p>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                Any amendment request made within the 30-day non-refundable period may be denied or treated as a cancellation request. Additional charges may also apply based on revised tariffs, seasonal pricing, or availability.
+              </p>
             </section>
 
             {/* Section 4 */}
             <section className="space-y-4">
               <h2 className="text-xl font-serif font-black text-[#1A2B48] flex items-center gap-3 border-b border-slate-100 pb-3">
-                <span className="text-[#BFA37E]">4.</span> Early Departure & Shortened Stay
+                <span className="text-[#BFA37E]">4.</span> Refund Processing Timeline
               </h2>
               <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                If you choose to shorten your stay or check out early after check-in, no refunds or credit vouchers will be issued for the remaining unused nights.
+                For eligible cancellations:
+              </p>
+              <ul className="space-y-3 text-xs font-bold text-slate-600 uppercase tracking-wider list-disc list-inside pl-4 leading-relaxed">
+                <li>Refunds will be processed through the original mode of payment used during booking.</li>
+                <li>The standard processing time may vary between 7–14 business days, depending on the payment gateway, bank processing timelines, or third-party booking platforms.</li>
+                <li>Transaction charges, payment gateway fees, or currency conversion fees charged by financial institutions may be non-refundable.</li>
+              </ul>
+              <p className="text-[11px] text-[#BFA37E] font-bold uppercase tracking-widest mt-2 leading-relaxed">
+                Guests are advised to retain booking confirmation emails and payment receipts until the refund process is completed successfully.
               </p>
             </section>
 
             {/* Section 5 */}
             <section className="space-y-4">
               <h2 className="text-xl font-serif font-black text-[#1A2B48] flex items-center gap-3 border-b border-slate-100 pb-3">
-                <span className="text-[#BFA37E]">5.</span> Refund Processing Timeline
+                <span className="text-[#BFA37E]">5.</span> Third-Party Booking Platforms
               </h2>
               <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                For eligible cancellations (more than 30 days notice):
+                For reservations made through Online Travel Agencies (OTAs) or third-party platforms, including but not limited to travel portals and booking marketplaces, cancellation and refund processing may additionally be subject to the respective platform’s policies and timelines.
               </p>
-              <ul className="space-y-2.5 text-xs font-bold text-slate-600 uppercase tracking-wider list-disc list-inside pl-4 leading-relaxed">
-                <li>Refunds are initiated immediately upon cancellation approval.</li>
-                <li>It typically takes 7 to 10 business days for the funds to reflect in your original payment mode (credit card, bank account, UPI).</li>
-                <li>Any processing fees levied by your bank or the payment gateway are non-refundable.</li>
-              </ul>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                Guests are advised to review the cancellation terms displayed at the time of booking on such platforms.
+              </p>
             </section>
 
             {/* Section 6 */}
             <section className="space-y-4">
               <h2 className="text-xl font-serif font-black text-[#1A2B48] flex items-center gap-3 border-b border-slate-100 pb-3">
-                <span className="text-[#BFA37E]">6.</span> Force Majeure & Exceptional Situations
+                <span className="text-[#BFA37E]">6.</span> Early Check-Out & Unused Services
               </h2>
               <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                In extraordinary circumstances such as natural disasters, national emergencies, severe weather events, or flight/train cancellations due to sudden disruptions:
+                No refund or adjustment will be provided for:
               </p>
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-wider italic leading-relaxed">
-                Decisions on booking transfers, credit note generation, or exemptions from the cancellation window will be evaluated on an individual basis by the hotel management at its absolute discretion.
+              <ul className="space-y-2 text-xs font-bold text-slate-600 uppercase tracking-wider list-disc list-inside pl-4 leading-relaxed">
+                <li>Early departures</li>
+                <li>Unused room nights</li>
+                <li>Unused hotel facilities or services</li>
+                <li>Complimentary inclusions associated with the booking package</li>
+              </ul>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                Once the guest has checked in, the reservation amount becomes fully non-refundable unless approved otherwise by the management under exceptional circumstances.
               </p>
             </section>
 
             {/* Section 7 */}
             <section className="space-y-4">
               <h2 className="text-xl font-serif font-black text-[#1A2B48] flex items-center gap-3 border-b border-slate-100 pb-3">
-                <span className="text-[#BFA37E]">7.</span> Contact Us for Cancellations
+                <span className="text-[#BFA37E]">7.</span> Force Majeure & Exceptional Circumstances
               </h2>
               <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                To initiate a cancellation or request a refund, please contact our support team immediately with your booking ID and registration details:
+                In situations beyond reasonable control, including but not limited to:
+              </p>
+              <ul className="space-y-2 text-xs font-bold text-slate-600 uppercase tracking-wider list-disc list-inside pl-4 leading-relaxed">
+                <li>Natural disasters</li>
+                <li>Government restrictions</li>
+                <li>Public emergencies</li>
+                <li>Transportation shutdowns</li>
+                <li>Unforeseen operational issues</li>
+              </ul>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                The management of Hotel Bhopal Inn by Ten On Ten Stays reserves the right to review cancellation requests individually and determine suitable resolutions at its sole discretion.
+              </p>
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-wider italic leading-relaxed">
+                Approval under such cases is not guaranteed and may vary depending on the situation.
+              </p>
+            </section>
+
+            {/* Section 8 */}
+            <section className="space-y-4">
+              <h2 className="text-xl font-serif font-black text-[#1A2B48] flex items-center gap-3 border-b border-slate-100 pb-3">
+                <span className="text-[#BFA37E]">8.</span> Fraudulent or Misuse Activities
+              </h2>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                The hotel reserves the right to cancel any reservation without refund in cases involving:
+              </p>
+              <ul className="space-y-2 text-xs font-bold text-slate-600 uppercase tracking-wider list-disc list-inside pl-4 leading-relaxed">
+                <li>Fraudulent payment activity</li>
+                <li>Misrepresentation of guest information</li>
+                <li>Unauthorized transactions</li>
+                <li>Violation of hotel policies</li>
+                <li>Suspicious or abusive booking behavior</li>
+              </ul>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                Further legal or administrative action may also be taken where necessary.
+              </p>
+            </section>
+
+            {/* Section 9 */}
+            <section className="space-y-4">
+              <h2 className="text-xl font-serif font-black text-[#1A2B48] flex items-center gap-3 border-b border-slate-100 pb-3">
+                <span className="text-[#BFA37E]">9.</span> Policy Acceptance
+              </h2>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                By proceeding with a reservation at Hotel Bhopal Inn by Ten On Ten Stays, guests confirm that they have read, understood, and accepted this Refund & Cancellation Policy in full.
+              </p>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                The hotel reserves the right to update, modify, or revise this policy at any time without prior notice. Updated versions will be published through official communication channels and platforms.
+              </p>
+            </section>
+
+            {/* Section 10 */}
+            <section className="space-y-4">
+              <h2 className="text-xl font-serif font-black text-[#1A2B48] flex items-center gap-3 border-b border-slate-100 pb-3">
+                <span className="text-[#BFA37E]">10.</span> Contact Information
+              </h2>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                For any questions related to cancellations, refunds, booking amendments, or reservation assistance, guests may contact the support team of Hotel Bhopal Inn by Ten On Ten Stays through the official communication channels provided during booking:
               </p>
               
               <div className="bg-[#FDFBF7] border border-[#F1E9DA] p-6 rounded-sm space-y-3 mt-4">
