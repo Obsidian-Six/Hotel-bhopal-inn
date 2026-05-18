@@ -21,6 +21,7 @@ const AdminLogin = lazy(() => import('@/pages/AdminLogin'))
 const FoodMenu = lazy(() => import('@/pages/FoodMenu'))
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'))
 const TermsAndConditions = lazy(() => import('@/pages/TermsAndConditions'))
+const RefundPolicy = lazy(() => import('@/pages/RefundPolicy'))
 import WhatsAppFloat from '@/components/layout/WhatsAppFloat'
 
 // Loading component
@@ -88,6 +89,8 @@ function App() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsAndConditions />} />
+            <Route path="/refund" element={<RefundPolicy />} />
+            <Route path="/refund-policy" element={<RefundPolicy />} />
             
             <Route path="*" element={<PlaceholderPage title="404 - Page Not Found" />} />
           </Routes>
