@@ -301,7 +301,29 @@ router.get('/my-bookings', protect, async (req, res) => {
     }
 });
 
-// PHONEPE: Create Payment Link
+// Helper to get PhonePe OAuth Token
+async function getPhonePeToken() {
+    const tokenUrl = 'https://api.phonepe.com/apis/identity-manager/v1/oauth/token';
+    const params = new URLSearchParams();
+    params.append('client_id', PHONEPE_MERCHANT_ID);
+    params.append('client_secret', PHONEPE_SALT_KEY);
+    params.append('client_version', PHONEPE_SALT_INDEX);
+    params.append('grant_type', 'client_credentials');
+
+    const response = await axios.post(tokenUrl, params.toString(), {
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'accept': 'application/json'
+        }
+    });
+
+    if (response.data && response.data.access_token) {
+        return response.data.access_token;
+    }
+    throw new Error("PhonePe OAuth access_token not received");
+}
+
+// PHONEPE V2: Create Payment Link
 router.post('/phonepe-pay', async (req, res) => {
     try {
         const { bookingId, amount } = req.body;
@@ -310,49 +332,45 @@ router.post('/phonepe-pay', async (req, res) => {
             return res.status(404).json({ message: "Booking not found" });
         }
 
-        const merchantTransactionId = `TXN_${bookingId}_${Date.now()}`;
-        const merchantUserId = `USER_${booking.user || 'Guest'}`;
+        const merchantOrderId = `OMO_${bookingId}_${Date.now()}`;
+
+        // Get access token
+        const accessToken = await getPhonePeToken();
 
         const payload = {
-            merchantId: PHONEPE_MERCHANT_ID,
-            merchantTransactionId: merchantTransactionId,
-            merchantUserId: merchantUserId,
-            amount: Math.round(amount * 100), // PhonePe accepts amount in paise (1 INR = 100 Paise)
-            redirectUrl: `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/bookings/phonepe-redirect?bookingId=${bookingId}`,
-            redirectMode: "REDIRECT",
-            paymentInstrument: {
-                type: "PAY_PAGE"
+            merchantOrderId: merchantOrderId,
+            amount: Math.round(amount * 100), // in paise
+            expireAfter: 900,
+            metaInfo: {
+                udf1: bookingId
+            },
+            paymentFlow: {
+                type: "PG_CHECKOUT",
+                message: "Standard room booking payment",
+                merchantUrls: {
+                    redirectUrl: `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/bookings/phonepe-redirect?bookingId=${bookingId}&merchantOrderId=${merchantOrderId}`
+                }
             }
         };
 
-        const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
-        const stringToSign = base64Payload + "/pg/v1/pay" + PHONEPE_SALT_KEY;
-        const sha256 = crypto.createHash('sha256').update(stringToSign).digest('hex');
-        const xVerify = sha256 + "###" + PHONEPE_SALT_INDEX;
-
-        const response = await axios.post(
-            `${PHONEPE_API_URL}/pg/v1/pay`,
-            { request: base64Payload },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-VERIFY': xVerify,
-                    'accept': 'application/json'
-                }
+        const payUrl = 'https://api.phonepe.com/apis/pg/checkout/v2/pay';
+        const response = await axios.post(payUrl, payload, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `O-Bearer ${accessToken}`,
+                'accept': 'application/json'
             }
-        );
+        });
 
-        if (response.data && response.data.success) {
-            const redirectUrl = response.data.data.instrumentResponse.redirectInfo.url;
-            
-            // Save the transaction id in booking financials
+        if (response.data && response.data.redirectUrl) {
+            // Save the merchantOrderId in booking financials
             booking.financials.paymentMode = 'Online (PhonePe - Pending)';
             await booking.save();
 
-            res.json({ success: true, redirectUrl });
+            res.json({ success: true, redirectUrl: response.data.redirectUrl });
         } else {
             console.error("PhonePe payment initiation failed:", response.data);
-            res.status(500).json({ message: response.data?.message || "Failed to initiate payment with PhonePe" });
+            res.status(500).json({ message: "Failed to initiate payment with PhonePe" });
         }
     } catch (err) {
         console.error("PhonePe Pay Error:", err.message, err.response?.data);
@@ -360,43 +378,30 @@ router.post('/phonepe-pay', async (req, res) => {
     }
 });
 
-// PHONEPE: Verify and Redirect
+// PHONEPE V2: Verify and Redirect
 const handlePhonePeRedirect = async (req, res) => {
     try {
-        const { bookingId } = req.query;
-        
-        // Extract info from PhonePe's POST response if redirected via POST
-        let merchantTransactionId = req.body?.transactionId || req.query?.transactionId;
-
-        // If no transactionId is found in direct parameters, PhonePe also passes response payload
-        if (!merchantTransactionId && req.body?.response) {
-            const decodedResponse = JSON.parse(Buffer.from(req.body.response, 'base64').toString('utf-8'));
-            merchantTransactionId = decodedResponse.data?.merchantTransactionId;
-        }
+        const { bookingId, merchantOrderId } = req.query;
 
         const booking = await Booking.findById(bookingId);
         if (!booking) {
             return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/my-bookings?payment=notfound`);
         }
 
-        if (merchantTransactionId) {
-            const stringToSign = `/pg/v1/status/${PHONEPE_MERCHANT_ID}/${merchantTransactionId}${PHONEPE_SALT_KEY}`;
-            const sha256 = crypto.createHash('sha256').update(stringToSign).digest('hex');
-            const xVerify = sha256 + "###" + PHONEPE_SALT_INDEX;
+        if (merchantOrderId) {
+            // Get access token
+            const accessToken = await getPhonePeToken();
 
-            const response = await axios.get(
-                `${PHONEPE_API_URL}/pg/v1/status/${PHONEPE_MERCHANT_ID}/${merchantTransactionId}`,
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-VERIFY': xVerify,
-                        'X-MERCHANT-ID': PHONEPE_MERCHANT_ID,
-                        'accept': 'application/json'
-                    }
+            const statusUrl = `https://api.phonepe.com/apis/pg/checkout/v2/order/${merchantOrderId}/status?details=false`;
+            const response = await axios.get(statusUrl, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `O-Bearer ${accessToken}`,
+                    'accept': 'application/json'
                 }
-            );
+            });
 
-            if (response.data && response.data.success && response.data.code === 'PAYMENT_SUCCESS') {
+            if (response.data && response.data.state === 'COMPLETED') {
                 const amountJustPaid = booking.financials.balance;
                 booking.financials.amountPaid += amountJustPaid;
                 booking.financials.balance = 0;
@@ -412,7 +417,6 @@ const handlePhonePeRedirect = async (req, res) => {
 
                 // Send Notifications via Backend
                 try {
-                    // Make internal call to notification API using axios
                     await axios.post(`${process.env.BACKEND_URL || 'http://localhost:8000'}/api/bookings/${bookingId}/notify`);
                 } catch (nErr) {
                     console.warn('Notification failed during PhonePe redirect', nErr.message);
