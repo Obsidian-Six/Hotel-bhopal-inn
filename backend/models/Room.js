@@ -34,10 +34,7 @@ const RoomSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
-    icalUrls: {
-        bookingCom: { type: String, default: '' },
-        makeMyTrip: { type: String, default: '' }
-    },
+
     isActive: {
         type: Boolean,
         default: true

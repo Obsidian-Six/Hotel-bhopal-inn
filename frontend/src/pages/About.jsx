@@ -11,19 +11,11 @@ import { Check, MessageCircle } from 'lucide-react';
 const API_BASE = config.API_URL;
 
 const About = () => {
-  const [testimonials, setTestimonials] = useState([]);
+
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const fetchTestimonials = async () => {
-      try {
-        const res = await axios.get(`${API_BASE}/api/testimonials`);
-        setTestimonials(res.data);
-      } catch (err) {
-        console.error('Error fetching testimonials:', err);
-      }
-    };
-    fetchTestimonials();
+
   }, []);
 
   return (

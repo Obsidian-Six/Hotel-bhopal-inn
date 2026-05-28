@@ -171,72 +171,23 @@ const Booking = () => {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
-  const loadRazorpayScript = () => {
-      return new Promise((resolve) => {
-          const script = document.createElement('script');
-          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          script.onload = () => resolve(true);
-          script.onerror = () => resolve(false);
-          document.body.appendChild(script);
-      });
-  };
-
-  const handleRazorpayPayment = async (bookingId, amount) => {
-      const res = await loadRazorpayScript();
-      if (!res) {
-          setStatus('Razorpay SDK failed to load. Are you online?');
-          setLoading(false);
-          return;
-      }
-
+  const handlePhonePePayment = async (bookingId, amount) => {
       try {
-          // Create Order on Backend
-          const orderRes = await axios.post(`${API_BASE}/api/bookings/create-order`, {
-              amount: amount,
-              receipt: bookingId
+          setStatus('Redirecting to PhonePe gateway...');
+          const res = await axios.post(`${API_BASE}/api/bookings/phonepe-pay`, {
+              bookingId,
+              amount
           });
           
-          const options = {
-              key: config.RAZORPAY_KEY, 
-              amount: orderRes.data.amount,
-              currency: orderRes.data.currency,
-              name: "Hotel Bhopal Inn",
-              description: "Room Booking Transaction",
-              order_id: orderRes.data.id,
-              handler: async function (response) {
-                  try {
-                      // Verify Payment
-                      const verifyRes = await axios.post(`${API_BASE}/api/bookings/verify-payment`, {
-                          razorpay_order_id: response.razorpay_order_id,
-                          razorpay_payment_id: response.razorpay_payment_id,
-                          razorpay_signature: response.razorpay_signature,
-                          bookingId: bookingId
-                      });
-                      
-                      if (verifyRes.data.success) {
-                          setStatus('Booking Confirmed & Payment Successful!');
-                          setTimeout(() => navigate('/my-bookings'), 2000);
-                      }
-                  } catch (err) {
-                      console.error('Payment verification failed', err);
-                      setStatus('Payment verification failed. Please contact support.');
-                  }
-              },
-              prefill: {
-                  name: `${formData.firstName} ${formData.lastName}`,
-                  email: formData.email,
-                  contact: formData.phone
-              },
-              theme: { color: "#000000" }
-          };
-
-          const paymentObject = new window.Razorpay(options);
-          paymentObject.open();
-          setLoading(false);
-
+          if (res.data && res.data.redirectUrl) {
+              window.location.href = res.data.redirectUrl;
+          } else {
+              setStatus('Failed to get payment link from PhonePe.');
+              setLoading(false);
+          }
       } catch (err) {
           console.error(err);
-          setStatus('Failed to initiate payment.');
+          setStatus(err.response?.data?.message || 'Failed to initiate PhonePe payment.');
           setLoading(false);
       }
   };
@@ -323,7 +274,7 @@ const Booking = () => {
            totalAmount: finalPrice,
            amountPaid: 0,
            balance: finalPrice,
-           paymentMode: formData.paymentMethod === 'Razorpay' ? 'Pending' : 'Pay at Hotel',
+           paymentMode: formData.paymentMethod === 'PhonePe' ? 'Pending' : 'Pay at Hotel',
            extraCharges: [
                { description: `Extra Persons (${formData.adults-1} Adult, ${formData.children} Child)`, amount: extraCharges, source: 'Booking' }
            ]
@@ -332,8 +283,8 @@ const Booking = () => {
 
       const res = await axios.post(`${API_BASE}/api/bookings`, payload);
       
-      if (formData.paymentMethod === 'Razorpay') {
-          handleRazorpayPayment(res.data._id, finalPrice);
+      if (formData.paymentMethod === 'PhonePe') {
+          handlePhonePePayment(res.data._id, finalPrice);
       } else {
           // Send Notifications via Backend
           try {
@@ -557,13 +508,13 @@ const Booking = () => {
                                         <input 
                                             type="radio" 
                                             name="paymentMethod" 
-                                            value="Razorpay" 
-                                            checked={formData.paymentMethod === 'Razorpay'} 
+                                            value="PhonePe" 
+                                            checked={formData.paymentMethod === 'PhonePe'} 
                                             onChange={handleChange}
                                             className="w-4 h-4 text-[#8B735B]"
                                         />
                                         <div>
-                                            <div className="font-bold text-sm text-[#000000]">Pay Online (Razorpay)</div>
+                                            <div className="font-bold text-sm text-[#000000]">Pay Online (PhonePe)</div>
                                             <div className="text-xs text-slate-500">Securely pay now via UPI, Credit/Debit Card, or Netbanking.</div>
                                         </div>
                                     </label>
@@ -628,7 +579,7 @@ const Booking = () => {
 
                             <div className="flex justify-end gap-4">
                                 <button type="submit" disabled={loading || (calculatedPrice && !calculatedPrice.isAvailable)} className="bg-[#000000] text-white px-10 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#8B735B] transition-all disabled:opacity-70">
-                                    {loading ? 'Processing...' : (calculatedPrice && !calculatedPrice.isAvailable ? 'Not Available' : (formData.paymentMethod === 'Razorpay' ? `Pay ₹${finalPrice}` : 'Confirm Booking'))}
+                                    {loading ? 'Processing...' : (calculatedPrice && !calculatedPrice.isAvailable ? 'Not Available' : (formData.paymentMethod === 'PhonePe' ? `Pay ₹${finalPrice}` : 'Confirm Booking'))}
                                 </button>
                             </div>
                         </form>

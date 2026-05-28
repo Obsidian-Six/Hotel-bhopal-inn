@@ -46,7 +46,7 @@ const RoomDetail = () => {
 
     const fetchReviews = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/api/testimonials?visible=true`);
+        const res = await axios.get(`${API_BASE}/api/reviews`);
         setReviews(res.data);
       } catch (err) {
         console.error('Error fetching reviews:', err);

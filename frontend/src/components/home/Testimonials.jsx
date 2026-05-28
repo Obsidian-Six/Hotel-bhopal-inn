@@ -30,7 +30,7 @@ const Testimonials = () => {
 
   const fetchReviews = async () => {
     try {
-      const res = await axios.get(`${config.API_URL}/api/testimonials?visible=true`);
+      const res = await axios.get(`${config.API_URL}/api/reviews`);
       if (res.data && res.data.length > 0) {
         setReviews(res.data);
       }
@@ -81,7 +81,7 @@ const Testimonials = () => {
                 <AnimatePresence mode="wait">
                   {getVisibleReviews().map((review, idx) => (
                       <motion.div
-                          key={`${review._id}-${idx}-${current}`}
+                          key={`${review.id}-${idx}-${current}`}
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -20 }}
@@ -91,11 +91,11 @@ const Testimonials = () => {
                           <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
                                   <div className="w-12 h-12 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-                                      <img src={`https://ui-avatars.com/api/?name=${review.name}&background=random`} alt={review.name} className="w-full h-full object-cover" />
+                                      <img src={review.profile_photo_url || `https://ui-avatars.com/api/?name=${review.name}&background=random`} alt={review.name} className="w-full h-full object-cover" />
                                   </div>
                                   <div>
                                       <h4 className="text-sm font-bold text-[#000000] uppercase tracking-wider">{review.name}</h4>
-                                      <p className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest">{review.city}</p>
+                                      <p className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest">{review.time}</p>
                                   </div>
                               </div>
                               {review.source?.toLowerCase().includes('google') ? (
@@ -107,7 +107,7 @@ const Testimonials = () => {
 
                           <div className="flex items-center gap-1">
                               {[...Array(5)].map((_, i) => (
-                                  <Star key={i} size={12} fill="#BFA37E" className="text-[#BFA37E]" />
+                                  <Star key={i} size={12} fill={i < (review.rating || 5) ? "#BFA37E" : "transparent"} className={i < (review.rating || 5) ? "text-[#BFA37E]" : "text-slate-300"} />
                               ))}
                           </div>
 

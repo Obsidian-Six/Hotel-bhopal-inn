@@ -6,7 +6,7 @@ const RoomUnit = require('../models/RoomUnit');
 const DailyInventory = require('../models/DailyInventory');
 
 const { protect } = require('../middleware/auth');
-const Razorpay = require('razorpay');
+const axios = require('axios');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 
@@ -19,11 +19,11 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Initialize Razorpay
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+// Initialize PhonePe
+const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID;
+const PHONEPE_SALT_INDEX = process.env.PHONEPE_SALT_INDEX;
+const PHONEPE_SALT_KEY = process.env.PHONEPE_SALT_KEY;
+const PHONEPE_API_URL = process.env.PHONEPE_API_URL || 'https://api.phonepe.com/apis/hermes';
 
 // GET: Today's Summary Stats for Front Desk
 router.get('/front-desk/stats', async (req, res) => {
@@ -301,54 +301,138 @@ router.get('/my-bookings', protect, async (req, res) => {
     }
 });
 
-// RAZORPAY: Create Order
-router.post('/create-order', async (req, res) => {
+// PHONEPE: Create Payment Link
+router.post('/phonepe-pay', async (req, res) => {
     try {
-        const options = {
-            amount: req.body.amount * 100, // in paise
-            currency: "INR",
-            receipt: req.body.receipt
+        const { bookingId, amount } = req.body;
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.status(404).json({ message: "Booking not found" });
+        }
+
+        const merchantTransactionId = `TXN_${bookingId}_${Date.now()}`;
+        const merchantUserId = `USER_${booking.user || 'Guest'}`;
+
+        const payload = {
+            merchantId: PHONEPE_MERCHANT_ID,
+            merchantTransactionId: merchantTransactionId,
+            merchantUserId: merchantUserId,
+            amount: Math.round(amount * 100), // PhonePe accepts amount in paise (1 INR = 100 Paise)
+            redirectUrl: `${process.env.BACKEND_URL || 'http://localhost:8000'}/api/bookings/phonepe-redirect?bookingId=${bookingId}`,
+            redirectMode: "REDIRECT",
+            paymentInstrument: {
+                type: "PAY_PAGE"
+            }
         };
-        const order = await razorpay.orders.create(options);
-        res.json(order);
+
+        const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
+        const stringToSign = base64Payload + "/pg/v1/pay" + PHONEPE_SALT_KEY;
+        const sha256 = crypto.createHash('sha256').update(stringToSign).digest('hex');
+        const xVerify = sha256 + "###" + PHONEPE_SALT_INDEX;
+
+        const response = await axios.post(
+            `${PHONEPE_API_URL}/pg/v1/pay`,
+            { request: base64Payload },
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-VERIFY': xVerify,
+                    'accept': 'application/json'
+                }
+            }
+        );
+
+        if (response.data && response.data.success) {
+            const redirectUrl = response.data.data.instrumentResponse.redirectInfo.url;
+            
+            // Save the transaction id in booking financials
+            booking.financials.paymentMode = 'Online (PhonePe - Pending)';
+            await booking.save();
+
+            res.json({ success: true, redirectUrl });
+        } else {
+            console.error("PhonePe payment initiation failed:", response.data);
+            res.status(500).json({ message: response.data?.message || "Failed to initiate payment with PhonePe" });
+        }
     } catch (err) {
+        console.error("PhonePe Pay Error:", err.message, err.response?.data);
         res.status(500).json({ message: err.message });
     }
 });
 
-// RAZORPAY: Verify Payment
-router.post('/verify-payment', async (req, res) => {
+// PHONEPE: Verify and Redirect
+const handlePhonePeRedirect = async (req, res) => {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId } = req.body;
-        const sign = razorpay_order_id + "|" + razorpay_payment_id;
-        const expectedSign = crypto
-            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-            .update(sign.toString())
-            .digest("hex");
+        const { bookingId } = req.query;
+        
+        // Extract info from PhonePe's POST response if redirected via POST
+        let merchantTransactionId = req.body?.transactionId || req.query?.transactionId;
 
-        if (razorpay_signature === expectedSign) {
-            const booking = await Booking.findById(bookingId);
-            if (booking) {
-                const amountJustPaid = booking.financials.balance; // Assuming full payment of remaining balance
+        // If no transactionId is found in direct parameters, PhonePe also passes response payload
+        if (!merchantTransactionId && req.body?.response) {
+            const decodedResponse = JSON.parse(Buffer.from(req.body.response, 'base64').toString('utf-8'));
+            merchantTransactionId = decodedResponse.data?.merchantTransactionId;
+        }
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+            return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/my-bookings?payment=notfound`);
+        }
+
+        if (merchantTransactionId) {
+            const stringToSign = `/pg/v1/status/${PHONEPE_MERCHANT_ID}/${merchantTransactionId}${PHONEPE_SALT_KEY}`;
+            const sha256 = crypto.createHash('sha256').update(stringToSign).digest('hex');
+            const xVerify = sha256 + "###" + PHONEPE_SALT_INDEX;
+
+            const response = await axios.get(
+                `${PHONEPE_API_URL}/pg/v1/status/${PHONEPE_MERCHANT_ID}/${merchantTransactionId}`,
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-VERIFY': xVerify,
+                        'X-MERCHANT-ID': PHONEPE_MERCHANT_ID,
+                        'accept': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data && response.data.success && response.data.code === 'PAYMENT_SUCCESS') {
+                const amountJustPaid = booking.financials.balance;
                 booking.financials.amountPaid += amountJustPaid;
                 booking.financials.balance = 0;
-                booking.financials.paymentMode = 'Online (Razorpay)';
+                booking.financials.paymentMode = 'Online (PhonePe)';
                 booking.financials.paymentHistory.push({
                     amount: amountJustPaid,
                     mode: 'Online',
                     staff: 'System',
                     timestamp: new Date()
                 });
+                booking.status = 'Confirmed';
                 await booking.save();
+
+                // Send Notifications via Backend
+                try {
+                    // Make internal call to notification API using axios
+                    await axios.post(`${process.env.BACKEND_URL || 'http://localhost:8000'}/api/bookings/${bookingId}/notify`);
+                } catch (nErr) {
+                    console.warn('Notification failed during PhonePe redirect', nErr.message);
+                }
+
+                return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/my-bookings?paymentStatus=success`);
             }
-            res.json({ success: true, message: "Payment verified and bill updated successfully" });
-        } else {
-            res.status(400).json({ success: false, message: "Invalid signature" });
         }
+
+        booking.financials.paymentMode = 'Online (PhonePe - Failed)';
+        await booking.save();
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/my-bookings?paymentStatus=failed`);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error("PhonePe Redirect Handler Error:", err.message, err.response?.data);
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/my-bookings?paymentStatus=error`);
     }
-});
+};
+
+router.get('/phonepe-redirect', handlePhonePeRedirect);
+router.post('/phonepe-redirect', handlePhonePeRedirect);
 
 // POST: Notify Admin & WhatsApp
 router.post('/:id/notify', async (req, res) => {

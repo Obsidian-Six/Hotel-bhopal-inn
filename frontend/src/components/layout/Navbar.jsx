@@ -28,7 +28,7 @@ const Navbar = ({ light = false }) => {
       dropdown: []
     },
     { name: 'BANQUET & EVENTS', path: '/banquet' },
-    { name: 'ORDER FOOD', path: '/menu' },
+    // { name: 'ORDER FOOD', path: '/menu' },
     { name: 'GALLERY', path: '/gallery' },
     { name: 'ABOUT US', path: '/about' },
     { name: 'CONTACT', path: '/contact' },

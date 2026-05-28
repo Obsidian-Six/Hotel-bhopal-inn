@@ -26,8 +26,7 @@ const RoomManagement = () => {
   const [extraPersonCharge, setExtraPersonCharge] = useState('');
   const [noOfRooms, setNoOfRooms] = useState('');
   const [files, setFiles] = useState([]);
-  const [bookingComIcalUrl, setBookingComIcalUrl] = useState('');
-  const [makeMyTripIcalUrl, setMakeMyTripIcalUrl] = useState('');
+
   const [replaceImages, setReplaceImages] = useState(false);
 
   const PRESET_AMENITIES = [
@@ -79,8 +78,7 @@ const RoomManagement = () => {
     setSelectedTags([]);
     setFiles([]);
     setReplaceImages(false);
-    setBookingComIcalUrl('');
-    setMakeMyTripIcalUrl('');
+
   };
 
   const onEdit = (room) => {
@@ -101,8 +99,7 @@ const RoomManagement = () => {
     setSelectedAmenities(room.amenities || []);
     setSelectedTags(room.tags || []);
     setReplaceImages(false);
-    setBookingComIcalUrl(room.icalUrls?.bookingCom || '');
-    setMakeMyTripIcalUrl(room.icalUrls?.makeMyTrip || '');
+
   };
 
   const onSubmit = async (e) => {
@@ -131,10 +128,7 @@ const RoomManagement = () => {
       noOfRooms: Number(noOfRooms)
     }));
 
-    formData.append('icalUrls', JSON.stringify({
-      bookingCom: bookingComIcalUrl,
-      makeMyTrip: makeMyTripIcalUrl
-    }));
+
 
     for (let i = 0; i < files.length; i++) {
       formData.append('images', files[i]);
@@ -381,36 +375,7 @@ const RoomManagement = () => {
                 </div>
               </div>
 
-              {/* OTA iCal Sync Section */}
-              <div className="pt-8 border-t border-[#F1E9DA]">
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">OTA Integration & Calendar Sync</label>
-                <p className="text-[10px] text-slate-400 mb-6 font-bold uppercase leading-relaxed">
-                  Connect standard iCal feeds to sync inventory in real-time. When a room is booked on Booking.com or MakeMyTrip, it will automatically block availability on your front desk and website calendar.
-                </p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Booking.com iCal Import URL</label>
-                    <input 
-                      type="text" 
-                      value={bookingComIcalUrl} 
-                      onChange={(e) => setBookingComIcalUrl(e.target.value)}
-                      placeholder="https://ical.booking.com/v1/..."
-                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">MakeMyTrip iCal Import URL</label>
-                    <input 
-                      type="text" 
-                      value={makeMyTripIcalUrl} 
-                      onChange={(e) => setMakeMyTripIcalUrl(e.target.value)}
-                      placeholder="https://ical.makemytrip.com/..."
-                      className="w-full bg-[#FDFBF7] border border-[#F1E9DA] p-4 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E] transition-colors"
-                    />
-                  </div>
-                </div>
-              </div>
+
 
               <div className="pt-8 border-t border-[#F1E9DA]">
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Gallery Upload</label>
