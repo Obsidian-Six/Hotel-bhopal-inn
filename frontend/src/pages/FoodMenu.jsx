@@ -302,7 +302,7 @@ const FoodMenu = () => {
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
                         onClick={() => setIsCartOpen(true)}
-                        className="fixed bottom-12 right-8 z-[200] bg-[#000000] text-white p-4 rounded-full shadow-2xl flex items-center gap-3 group border border-[#BFA37E]/30"
+                        className="fixed bottom-28 right-8 z-[200] bg-[#000000] text-white p-4 rounded-full shadow-2xl flex items-center gap-3 group border border-[#BFA37E]/30"
                     >
                         <ShoppingCart size={24} />
                         <span className="bg-[#BFA37E] text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold">
