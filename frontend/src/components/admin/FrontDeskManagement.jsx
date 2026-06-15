@@ -31,13 +31,36 @@ const FrontDeskManagement = () => {
 
   // Walk-in form state
   const [walkInForm, setWalkInForm] = useState({
-    guestDetails: { firstName: '', lastName: '', phone: '', email: '', adults: 2, children: 0 },
+    guestDetails: { firstName: '', lastName: '', phone: '', email: '', idProof: '', adults: 2, children: 0 },
     roomCategory: '',
+    roomUnit: '',
     checkInDate: new Date().toISOString().split('T')[0],
     checkOutDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     financials: { roomTariff: 0, amountPaid: 0, totalAmount: 0, balance: 0 },
-    source: 'Walk-in'
+    source: 'Walk-in',
+    immediateCheckIn: false
   });
+
+  // Calculate Walk-in Financials dynamically based on stay duration
+  useEffect(() => {
+    const checkIn = new Date(walkInForm.checkInDate);
+    const checkOut = new Date(walkInForm.checkOutDate);
+    const diffTime = checkOut - checkIn;
+    const nights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    const calculatedTotal = walkInForm.financials.roomTariff * nights;
+    const calculatedBalance = calculatedTotal - walkInForm.financials.amountPaid;
+
+    if (calculatedTotal !== walkInForm.financials.totalAmount || calculatedBalance !== walkInForm.financials.balance) {
+      setWalkInForm(prev => ({
+        ...prev,
+        financials: {
+          ...prev.financials,
+          totalAmount: calculatedTotal,
+          balance: calculatedBalance
+        }
+      }));
+    }
+  }, [walkInForm.checkInDate, walkInForm.checkOutDate, walkInForm.financials.roomTariff, walkInForm.financials.amountPaid]);
 
   useEffect(() => {
     fetchData();
@@ -157,7 +180,18 @@ const FrontDeskManagement = () => {
   const handleWalkInSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_BASE}/api/bookings/walk-in`, walkInForm);
+      const payload = {
+        guestDetails: walkInForm.guestDetails,
+        roomCategory: walkInForm.roomCategory,
+        roomUnit: walkInForm.immediateCheckIn ? walkInForm.roomUnit : null,
+        checkInDate: walkInForm.checkInDate,
+        checkOutDate: walkInForm.checkOutDate,
+        financials: walkInForm.financials,
+        source: 'Walk-in',
+        immediateCheckIn: walkInForm.immediateCheckIn
+      };
+
+      await axios.post(`${API_BASE}/api/bookings/walk-in`, payload);
       
       // Record Advance Payment in Finance if exists
       if (walkInForm.financials.amountPaid > 0) {
@@ -173,10 +207,21 @@ const FrontDeskManagement = () => {
       }
 
       setIsWalkInOpen(false);
+      // Reset form state
+      setWalkInForm({
+        guestDetails: { firstName: '', lastName: '', phone: '', email: '', idProof: '', adults: 2, children: 0 },
+        roomCategory: '',
+        roomUnit: '',
+        checkInDate: new Date().toISOString().split('T')[0],
+        checkOutDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+        financials: { roomTariff: 0, amountPaid: 0, totalAmount: 0, balance: 0 },
+        source: 'Walk-in',
+        immediateCheckIn: false
+      });
       fetchData();
     } catch (err) {
       console.error(err);
-      alert('Walk-in booking failed');
+      alert('Walk-in booking failed: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -876,11 +921,11 @@ const FrontDeskManagement = () => {
 
       {/* Walk-In Modal */}
       {isWalkInOpen && (
-        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[100] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white w-full max-w-2xl rounded-sm p-8 shadow-2xl border-t-8 border-[#BFA37E]">
+        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[100] flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-sm p-8 shadow-2xl border-t-8 border-[#BFA37E] my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-black text-[#1A2B48] uppercase">New Walk-In Registration</h3>
-              <button onClick={() => setIsWalkInOpen(false)} className="bg-slate-100 p-2 rounded-full"><X size={24}/></button>
+              <button onClick={() => setIsWalkInOpen(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors"><X size={24}/></button>
             </div>
             <form onSubmit={handleWalkInSubmit} className="space-y-6">
                <div className="grid grid-cols-2 gap-6">
@@ -888,14 +933,18 @@ const FrontDeskManagement = () => {
                   <InputField label="Last Name" value={walkInForm.guestDetails.lastName} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, lastName: v}})} />
                </div>
                <div className="grid grid-cols-2 gap-6">
+                  <InputField label="Phone" value={walkInForm.guestDetails.phone} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, phone: v}})} required={true} />
+                  <InputField label="Email" type="email" value={walkInForm.guestDetails.email} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, email: v}})} required={false} />
+               </div>
+               <div className="grid grid-cols-2 gap-6">
                   <div>
                       <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Room Category</label>
-                      <select className="w-full border-2 border-slate-200 p-3 text-sm" value={walkInForm.roomCategory} onChange={e => setWalkInForm({...walkInForm, roomCategory: e.target.value})} required>
+                      <select className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all font-semibold focus:outline-none" value={walkInForm.roomCategory} onChange={e => setWalkInForm({...walkInForm, roomCategory: e.target.value})} required>
                         <option value="">-- Select Category --</option>
                         {roomCategories.map(cat => <option key={cat._id} value={cat._id}>{cat.title}</option>)}
                       </select>
                   </div>
-                  <InputField label="Room Tariff (Rack Rate)" type="number" value={walkInForm.financials.roomTariff} onChange={v => setWalkInForm({...walkInForm, financials: {...walkInForm.financials, roomTariff: Number(v), totalAmount: Number(v), balance: Number(v)}})} />
+                  <InputField label="Room Tariff (Rack Rate / Night)" type="number" value={walkInForm.financials.roomTariff} onChange={v => setWalkInForm({...walkInForm, financials: {...walkInForm.financials, roomTariff: Number(v)}})} />
                </div>
                <div className="grid grid-cols-2 gap-6">
                   <InputField label="Check-In" type="date" value={walkInForm.checkInDate} onChange={v => setWalkInForm({...walkInForm, checkInDate: v})} />
@@ -905,6 +954,90 @@ const FrontDeskManagement = () => {
                   <InputField label="Adults" type="number" value={walkInForm.guestDetails.adults} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, adults: Number(v)}})} />
                   <InputField label="Children" type="number" value={walkInForm.guestDetails.children} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, children: Number(v)}})} />
                </div>
+               <div className="grid grid-cols-2 gap-6">
+                  <InputField label="Advance Paid" type="number" value={walkInForm.financials.amountPaid} onChange={v => setWalkInForm({...walkInForm, financials: {...walkInForm.financials, amountPaid: Number(v)}})} required={false} />
+                  <InputField label="ID Proof Number" value={walkInForm.guestDetails.idProof} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, idProof: v}})} required={false} />
+               </div>
+               <div className="grid grid-cols-2 gap-6">
+                  <div className="flex flex-col justify-end">
+                      <label className="flex items-center gap-3 cursor-pointer p-3 hover:bg-slate-50 transition-colors border border-dashed border-slate-200 rounded-sm">
+                          <input 
+                              type="checkbox" 
+                              checked={walkInForm.immediateCheckIn} 
+                              onChange={e => setWalkInForm({...walkInForm, immediateCheckIn: e.target.checked})} 
+                              className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded"
+                          />
+                          <div className="flex flex-col">
+                              <span className="text-[10px] font-black uppercase text-slate-700">Immediate Check-In</span>
+                              <span className="text-[9px] text-slate-400">Check in guest and occupy room unit now</span>
+                          </div>
+                      </label>
+                  </div>
+               </div>
+
+               {walkInForm.immediateCheckIn && (
+                  <div className="animate-in slide-in-from-top-2 duration-200 space-y-2">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase">Assign Room Unit</label>
+                      <select 
+                          className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all font-semibold focus:outline-none" 
+                          value={walkInForm.roomUnit} 
+                          onChange={e => setWalkInForm({...walkInForm, roomUnit: e.target.value})} 
+                          required={walkInForm.immediateCheckIn}
+                      >
+                          <option value="">-- Choose Room Unit --</option>
+                          {availableUnits
+                            .filter(u => {
+                              if (!u.category || !walkInForm.roomCategory) return false;
+                              const uCatId = (u.category?._id || u.category).toString();
+                              const bCatId = walkInForm.roomCategory.toString();
+                              return uCatId === bCatId;
+                            })
+                            .map(u => (
+                              <option key={u._id} value={u._id} disabled={u.status === 'Occupied' || u.status === 'Maintenance'}>
+                                Room {u.roomNumber} ({u.status === 'Dirty' ? '⚠️ Dirty' : '✓ Ready'})
+                              </option>
+                            ))
+                          }
+                      </select>
+                      {availableUnits.filter(u => {
+                            if (!u.category || !walkInForm.roomCategory) return false;
+                            const uCatId = (u.category?._id || u.category).toString();
+                            const bCatId = walkInForm.roomCategory.toString();
+                            return uCatId === bCatId;
+                          }).length === 0 && (
+                          <p className="text-xs text-rose-600 font-bold mt-2 uppercase flex items-center gap-2">
+                            <AlertTriangle size={14} /> No room units created or available for this category.
+                          </p>
+                      )}
+                  </div>
+               )}
+
+               {/* Dynamic Bill Preview */}
+               <div className="bg-slate-50 p-4 border border-slate-200 rounded-sm space-y-1">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase mb-2">Registration Billing Preview</h4>
+                  <div className="flex justify-between text-xs font-bold text-slate-700">
+                     <span>Stay Duration:</span>
+                     <span>
+                        {Math.max(1, Math.ceil((new Date(walkInForm.checkOutDate) - new Date(walkInForm.checkInDate)) / (1000 * 60 * 60 * 24)))} Nights
+                     </span>
+                  </div>
+                  <div className="flex justify-between text-xs font-bold text-slate-700">
+                     <span>Total Room Tariff:</span>
+                     <span>₹{walkInForm.financials.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-bold text-slate-700">
+                     <span>Advance Paid:</span>
+                     <span>₹{walkInForm.financials.amountPaid.toLocaleString()}</span>
+                  </div>
+                  <div className="h-px bg-slate-200 my-2"></div>
+                  <div className="flex justify-between text-sm font-black text-[#1A2B48]">
+                     <span>Net Balance Due at Checkout:</span>
+                     <span className={walkInForm.financials.balance > 0 ? "text-rose-600" : "text-emerald-600"}>
+                        ₹{walkInForm.financials.balance.toLocaleString()}
+                     </span>
+                  </div>
+               </div>
+
                <button type="submit" className="w-full bg-[#1A2B48] text-white py-5 font-black uppercase text-xs shadow-xl hover:bg-[#253d66] transition-all">Create Registration Entry</button>
             </form>
           </div>
@@ -993,10 +1126,10 @@ const ActionButton = ({ icon, label, color, onClick, disabled }) => (
     </button>
 );
 
-const InputField = ({ label, value, onChange, type = "text" }) => (
+const InputField = ({ label, value, onChange, type = "text", required = true }) => (
   <div>
     <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">{label}</label>
-    <input type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all" required />
+    <input type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all focus:outline-none" required={required} />
   </div>
 );
 
