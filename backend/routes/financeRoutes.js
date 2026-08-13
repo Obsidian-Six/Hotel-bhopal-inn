@@ -3,6 +3,7 @@ const router = express.Router();
 const Transaction = require('../models/Transaction');
 const CashHandover = require('../models/CashHandover');
 const Booking = require('../models/Booking');
+const RoomUnit = require('../models/RoomUnit');
 const { encrypt, decrypt } = require('../utils/crypto');
 
 // Add a transaction
@@ -186,6 +187,160 @@ router.get('/daily-report', async (req, res) => {
 
         res.json(summary);
     } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// GET: Dedicated Front Desk Analytics for selected date
+router.get('/analytics-date', async (req, res) => {
+    try {
+        const { date } = req.query;
+        let queryDate = date ? new Date(date) : new Date();
+        
+        const startOfDay = new Date(queryDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const endOfDay = new Date(queryDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // 1. Room Bookings & Check-ins for selected date
+        const checkIns = await Booking.countDocuments({
+            checkInDate: { $gte: startOfDay, $lte: endOfDay },
+            status: { $ne: 'Cancelled' }
+        });
+
+        const activeBookingsOnDate = await Booking.find({
+            status: { $ne: 'Cancelled' },
+            checkInDate: { $lte: endOfDay },
+            checkOutDate: { $gte: startOfDay }
+        }).populate('roomCategory').populate('roomUnit');
+
+        const occupiedCount = activeBookingsOnDate.filter(b => b.status === 'Checked-In').length;
+
+        // Fetch all room units
+        const allUnits = await RoomUnit.find().populate('category');
+
+        const categoryConfig = {
+            'Balcony Deluxe': ['101', '102', '201', '202'],
+            'Double Deluxe': ['103', '104', '105', '106', '203', '204', '205', '206'],
+            'Super Deluxe': ['107', '108', '207', '208']
+        };
+
+        const vacantByCategory = {};
+        let totalVacant = 0;
+        let totalRoomsCount = 0;
+
+        Object.keys(categoryConfig).forEach(catName => {
+            const catUnits = allUnits.filter(u => {
+                const title = u.category?.title || u.category?.category || '';
+                return title.toLowerCase().includes(catName.toLowerCase()) || 
+                       categoryConfig[catName].includes(u.roomNumber);
+            });
+
+            const catOccupiedUnits = activeBookingsOnDate.filter(b => {
+                if (b.status !== 'Checked-In') return false;
+                const bRoomNum = b.roomUnit?.roomNumber;
+                const bCatTitle = b.roomCategory?.title || b.roomCategory?.category || '';
+                return categoryConfig[catName].includes(bRoomNum) || bCatTitle.toLowerCase().includes(catName.toLowerCase());
+            });
+
+            const totalInCat = catUnits.length || categoryConfig[catName].length;
+            const occupiedInCat = catOccupiedUnits.length;
+            const vacantInCat = Math.max(0, totalInCat - occupiedInCat);
+
+            vacantByCategory[catName] = {
+                total: totalInCat,
+                occupied: occupiedInCat,
+                vacant: vacantInCat,
+                roomNumbers: categoryConfig[catName]
+            };
+
+            totalRoomsCount += totalInCat;
+            totalVacant += vacantInCat;
+        });
+
+        // 2. Finance Desk Calculations ("Today's Reading Difference:")
+        const todayTx = await Transaction.find({
+            date: { $gte: startOfDay, $lte: endOfDay },
+            isVoided: false
+        });
+
+        let cashSale = 0;
+        let onlineSale = 0;
+        let cashExpenses = 0;
+
+        todayTx.forEach(tx => {
+            const amount = Number(decrypt(tx.amount)) || 0;
+            if (tx.type === 'Income') {
+                if (tx.paymentMode === 'Cash') {
+                    cashSale += amount;
+                } else {
+                    onlineSale += amount;
+                }
+            } else if (tx.type === 'Expense' && tx.approved) {
+                if (tx.paymentMode === 'Cash' || !tx.paymentMode) {
+                    cashExpenses += amount;
+                }
+            }
+        });
+
+        // Online payments from Bookings on this date
+        const bookingsWithPayments = await Booking.find({
+            'financials.paymentHistory.timestamp': { $gte: startOfDay, $lte: endOfDay }
+        });
+
+        bookingsWithPayments.forEach(b => {
+            b.financials.paymentHistory.forEach(p => {
+                if (p.timestamp >= startOfDay && p.timestamp <= endOfDay) {
+                    if (['Online', 'Card', 'UPI', 'Bank Transfer'].includes(p.mode)) {
+                        onlineSale += Number(p.amount) || 0;
+                    }
+                }
+            });
+        });
+
+        const totalSale = cashSale + onlineSale;
+
+        // 3. Counter Opening Balance calculation (net prior cash accumulation)
+        const priorTx = await Transaction.find({
+            date: { $lt: startOfDay },
+            isVoided: false
+        });
+
+        let priorCashIncome = 0;
+        let priorCashExpense = 0;
+
+        priorTx.forEach(tx => {
+            const amount = Number(decrypt(tx.amount)) || 0;
+            if (tx.type === 'Income' && tx.paymentMode === 'Cash') {
+                priorCashIncome += amount;
+            } else if (tx.type === 'Expense' && tx.approved && (tx.paymentMode === 'Cash' || !tx.paymentMode)) {
+                priorCashExpense += amount;
+            }
+        });
+
+        const openingBalanceCounter = Math.max(0, priorCashIncome - priorCashExpense);
+        const cashBalanceCounter = openingBalanceCounter + cashSale - cashExpenses;
+
+        res.json({
+            date: queryDate.toISOString().split('T')[0],
+            formattedDate: queryDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+            checkIns,
+            occupiedRooms: occupiedCount,
+            totalRooms: totalRoomsCount,
+            vacantRooms: totalVacant,
+            vacantByCategory,
+            readingDifference: {
+                cashSale,
+                onlineSale,
+                totalSale,
+                cashExpenses,
+                openingBalanceCounter,
+                cashBalanceCounter
+            }
+        });
+    } catch (err) {
+        console.error('Analytics Date Error:', err);
         res.status(500).json({ message: err.message });
     }
 });

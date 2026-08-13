@@ -107,10 +107,10 @@ router.post('/', async (req, res) => {
     }
 });
 
-// POST: Walk-in Booking (Creates + Optional immediate check-in)
+// POST: Walk-in / OTA Registration (Creates + Optional immediate check-in)
 router.post('/walk-in', async (req, res) => {
     try {
-        const { guestDetails, roomCategory, roomUnit, checkInDate, checkOutDate, financials, immediateCheckIn } = req.body;
+        const { guestDetails, roomCategory, roomUnit, checkInDate, checkOutDate, financials, immediateCheckIn, source, otaPlatform, roomPlan } = req.body;
         
         const booking = new Booking({
             guestDetails,
@@ -119,7 +119,9 @@ router.post('/walk-in', async (req, res) => {
             checkInDate,
             checkOutDate,
             financials,
-            source: 'Walk-in',
+            source: source || 'Walk-in',
+            otaPlatform: otaPlatform || '',
+            roomPlan: roomPlan || 'EP',
             status: immediateCheckIn ? 'Checked-In' : 'Confirmed'
         });
 
@@ -132,16 +134,27 @@ router.post('/walk-in', async (req, res) => {
 
         await booking.save();
 
-        // Update Inventory
+        // Update Inventory Count (UTC midnight normalization)
         const start = new Date(checkInDate);
         const end = new Date(checkOutDate);
-        for (let d = new Date(start); d < end; d.setUTCDate(d.getUTCDate() + 1)) {
-            const dateStr = d.toISOString().split('T')[0];
+        let curr = new Date(start);
+        while (curr < end) {
+            const dateStr = curr.toISOString().split('T')[0];
+            const utcDate = new Date(dateStr);
+            utcDate.setUTCHours(0, 0, 0, 0);
+            
             await DailyInventory.findOneAndUpdate(
-                { roomCategory, date: new Date(dateStr) },
+                { roomCategory, date: utcDate },
                 { $inc: { bookingsCount: 1 } },
                 { upsert: true }
             );
+            curr.setDate(curr.getDate() + 1);
+        }
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('inventory_updated', { roomCategory });
+            io.emit('booking_updated', booking);
         }
 
         res.status(201).json(booking);
@@ -167,9 +180,86 @@ router.post('/:id/check-in', async (req, res) => {
         await booking.save();
         await RoomUnit.findByIdAndUpdate(roomUnit, { status: 'Occupied' });
 
-        req.app.get('socketio').emit('booking_updated', { type: 'check-in', bookingId: booking._id });
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('inventory_updated', { roomCategory: booking.roomCategory });
+            io.emit('booking_updated', { type: 'check-in', bookingId: booking._id });
+        }
         res.json(booking);
     } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// POST: Extend Stay for Guest
+router.post('/:id/extend-stay', async (req, res) => {
+    try {
+        const { newCheckOutDate, additionalTariff } = req.body;
+        const booking = await Booking.findById(req.params.id);
+        
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+        if (!newCheckOutDate) return res.status(400).json({ message: 'New checkout date required' });
+
+        const oldCheckOut = new Date(booking.checkOutDate);
+        const newCheckOut = new Date(newCheckOutDate);
+
+        if (newCheckOut <= oldCheckOut) {
+            return res.status(400).json({ message: 'New checkout date must be after current checkout date' });
+        }
+
+        // Update inventory count for extra nights
+        let curr = new Date(oldCheckOut);
+        while (curr < newCheckOut) {
+            const dateStr = curr.toISOString().split('T')[0];
+            const utcDate = new Date(dateStr);
+            utcDate.setUTCHours(0, 0, 0, 0);
+            
+            await DailyInventory.findOneAndUpdate(
+                { roomCategory: booking.roomCategory, date: utcDate },
+                { $inc: { bookingsCount: 1 } },
+                { upsert: true }
+            );
+            curr.setDate(curr.getDate() + 1);
+        }
+
+        // Calculate stay Extension Tariff
+        const checkIn = new Date(booking.checkInDate);
+        const prevNights = Math.max(1, Math.ceil((oldCheckOut - checkIn) / (1000 * 60 * 60 * 24)));
+        const extraNights = Math.max(1, Math.ceil((newCheckOut - oldCheckOut) / (1000 * 60 * 60 * 24)));
+
+        let addChargeAmount = 0;
+        if (additionalTariff !== undefined && additionalTariff !== null && additionalTariff !== '') {
+            addChargeAmount = Number(additionalTariff);
+        } else {
+            const nightRate = (booking.financials?.roomTariff || 0) / prevNights;
+            addChargeAmount = Math.round(nightRate * extraNights);
+        }
+
+        booking.checkOutDate = newCheckOut;
+        booking.financials.roomTariff = (booking.financials?.roomTariff || 0) + addChargeAmount;
+        
+        const extraChargesTotal = (booking.financials?.extraCharges || []).reduce((acc, c) => acc + (c.amount || 0), 0);
+        booking.financials.totalAmount = booking.financials.roomTariff + extraChargesTotal;
+        booking.financials.balance = booking.financials.totalAmount - (booking.financials?.amountPaid || 0);
+
+        booking.financials.extraCharges.push({
+            description: `Stay Extension (+${extraNights} Night${extraNights > 1 ? 's' : ''} up to ${newCheckOut.toLocaleDateString('en-GB')})`,
+            amount: addChargeAmount,
+            date: new Date(),
+            source: 'Stay Extension'
+        });
+
+        await booking.save();
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('inventory_updated', { roomCategory: booking.roomCategory });
+            io.emit('booking_updated', booking);
+        }
+
+        res.json(booking);
+    } catch (err) {
+        console.error('Extend stay error:', err);
         res.status(400).json({ message: err.message });
     }
 });

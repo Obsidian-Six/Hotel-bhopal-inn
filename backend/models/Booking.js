@@ -63,8 +63,17 @@ const BookingSchema = new mongoose.Schema({
     },
     source: {
         type: String,
-        enum: ['Website', 'Walk-in', 'Booking.com', 'MakeMyTrip', 'Other', 'Offline', 'OTA'],
+        enum: ['Website', 'Walk-in', 'Booking.com', 'MakeMyTrip', 'Goibibo', 'Agoda', 'Expedia', 'Airbnb', 'OTA', 'Other', 'Offline'],
         default: 'Website'
+    },
+    otaPlatform: {
+        type: String,
+        default: ''
+    },
+    roomPlan: {
+        type: String,
+        enum: ['EP', 'CP', 'MAP', 'AP'],
+        default: 'EP'
     },
     otaReferenceId: {
         type: String,

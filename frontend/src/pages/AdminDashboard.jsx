@@ -12,7 +12,8 @@ import FinanceManagement from '@/components/admin/FinanceManagement';
 import ReelManagement from '@/components/admin/ReelManagement';
 import FoodMenuManagement from '@/components/admin/FoodMenuManagement';
 import PostManagement from '@/components/admin/PostManagement';
-import { Tag, Calendar, Users, IndianRupee, Film, Utensils, Camera } from 'lucide-react';
+import FrontDeskAnalytics from '@/components/admin/FrontDeskAnalytics';
+import { Tag, Calendar, Users, IndianRupee, Film, Utensils, Camera, TrendingUp } from 'lucide-react';
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('hero'); // 'hero', 'rooms', or 'banquet'
@@ -128,6 +129,13 @@ const AdminDashboard = () => {
           >
             <Users size={16} />
             Front Desk
+          </button>
+          <button 
+            onClick={() => setActiveTab('analytics')}
+            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'analytics' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+          >
+            <TrendingUp size={16} />
+            Front Desk Analytics
           </button>
           <button 
             onClick={() => setActiveTab('inventory')}
@@ -271,6 +279,8 @@ const AdminDashboard = () => {
             <OfferManagement />
           ) : activeTab === 'bookings' ? (
             <FrontDeskManagement />
+          ) : activeTab === 'analytics' ? (
+            <FrontDeskAnalytics />
           ) : activeTab === 'inventory' ? (
             <InventoryManagement />
           ) : activeTab === 'finance' ? (

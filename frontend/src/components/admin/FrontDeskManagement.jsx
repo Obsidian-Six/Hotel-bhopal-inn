@@ -3,9 +3,10 @@ import axios from 'axios';
 import config from '../../config';
 import { 
   X, CheckCircle2, IndianRupee, Printer, LogOut, 
-  Plus, Info, ArrowRight, User, Calendar, CreditCard, AlertTriangle, History, FastForward, Coffee
+  Plus, Info, ArrowRight, User, Calendar, CreditCard, AlertTriangle, History, FastForward, Coffee, TrendingUp, BarChart3, CalendarPlus
 } from 'lucide-react';
 import { socket } from '@/lib/socket';
+import FrontDeskAnalytics from './FrontDeskAnalytics';
 
 const API_BASE = config.API_URL;
 
@@ -17,6 +18,9 @@ const FrontDeskManagement = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [isExtendStayOpen, setIsExtendStayOpen] = useState(false);
+  const [extendForm, setExtendForm] = useState({ newCheckOutDate: '', additionalTariff: '' });
   const [roomCategories, setRoomCategories] = useState([]);
   const [availableUnits, setAvailableUnits] = useState([]);
 
@@ -38,6 +42,9 @@ const FrontDeskManagement = () => {
     checkOutDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     financials: { roomTariff: 0, amountPaid: 0, totalAmount: 0, balance: 0 },
     source: 'Walk-in',
+    otaPlatform: '',
+    otaReferenceId: '',
+    roomPlan: 'EP',
     immediateCheckIn: false
   });
 
@@ -187,7 +194,10 @@ const FrontDeskManagement = () => {
         checkInDate: walkInForm.checkInDate,
         checkOutDate: walkInForm.checkOutDate,
         financials: walkInForm.financials,
-        source: 'Walk-in',
+        source: walkInForm.source,
+        otaPlatform: walkInForm.otaPlatform,
+        otaReferenceId: walkInForm.otaReferenceId,
+        roomPlan: walkInForm.roomPlan,
         immediateCheckIn: walkInForm.immediateCheckIn
       };
 
@@ -199,7 +209,7 @@ const FrontDeskManagement = () => {
             type: 'Income',
             category: 'Room Rent',
             amount: Number(walkInForm.financials.amountPaid),
-            description: `Walk-in Advance - ${walkInForm.guestDetails.firstName} ${walkInForm.guestDetails.lastName}`,
+            description: `Walk-in Advance (${walkInForm.source}) - ${walkInForm.guestDetails.firstName} ${walkInForm.guestDetails.lastName}`,
             paymentMode: 'Cash', // Default for walk-ins
             date: new Date(),
             recordedBy: 'FrontDesk'
@@ -216,12 +226,34 @@ const FrontDeskManagement = () => {
         checkOutDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
         financials: { roomTariff: 0, amountPaid: 0, totalAmount: 0, balance: 0 },
         source: 'Walk-in',
+        otaPlatform: '',
+        otaReferenceId: '',
+        roomPlan: 'EP',
         immediateCheckIn: false
       });
       fetchData();
     } catch (err) {
       console.error(err);
       alert('Walk-in booking failed: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleExtendStaySubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedBooking) return;
+    try {
+      const res = await axios.post(`${API_BASE}/api/bookings/${selectedBooking._id}/extend-stay`, {
+        newCheckOutDate: extendForm.newCheckOutDate,
+        additionalTariff: extendForm.additionalTariff
+      });
+      
+      alert('Stay extended successfully! Inventory calendar updated.');
+      setIsExtendStayOpen(false);
+      fetchData();
+      setSelectedBooking(res.data);
+    } catch (err) {
+      console.error(err);
+      alert('Extend stay failed: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -462,11 +494,12 @@ const FrontDeskManagement = () => {
                 <div class="field-row"><span class="label">Name:</span> <span class="value">${booking.guestDetails.firstName} ${booking.guestDetails.lastName}</span></div>
                 <div class="field-row"><span class="label">From:</span> <span class="value">${booking.guestDetails.city || '--------------------'}</span></div>
                 <div class="field-row"><span class="label">No. of Person:</span> <span class="value">${(Number(booking.guestDetails.adults) || 0) + (Number(booking.guestDetails.children) || 0)}</span></div>
+                <div class="field-row"><span class="label">Room Plan:</span> <span class="value">${booking.roomPlan || 'EP'}</span></div>
               </div>
               <div class="right-col">
                 <div class="field-row"><span class="label">Room No.:</span> <span class="value">${booking.roomUnit?.roomNumber || '---'}</span></div>
                 <div class="field-row"><span class="label">Reg. S. No.:</span> <span class="value">BK-${booking._id.slice(-6).toUpperCase()}</span></div>
-                <div class="field-row"><span class="label">Guest GST:</span> <span class="value">${booking.guestDetails.gstNo || '--------------------'}</span></div>
+                <div class="field-row"><span class="label">Source / Platform:</span> <span class="value">${booking.source || 'Walk-in'} ${booking.otaReferenceId ? `(Ref: ${booking.otaReferenceId})` : ''}</span></div>
               </div>
             </div>
 
@@ -589,9 +622,20 @@ const FrontDeskManagement = () => {
               <History size={16} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
-          <button onClick={() => setIsWalkInOpen(true)} className="bg-[#BFA37E] hover:bg-[#a68d6d] text-white px-6 py-2 rounded-sm text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-lg">
-            <Plus size={16} /> New Walk-In
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest hidden md:inline bg-[#BFA37E]/10 px-2.5 py-1 rounded border border-[#BFA37E]/20">
+              Front Desk Intelligence
+            </span>
+            <button 
+              onClick={() => setIsAnalyticsOpen(true)} 
+              className="bg-[#BFA37E] hover:bg-[#a68d6d] text-slate-950 px-5 py-2 rounded-sm text-[11px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg transition-all hover:scale-105 active:scale-95"
+            >
+              <TrendingUp size={16} /> Analytics
+            </button>
+            <button onClick={() => setIsWalkInOpen(true)} className="bg-white hover:bg-slate-100 text-[#1A2B48] px-6 py-2 rounded-sm text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-lg">
+              <Plus size={16} /> New Walk-In
+            </button>
+          </div>
         </div>
         
         <div className="overflow-x-auto">
@@ -706,6 +750,14 @@ const FrontDeskManagement = () => {
                             <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Guest Primary</label>
                             <p className="text-lg font-black">{selectedBooking.guestDetails.firstName} {selectedBooking.guestDetails.lastName}</p>
                             <p className="text-sm text-slate-600">{selectedBooking.guestDetails.phone} | {selectedBooking.guestDetails.email || 'No Email'}</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <span className="text-[10px] font-black uppercase bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded border border-amber-200">
+                                Meal Plan: {selectedBooking.roomPlan || 'EP'}
+                              </span>
+                              <span className="text-[10px] font-black uppercase bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded border border-blue-200">
+                                Platform: {selectedBooking.source} {selectedBooking.otaReferenceId ? `(#${selectedBooking.otaReferenceId})` : ''}
+                              </span>
+                            </div>
                         </div>
                         <div className="p-4 bg-slate-50 border rounded-sm">
                             <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Stay Duration</label>
@@ -809,6 +861,18 @@ const FrontDeskManagement = () => {
                             label="Print Final Bill" 
                             color="bg-indigo-600" 
                             onClick={() => handlePrint(selectedBooking)}
+                        />
+                        <ActionButton 
+                            icon={<CalendarPlus size={18} />} 
+                            label="Extend Stay" 
+                            color="bg-cyan-700 hover:bg-cyan-800" 
+                            onClick={() => {
+                              const currOut = selectedBooking.checkOutDate ? new Date(selectedBooking.checkOutDate).toISOString().split('T')[0] : '';
+                              const nextDay = currOut ? new Date(new Date(currOut).getTime() + 86400000).toISOString().split('T')[0] : '';
+                              setExtendForm({ newCheckOutDate: nextDay, additionalTariff: '' });
+                              setIsExtendStayOpen(true);
+                            }}
+                            disabled={selectedBooking.status === 'Checked-Out' || selectedBooking.status === 'Cancelled'}
                         />
                         <ActionButton 
                             icon={<Coffee size={18} />} 
@@ -959,6 +1023,54 @@ const FrontDeskManagement = () => {
                   <InputField label="ID Proof Number" value={walkInForm.guestDetails.idProof} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, idProof: v}})} required={false} />
                </div>
                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Booking Source / OTA Platform</label>
+                      <select 
+                        className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all font-semibold focus:outline-none" 
+                        value={walkInForm.source} 
+                        onChange={e => setWalkInForm({...walkInForm, source: e.target.value, otaPlatform: e.target.value !== 'Walk-in' && e.target.value !== 'Website' ? e.target.value : ''})} 
+                        required
+                      >
+                        <option value="Walk-in">Direct Walk-in</option>
+                        <option value="Booking.com">Booking.com</option>
+                        <option value="MakeMyTrip">MakeMyTrip</option>
+                        <option value="Goibibo">Goibibo</option>
+                        <option value="Agoda">Agoda</option>
+                        <option value="Expedia">Expedia</option>
+                        <option value="Airbnb">Airbnb</option>
+                        <option value="OTA">Other OTA Channel</option>
+                        <option value="Website">Direct Website</option>
+                      </select>
+                  </div>
+                  <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Room Plan / Meal Plan</label>
+                      <select 
+                        className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all font-semibold focus:outline-none" 
+                        value={walkInForm.roomPlan} 
+                        onChange={e => setWalkInForm({...walkInForm, roomPlan: e.target.value})} 
+                        required
+                      >
+                        <option value="EP">EP — European Plan (Room Only)</option>
+                        <option value="CP">CP — Continental Plan (Room + Breakfast)</option>
+                        <option value="MAP">MAP — Modified American (Breakfast + Dinner)</option>
+                        <option value="AP">AP — American Plan (Room + All Meals)</option>
+                      </select>
+                  </div>
+               </div>
+
+               {walkInForm.source !== 'Walk-in' && walkInForm.source !== 'Website' && (
+                 <div className="grid grid-cols-1 gap-6">
+                   <InputField 
+                     label="OTA Reference ID / Confirmation Number" 
+                     value={walkInForm.otaReferenceId} 
+                     onChange={v => setWalkInForm({...walkInForm, otaReferenceId: v})} 
+                     required={false} 
+                     placeholder="e.g. BK-98723412 or MMT-6543"
+                   />
+                 </div>
+               )}
+
+               <div className="grid grid-cols-2 gap-6">
                   <div className="flex flex-col justify-end">
                       <label className="flex items-center gap-3 cursor-pointer p-3 hover:bg-slate-50 transition-colors border border-dashed border-slate-200 rounded-sm">
                           <input 
@@ -1103,6 +1215,76 @@ const FrontDeskManagement = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Extend Stay Modal */}
+      {isExtendStayOpen && selectedBooking && (
+        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[130] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white w-full max-w-lg rounded-sm shadow-2xl p-8 border-t-8 border-cyan-600 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-2xl font-black text-[#1A2B48] uppercase">Extend Guest Stay</h3>
+                <p className="text-xs text-slate-500 font-bold mt-1">
+                  Guest: {selectedBooking.guestDetails.firstName} {selectedBooking.guestDetails.lastName} | Room: {selectedBooking.roomUnit?.roomNumber || 'Assigned'}
+                </p>
+              </div>
+              <button onClick={() => setIsExtendStayOpen(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><X size={20}/></button>
+            </div>
+
+            <form onSubmit={handleExtendStaySubmit} className="space-y-6">
+              <div className="bg-slate-50 p-4 border border-slate-200 rounded-sm text-xs space-y-1 font-semibold text-slate-700">
+                <div className="flex justify-between">
+                  <span>Current Check-In:</span>
+                  <span className="font-bold">{new Date(selectedBooking.checkInDate).toLocaleDateString('en-GB')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Current Check-Out:</span>
+                  <span className="font-bold text-rose-600">{new Date(selectedBooking.checkOutDate).toLocaleDateString('en-GB')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Current Room Tariff:</span>
+                  <span className="font-bold">₹{selectedBooking.financials.roomTariff?.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">New Check-Out Date</label>
+                <input 
+                  type="date" 
+                  min={selectedBooking.checkOutDate ? new Date(new Date(selectedBooking.checkOutDate).getTime() + 86400000).toISOString().split('T')[0] : ''}
+                  value={extendForm.newCheckOutDate}
+                  onChange={e => setExtendForm({...extendForm, newCheckOutDate: e.target.value})}
+                  className="w-full border-2 border-slate-200 p-4 text-sm font-bold focus:outline-none focus:border-cyan-600"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Additional Tariff Amount (₹)</label>
+                <input 
+                  type="number" 
+                  placeholder="Leave blank to auto-calculate per-night rate"
+                  value={extendForm.additionalTariff}
+                  onChange={e => setExtendForm({...extendForm, additionalTariff: e.target.value})}
+                  className="w-full border-2 border-slate-200 p-4 text-sm font-bold focus:outline-none focus:border-cyan-600"
+                />
+                <span className="text-[9px] text-slate-400 font-bold block mt-1">If left blank, extra tariff will be auto-computed based on current room nightly rate.</span>
+              </div>
+
+              <div className="flex gap-4 pt-2">
+                <button type="button" onClick={() => setIsExtendStayOpen(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-400 hover:text-slate-700">Cancel</button>
+                <button type="submit" className="flex-1 bg-cyan-700 hover:bg-cyan-800 text-white py-4 text-xs font-black uppercase shadow-xl transition-all">Confirm Extend Stay</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Front Desk Analytics Full-Page Modal View */}
+      {isAnalyticsOpen && (
+        <div className="fixed inset-0 z-[200] bg-slate-950/95 overflow-y-auto animate-in fade-in duration-200">
+          <FrontDeskAnalytics onClose={() => setIsAnalyticsOpen(false)} />
         </div>
       )}
     </div>
