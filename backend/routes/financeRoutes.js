@@ -196,13 +196,23 @@ router.get('/daily-report', async (req, res) => {
 router.get('/analytics-date', async (req, res) => {
     try {
         const { date } = req.query;
-        let queryDate = date ? new Date(date) : new Date();
-        
-        const startOfDay = new Date(queryDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        const endOfDay = new Date(queryDate);
-        endOfDay.setHours(23, 59, 59, 999);
+        let startOfDay, endOfDay;
+        let targetDateStr;
+
+        if (date && typeof date === 'string' && date.includes('-')) {
+            targetDateStr = date;
+            const [y, m, d] = date.split('-').map(Number);
+            startOfDay = new Date(y, m - 1, d, 0, 0, 0, 0);
+            endOfDay = new Date(y, m - 1, d, 23, 59, 59, 999);
+        } else {
+            const now = date ? new Date(date) : new Date();
+            const y = now.getFullYear();
+            const m = now.getMonth();
+            const d = now.getDate();
+            targetDateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            startOfDay = new Date(y, m, d, 0, 0, 0, 0);
+            endOfDay = new Date(y, m, d, 23, 59, 59, 999);
+        }
 
         // 1. Room Bookings & Check-ins for selected date
         const checkIns = await Booking.countDocuments({
@@ -260,100 +270,79 @@ router.get('/analytics-date', async (req, res) => {
             totalVacant += vacantInCat;
         });
 
-        // 2. Finance Desk Calculations ("Today's Reading Difference:")
-        const todayTx = await Transaction.find({
-            date: { $gte: startOfDay, $lte: endOfDay },
-            isVoided: false
-        });
-
-        let cashSale = 0;
-        let onlineSale = 0;
-        let cashExpenses = 0;
-
-        todayTx.forEach(tx => {
-            const amount = Number(decrypt(tx.amount)) || 0;
-            if (tx.type === 'Income') {
-                if (tx.paymentMode === 'Cash') {
-                    cashSale += amount;
-                } else {
-                    onlineSale += amount;
-                }
-            } else if (tx.type === 'Expense' && tx.approved) {
-                if (tx.paymentMode === 'Cash' || !tx.paymentMode) {
-                    cashExpenses += amount;
-                }
-            }
-        });
-
-        // Booking payments on this date
-        const bookingsWithPayments = await Booking.find({
-            'financials.paymentHistory.timestamp': { $gte: startOfDay, $lte: endOfDay }
-        });
-
-        bookingsWithPayments.forEach(b => {
-            b.financials.paymentHistory.forEach(p => {
-                if (p.timestamp >= startOfDay && p.timestamp <= endOfDay) {
-                    const amt = Number(p.amount) || 0;
-                    if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe'].includes(p.mode)) {
-                        onlineSale += amt;
-                    } else if (p.mode === 'Cash') {
-                        cashSale += amt;
-                    }
-                }
-            });
-        });
-
-        const totalSale = cashSale + onlineSale;
-
-        // 3. Counter Opening Balance calculation (starts from 10th Aug 2026 where opening balance on Aug 10 = 0)
-        const aug10Start = new Date('2026-08-10T00:00:00.000Z');
-        let runningBalance = 0;
-
-        if (startOfDay > aug10Start) {
-            const allPriorTx = await Transaction.find({
-                date: { $gte: aug10Start, $lt: startOfDay },
+        // Helper: Calculate financials for a specific date range (prevents double-counting room rent in Transaction table)
+        const calculateFinancialsForRange = async (sDate, eDate) => {
+            const txs = await Transaction.find({
+                date: { $gte: sDate, $lte: eDate },
                 isVoided: false
             });
 
-            const allPriorBookings = await Booking.find({
-                'financials.paymentHistory.timestamp': { $gte: aug10Start, $lt: startOfDay }
+            let cash = 0;
+            let online = 0;
+            let expenses = 0;
+
+            txs.forEach(tx => {
+                const amount = Number(decrypt(tx.amount)) || 0;
+                if (tx.type === 'Income' && tx.category !== 'Room Rent') {
+                    if (tx.paymentMode === 'Cash') {
+                        cash += amount;
+                    } else {
+                        online += amount;
+                    }
+                } else if (tx.type === 'Expense' && tx.approved) {
+                    if (tx.paymentMode === 'Cash' || !tx.paymentMode) {
+                        expenses += amount;
+                    }
+                }
             });
 
-            let currDate = new Date(aug10Start);
-            while (currDate < startOfDay) {
-                const nextDate = new Date(currDate);
-                nextDate.setDate(nextDate.getDate() + 1);
+            const bookings = await Booking.find({
+                'financials.paymentHistory.timestamp': { $gte: sDate, $lte: eDate }
+            });
 
-                let dayTotalPayments = 0;
-                let dayExpenditure = 0;
-
-                allPriorTx.forEach(tx => {
-                    const txDate = new Date(tx.date);
-                    if (txDate >= currDate && txDate < nextDate) {
-                        const amount = Number(decrypt(tx.amount)) || 0;
-                        if (tx.type === 'Income') {
-                            dayTotalPayments += amount;
-                        } else if (tx.type === 'Expense' && tx.approved) {
-                            dayExpenditure += amount;
+            bookings.forEach(b => {
+                b.financials.paymentHistory.forEach(p => {
+                    if (p.timestamp >= sDate && p.timestamp <= eDate) {
+                        const amt = Number(p.amount) || 0;
+                        if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe'].includes(p.mode)) {
+                            online += amt;
+                        } else if (p.mode === 'Cash') {
+                            cash += amt;
                         }
                     }
                 });
+            });
 
-                allPriorBookings.forEach(b => {
-                    b.financials.paymentHistory.forEach(p => {
-                        const pDate = new Date(p.timestamp);
-                        if (pDate >= currDate && pDate < nextDate) {
-                            dayTotalPayments += Number(p.amount) || 0;
-                        }
-                    });
-                });
+            return { cash, online, total: cash + online, expenses };
+        };
 
-                runningBalance = runningBalance + dayTotalPayments - dayExpenditure;
-                currDate = nextDate;
+        // 2. Today's Financials
+        const todayFin = await calculateFinancialsForRange(startOfDay, endOfDay);
+        const cashSale = todayFin.cash;
+        const onlineSale = todayFin.online;
+        const totalSale = todayFin.total;
+        const cashExpenses = todayFin.expenses;
+
+        // 3. Counter Opening Balance calculation (starts from 10th Aug 2026 with opening balance on Aug 10 = 0)
+        let openingBalanceCounter = 0;
+        const [targetY, targetM, targetD] = targetDateStr.split('-').map(Number);
+        const baseDate = new Date(2026, 7, 10, 0, 0, 0, 0); // 10th Aug 2026 local
+        const currentDateObj = new Date(targetY, targetM - 1, targetD, 0, 0, 0, 0);
+
+        if (currentDateObj > baseDate) {
+            let iterDate = new Date(baseDate);
+            while (iterDate < currentDateObj) {
+                const iterStart = new Date(iterDate);
+                const iterEnd = new Date(iterDate);
+                iterEnd.setHours(23, 59, 59, 999);
+
+                const iterFin = await calculateFinancialsForRange(iterStart, iterEnd);
+                openingBalanceCounter += (iterFin.total - iterFin.expenses);
+
+                iterDate.setDate(iterDate.getDate() + 1);
             }
         }
 
-        const openingBalanceCounter = runningBalance;
         const cashBalanceCounter = openingBalanceCounter + totalSale - cashExpenses;
 
         // 4. Electricity Meter Analytics Calculation
