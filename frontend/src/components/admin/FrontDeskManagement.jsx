@@ -3,7 +3,7 @@ import axios from 'axios';
 import config from '../../config';
 import { 
   X, CheckCircle2, IndianRupee, Printer, LogOut, 
-  Plus, Info, ArrowRight, User, Calendar, CreditCard, AlertTriangle, History, FastForward, Coffee, TrendingUp, BarChart3, CalendarPlus
+  Plus, Info, ArrowRight, User, Calendar, CreditCard, AlertTriangle, History, FastForward, Coffee, TrendingUp, BarChart3, CalendarPlus, Zap, Activity
 } from 'lucide-react';
 import { socket } from '@/lib/socket';
 import FrontDeskAnalytics from './FrontDeskAnalytics';
@@ -21,6 +21,18 @@ const FrontDeskManagement = () => {
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isExtendStayOpen, setIsExtendStayOpen] = useState(false);
   const [extendForm, setExtendForm] = useState({ newCheckOutDate: '', additionalTariff: '' });
+
+  const [isCollectPaymentOpen, setIsCollectPaymentOpen] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({ amount: '', mode: 'Cash' });
+
+  const [isMeterModalOpen, setIsMeterModalOpen] = useState(false);
+  const [meterForm, setMeterForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    reading: '',
+    notes: ''
+  });
+  const [meterReadings, setMeterReadings] = useState([]);
+
   const [roomCategories, setRoomCategories] = useState([]);
   const [availableUnits, setAvailableUnits] = useState([]);
 
@@ -256,6 +268,40 @@ const FrontDeskManagement = () => {
       alert('Extend stay failed: ' + (err.response?.data?.message || err.message));
     }
   };
+
+  const fetchMeterReadings = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/finance/meter-readings`);
+      if (res.data) setMeterReadings(res.data);
+    } catch (err) {
+      console.error('Error fetching meter readings:', err);
+    }
+  };
+
+  const handleMeterSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API_BASE}/api/finance/meter-reading`, {
+        date: meterForm.date,
+        reading: Number(meterForm.reading),
+        notes: meterForm.notes,
+        recordedBy: 'Front Desk'
+      });
+      alert('Electricity meter reading saved successfully!');
+      setMeterForm({ date: new Date().toISOString().split('T')[0], reading: '', notes: '' });
+      setIsMeterModalOpen(false);
+      fetchMeterReadings();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save meter reading: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  useEffect(() => {
+    if (isMeterModalOpen) {
+      fetchMeterReadings();
+    }
+  }, [isMeterModalOpen]);
 
   const handlePrint = (booking) => {
     const printWindow = window.open('', '_blank');
@@ -598,6 +644,25 @@ const FrontDeskManagement = () => {
 
   return (
     <div className="space-y-6 font-sans p-6 bg-slate-50 min-h-screen">
+      {/* Top Electricity Meter Tracker Bar (Requirement 3) */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 border border-amber-500/40 shadow-md rounded-sm gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-amber-500/10 text-amber-600 rounded">
+            <Zap size={20} className="fill-amber-500" />
+          </div>
+          <div>
+            <h3 className="text-xs font-black uppercase text-[#1A2B48] tracking-wider">Electricity Meter Reading Tracker</h3>
+            <p className="text-[10px] text-slate-500 font-semibold">Record daily kWh readings for Front Desk & Financial Analytics</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setIsMeterModalOpen(true)}
+          className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-5 py-2.5 rounded-sm text-[11px] font-black uppercase tracking-wider flex items-center gap-2 shadow-md transition-all hover:scale-[1.02] active:scale-95"
+        >
+          <Zap size={14} className="fill-slate-950" /> Enter Meter Readings
+        </button>
+      </div>
+
       {/* Dynamic Summary Bar */}
       <div className="grid grid-cols-5 shadow-2xl rounded-sm overflow-hidden border border-slate-200 bg-white">
         <SummaryCard label="Check-Ins" value={stats.checkIns} color="bg-emerald-500" />
@@ -838,9 +903,8 @@ const FrontDeskManagement = () => {
                         <p className="text-4xl font-black text-rose-600 mb-4">₹{selectedBooking.financials.balance?.toLocaleString()}</p>
                         <button 
                             onClick={() => {
-                                const amt = prompt("Amount to Collect (₹):", selectedBooking.financials.balance);
-                                const mode = prompt("Payment Mode (Cash/UPI/Card):", "Cash");
-                                if(amt && mode) collectPayment(selectedBooking._id, amt, mode);
+                                setPaymentForm({ amount: selectedBooking.financials.balance || 0, mode: 'Cash' });
+                                setIsCollectPaymentOpen(true);
                             }}
                             className="w-full bg-[#1A2B48] text-white py-4 font-black text-xs uppercase shadow-xl hover:bg-[#253d66] transition-all"
                         >
@@ -1277,6 +1341,165 @@ const FrontDeskManagement = () => {
                 <button type="submit" className="flex-1 bg-cyan-700 hover:bg-cyan-800 text-white py-4 text-xs font-black uppercase shadow-xl transition-all">Confirm Extend Stay</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Collect Payment Modal (Requirement 1: Cash vs Online) */}
+      {isCollectPaymentOpen && selectedBooking && (
+        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[140] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white w-full max-w-md rounded-sm shadow-2xl p-8 border-t-8 border-[#1A2B48] animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-2xl font-black text-[#1A2B48] uppercase">Collect Guest Payment</h3>
+                <p className="text-xs text-slate-500 font-bold mt-1">
+                  Guest: {selectedBooking.guestDetails.firstName} {selectedBooking.guestDetails.lastName} | Balance: ₹{selectedBooking.financials.balance?.toLocaleString()}
+                </p>
+              </div>
+              <button onClick={() => setIsCollectPaymentOpen(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><X size={20}/></button>
+            </div>
+
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                collectPayment(selectedBooking._id, paymentForm.amount, paymentForm.mode);
+                setIsCollectPaymentOpen(false);
+              }} 
+              className="space-y-6"
+            >
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Payment Amount (₹)</label>
+                <input 
+                  type="number" 
+                  value={paymentForm.amount}
+                  onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})}
+                  className="w-full border-2 border-slate-200 p-4 text-lg font-black focus:outline-none focus:border-[#1A2B48]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Payment Mode Selection</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentForm({...paymentForm, mode: 'Cash'})}
+                    className={`p-4 rounded-sm border-2 font-black text-xs uppercase flex flex-col items-center gap-2 transition-all ${
+                      paymentForm.mode === 'Cash' ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-md' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                    }`}
+                  >
+                    <IndianRupee size={20} />
+                    <span>Cash (Manual Cash)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentForm({...paymentForm, mode: 'Online'})}
+                    className={`p-4 rounded-sm border-2 font-black text-xs uppercase flex flex-col items-center gap-2 transition-all ${
+                      paymentForm.mode === 'Online' ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-md' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                    }`}
+                  >
+                    <CreditCard size={20} />
+                    <span>Online (PhonePe / UPI)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-2">
+                <button type="button" onClick={() => setIsCollectPaymentOpen(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-400 hover:text-slate-700">Cancel</button>
+                <button type="submit" className="flex-1 bg-[#1A2B48] hover:bg-[#253d66] text-white py-4 text-xs font-black uppercase shadow-xl transition-all">Submit Payment</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Electricity Meter Readings Modal (Requirement 3) */}
+      {isMeterModalOpen && (
+        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[140] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white w-full max-w-xl rounded-sm shadow-2xl p-8 border-t-8 border-amber-500 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-100 text-amber-900 rounded">
+                  <Zap size={24} className="fill-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-[#1A2B48] uppercase">Electricity Meter Readings</h3>
+                  <p className="text-xs text-slate-500 font-bold mt-0.5">Record daily kWh meter readings for property analytics</p>
+                </div>
+              </div>
+              <button onClick={() => setIsMeterModalOpen(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><X size={20}/></button>
+            </div>
+
+            <form onSubmit={handleMeterSubmit} className="space-y-6 bg-slate-50 p-6 border border-slate-200 rounded-sm mb-6">
+              <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">New Reading Entry</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Reading Date</label>
+                  <input 
+                    type="date"
+                    value={meterForm.date}
+                    onChange={e => setMeterForm({...meterForm, date: e.target.value})}
+                    className="w-full border-2 border-slate-200 p-3 text-sm font-bold focus:outline-none focus:border-amber-500 bg-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Meter Reading Value (kWh)</label>
+                  <input 
+                    type="number"
+                    placeholder="e.g. 500 or 600"
+                    value={meterForm.reading}
+                    onChange={e => setMeterForm({...meterForm, reading: e.target.value})}
+                    className="w-full border-2 border-slate-200 p-3 text-sm font-bold focus:outline-none focus:border-amber-500 bg-white"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Notes / Remarks (Optional)</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. Monthly bill check or shift reading"
+                  value={meterForm.notes}
+                  onChange={e => setMeterForm({...meterForm, notes: e.target.value})}
+                  className="w-full border-2 border-slate-200 p-3 text-sm font-semibold focus:outline-none focus:border-amber-500 bg-white"
+                />
+              </div>
+
+              <button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 py-4 font-black uppercase text-xs shadow-lg transition-all flex items-center justify-center gap-2">
+                <Zap size={16} className="fill-slate-950" /> Save Electricity Reading
+              </button>
+            </form>
+
+            <div className="space-y-3">
+              <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Recently Logged Meter Readings</h4>
+              <div className="border border-slate-200 rounded-sm overflow-hidden text-xs">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-100 text-[10px] uppercase font-bold text-slate-500 border-b">
+                    <tr>
+                      <th className="p-3">Date</th>
+                      <th className="p-3">Reading (kWh)</th>
+                      <th className="p-3">Recorded By</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {meterReadings.length === 0 ? (
+                      <tr><td colSpan="3" className="p-4 text-center text-slate-400 italic">No meter readings recorded yet.</td></tr>
+                    ) : (
+                      meterReadings.map(r => (
+                        <tr key={r._id} className="hover:bg-slate-50">
+                          <td className="p-3 font-bold">{new Date(r.date).toLocaleDateString('en-GB')}</td>
+                          <td className="p-3 font-black text-amber-600">{r.reading} kWh</td>
+                          <td className="p-3 text-slate-500">{r.recordedBy}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       )}

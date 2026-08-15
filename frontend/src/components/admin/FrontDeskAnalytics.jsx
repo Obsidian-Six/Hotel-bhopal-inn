@@ -3,7 +3,7 @@ import axios from 'axios';
 import config from '../../config';
 import { 
   Calendar as CalendarIcon, Copy, Share2, Check, IndianRupee, 
-  DoorClosed, UserCheck, CheckCircle2, TrendingUp, Wallet, ArrowDownRight, ArrowUpRight, ArrowLeft, RefreshCw
+  DoorClosed, UserCheck, CheckCircle2, TrendingUp, Wallet, ArrowDownRight, ArrowUpRight, ArrowLeft, RefreshCw, Zap, Activity
 } from 'lucide-react';
 
 const API_BASE = config.API_URL;
@@ -80,6 +80,7 @@ const FrontDeskAnalytics = ({ onClose }) => {
   const buildSummaryReportText = () => {
     const rd = analyticsData.readingDifference || {};
     const cat = analyticsData.vacantByCategory || {};
+    const meter = analyticsData.meterAnalytics || {};
     
     return `=== HOTEL BHOPAL INN - FRONT DESK ANALYTICS REPORT ===
 ${getFormattedDateHeading(selectedDate)}
@@ -100,8 +101,13 @@ Prepared By: ${preparedBy}
 • Online Sale (PhonePe/UPI/Card): ₹${(rd.onlineSale || 0).toLocaleString('en-IN')}
 • Total Sale: ₹${(rd.totalSale || 0).toLocaleString('en-IN')}
 • Cash Expenses: ₹${(rd.cashExpenses || 0).toLocaleString('en-IN')}
-• Opening Balance at Counter: ₹${(rd.openingBalanceCounter || 0).toLocaleString('en-IN')}
+• Opening Balance at Counter (from 10th Aug 2026): ₹${(rd.openingBalanceCounter || 0).toLocaleString('en-IN')}
 • Cash Balance at Counter: ₹${(rd.cashBalanceCounter || 0).toLocaleString('en-IN')}
+
+--- ELECTRICITY METER READING SUMMARY ---
+• Yesterday Meter: ${meter.yesterday?.recorded ? meter.yesterday.reading + ' kWh' : 'Not Recorded'}
+• Today Meter: ${meter.today?.recorded ? meter.today.reading + ' kWh' : 'Not Updated'}
+• Difference (Consumption): ${meter.difference !== null && meter.difference !== undefined ? meter.difference + ' kWh' : 'Not Calculated'}
 =================================================`;
   };
 
@@ -438,6 +444,77 @@ Prepared By: ${preparedBy}
                 </p>
                 <div className="bg-slate-800/80 p-3 rounded text-[11px] text-slate-300 font-medium mt-2 border border-slate-700">
                   <span className="text-slate-400 font-bold">Formula:</span> Opening Balance + Cash Sale - Cash Expenses = ₹{(rd.openingBalanceCounter || 0).toLocaleString()} + ₹{(rd.cashSale || 0).toLocaleString()} - ₹{(rd.cashExpenses || 0).toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            {/* Electricity Meter Reading Difference Summary (Requirement 3) */}
+            <div className="bg-slate-900/90 p-6 md:p-8 rounded-xl border-2 border-amber-500/40 space-y-6 shadow-2xl">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-lg">
+                    <Zap size={24} className="fill-amber-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-serif font-black text-white flex items-center gap-2">
+                      Electricity Meter Reading Difference Summary
+                    </h4>
+                    <p className="text-xs text-slate-400">Daily kWh meter reading comparison & consumption tracking</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                    analyticsData.meterAnalytics?.today?.recorded ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  }`}>
+                    {analyticsData.meterAnalytics?.today?.recorded ? 'Today Updated' : 'Today: Not Updated'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Missed Dates Warning Alert */}
+              {analyticsData.meterAnalytics?.missedDates && analyticsData.meterAnalytics.missedDates.length > 0 && (
+                <div className="bg-amber-500/10 border border-amber-500/40 p-4 rounded-lg flex items-center gap-3 text-amber-300 text-xs font-semibold">
+                  <Activity size={20} className="text-amber-400 shrink-0" />
+                  <div>
+                    <span className="font-bold uppercase tracking-wider block">Missed Meter Reading(s) Detected:</span>
+                    <span>No readings recorded on: {analyticsData.meterAnalytics.missedDates.join(', ')}. Consumption calculated from prior reading on {analyticsData.meterAnalytics.yesterday?.dateStr}.</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Yesterday Meter */}
+                <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 space-y-2">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Yesterday Meter Reading</span>
+                  <p className="text-3xl font-black text-white">
+                    {analyticsData.meterAnalytics?.yesterday?.recorded ? `${analyticsData.meterAnalytics.yesterday.reading} kWh` : 'Not Recorded'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    {analyticsData.meterAnalytics?.yesterday?.recorded ? `Recorded for Date: ${analyticsData.meterAnalytics.yesterday.dateStr}` : 'No previous reading date'}
+                  </p>
+                </div>
+
+                {/* Today Meter */}
+                <div className="bg-slate-800/80 p-5 rounded-xl border border-slate-700 space-y-2">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Today Meter Reading</span>
+                  <p className={`text-3xl font-black ${analyticsData.meterAnalytics?.today?.recorded ? 'text-amber-400' : 'text-slate-500'}`}>
+                    {analyticsData.meterAnalytics?.today?.recorded ? `${analyticsData.meterAnalytics.today.reading} kWh` : 'Not Updated'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    {analyticsData.meterAnalytics?.today?.recorded ? `Recorded for Date: ${analyticsData.meterAnalytics.today.dateStr}` : 'Enter reading via Front Desk to update'}
+                  </p>
+                </div>
+
+                {/* Difference / Consumption */}
+                <div className="bg-slate-800/80 p-5 rounded-xl border border-emerald-500/40 space-y-2">
+                  <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider">Meter Difference (Consumption)</span>
+                  <p className="text-3xl font-black text-emerald-400">
+                    {analyticsData.meterAnalytics?.difference !== null && analyticsData.meterAnalytics?.difference !== undefined ? `${analyticsData.meterAnalytics.difference} kWh` : 'Not Calculated'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    {analyticsData.meterAnalytics?.difference !== null ? 'Difference between Today & Yesterday reading' : 'Awaiting today\'s meter reading update'}
+                  </p>
                 </div>
               </div>
             </div>

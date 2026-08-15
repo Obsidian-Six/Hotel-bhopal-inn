@@ -4,6 +4,7 @@ const Transaction = require('../models/Transaction');
 const CashHandover = require('../models/CashHandover');
 const Booking = require('../models/Booking');
 const RoomUnit = require('../models/RoomUnit');
+const ElectricityReading = require('../models/ElectricityReading');
 const { encrypt, decrypt } = require('../utils/crypto');
 
 // Add a transaction
@@ -284,7 +285,7 @@ router.get('/analytics-date', async (req, res) => {
             }
         });
 
-        // Online payments from Bookings on this date
+        // Booking payments on this date
         const bookingsWithPayments = await Booking.find({
             'financials.paymentHistory.timestamp': { $gte: startOfDay, $lte: endOfDay }
         });
@@ -292,8 +293,11 @@ router.get('/analytics-date', async (req, res) => {
         bookingsWithPayments.forEach(b => {
             b.financials.paymentHistory.forEach(p => {
                 if (p.timestamp >= startOfDay && p.timestamp <= endOfDay) {
-                    if (['Online', 'Card', 'UPI', 'Bank Transfer'].includes(p.mode)) {
-                        onlineSale += Number(p.amount) || 0;
+                    const amt = Number(p.amount) || 0;
+                    if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe'].includes(p.mode)) {
+                        onlineSale += amt;
+                    } else if (p.mode === 'Cash') {
+                        cashSale += amt;
                     }
                 }
             });
@@ -301,26 +305,111 @@ router.get('/analytics-date', async (req, res) => {
 
         const totalSale = cashSale + onlineSale;
 
-        // 3. Counter Opening Balance calculation (net prior cash accumulation)
-        const priorTx = await Transaction.find({
-            date: { $lt: startOfDay },
-            isVoided: false
-        });
+        // 3. Counter Opening Balance calculation (starts from 10th Aug 2026 where opening balance was 0)
+        const aug10Start = new Date('2026-08-10T00:00:00.000Z');
+        let openingBalanceCounter = 0;
 
-        let priorCashIncome = 0;
-        let priorCashExpense = 0;
+        if (startOfDay > aug10Start) {
+            const priorTx = await Transaction.find({
+                date: { $gte: aug10Start, $lt: startOfDay },
+                isVoided: false
+            });
 
-        priorTx.forEach(tx => {
-            const amount = Number(decrypt(tx.amount)) || 0;
-            if (tx.type === 'Income' && tx.paymentMode === 'Cash') {
-                priorCashIncome += amount;
-            } else if (tx.type === 'Expense' && tx.approved && (tx.paymentMode === 'Cash' || !tx.paymentMode)) {
-                priorCashExpense += amount;
-            }
-        });
+            let priorCashIncome = 0;
+            let priorCashExpense = 0;
 
-        const openingBalanceCounter = Math.max(0, priorCashIncome - priorCashExpense);
+            priorTx.forEach(tx => {
+                const amount = Number(decrypt(tx.amount)) || 0;
+                if (tx.type === 'Income' && tx.paymentMode === 'Cash') {
+                    priorCashIncome += amount;
+                } else if (tx.type === 'Expense' && tx.approved && (tx.paymentMode === 'Cash' || !tx.paymentMode)) {
+                    priorCashExpense += amount;
+                }
+            });
+
+            const priorBookings = await Booking.find({
+                'financials.paymentHistory.timestamp': { $gte: aug10Start, $lt: startOfDay }
+            });
+
+            priorBookings.forEach(b => {
+                b.financials.paymentHistory.forEach(p => {
+                    if (p.timestamp >= aug10Start && p.timestamp < startOfDay && p.mode === 'Cash') {
+                        priorCashIncome += Number(p.amount) || 0;
+                    }
+                });
+            });
+
+            openingBalanceCounter = Math.max(0, priorCashIncome - priorCashExpense);
+        }
+
         const cashBalanceCounter = openingBalanceCounter + cashSale - cashExpenses;
+
+        // 4. Electricity Meter Analytics Calculation
+        const targetDateStr = queryDate.toISOString().split('T')[0];
+        
+        const todayMeterDoc = await ElectricityReading.findOne({ dateStr: targetDateStr });
+        
+        const yesterdayObj = new Date(queryDate);
+        yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+        const yesterdayDateStr = yesterdayObj.toISOString().split('T')[0];
+        
+        const yesterdayMeterDoc = await ElectricityReading.findOne({ dateStr: yesterdayDateStr });
+        
+        let priorMeterDoc = yesterdayMeterDoc;
+        let missedDates = [];
+        
+        if (!priorMeterDoc) {
+            priorMeterDoc = await ElectricityReading.findOne({
+                dateStr: { $lt: targetDateStr }
+            }).sort({ dateStr: -1 });
+
+            if (priorMeterDoc) {
+                let currDate = new Date(priorMeterDoc.date);
+                currDate.setDate(currDate.getDate() + 1);
+                
+                while (currDate < queryDate) {
+                    const missedStr = currDate.toISOString().split('T')[0];
+                    missedDates.push(missedStr);
+                    currDate.setDate(currDate.getDate() + 1);
+                }
+            }
+        }
+
+        let meterDiff = null;
+        let meterStatus = 'Today Reading Not Updated';
+
+        if (todayMeterDoc && priorMeterDoc) {
+            meterDiff = todayMeterDoc.reading - priorMeterDoc.reading;
+            meterStatus = 'Calculated';
+        } else if (!priorMeterDoc) {
+            meterStatus = 'No Previous Reading Found';
+        }
+
+        const meterAnalytics = {
+            selectedDateStr: targetDateStr,
+            today: todayMeterDoc ? {
+                recorded: true,
+                reading: todayMeterDoc.reading,
+                dateStr: todayMeterDoc.dateStr,
+                recordedBy: todayMeterDoc.recordedBy
+            } : {
+                recorded: false,
+                dateStr: targetDateStr
+            },
+            yesterday: priorMeterDoc ? {
+                recorded: true,
+                isExactYesterday: yesterdayMeterDoc ? true : false,
+                reading: priorMeterDoc.reading,
+                dateStr: priorMeterDoc.dateStr,
+                recordedBy: priorMeterDoc.recordedBy
+            } : {
+                recorded: false,
+                dateStr: yesterdayDateStr
+            },
+            difference: meterDiff,
+            status: meterStatus,
+            missedDates
+        };
 
         res.json({
             date: queryDate.toISOString().split('T')[0],
@@ -337,7 +426,8 @@ router.get('/analytics-date', async (req, res) => {
                 cashExpenses,
                 openingBalanceCounter,
                 cashBalanceCounter
-            }
+            },
+            meterAnalytics
         });
     } catch (err) {
         console.error('Analytics Date Error:', err);
@@ -416,6 +506,51 @@ router.get('/cash-handover', async (req, res) => {
         result.netDayTotal = Number(decrypt(result.netDayTotal)) || 0;
         
         res.json(result);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Save or Update Electricity Meter Reading
+router.post('/meter-reading', async (req, res) => {
+    try {
+        const { date, reading, notes, recordedBy } = req.body;
+        if (!date || reading === undefined || reading === null || reading === '') {
+            return res.status(400).json({ message: 'Date and meter reading value are required' });
+        }
+        
+        const dateObj = new Date(date);
+        const dateStr = dateObj.toISOString().split('T')[0];
+
+        const updated = await ElectricityReading.findOneAndUpdate(
+            { dateStr },
+            {
+                date: dateObj,
+                dateStr,
+                reading: Number(reading),
+                notes: notes || '',
+                recordedBy: recordedBy || 'Front Desk'
+            },
+            { upsert: true, new: true }
+        );
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('meter_reading_updated', updated);
+        }
+
+        res.status(200).json(updated);
+    } catch (err) {
+        console.error('Meter reading save error:', err);
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Get Electricity Meter Readings
+router.get('/meter-readings', async (req, res) => {
+    try {
+        const readings = await ElectricityReading.find().sort({ dateStr: -1 }).limit(50);
+        res.json(readings);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
