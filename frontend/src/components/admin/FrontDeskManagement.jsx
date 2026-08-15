@@ -180,8 +180,11 @@ const FrontDeskManagement = () => {
       });
 
       // 2. Automatically Record in Finance Ledger
-      const guestName = selectedBooking?.guestDetails ? `${selectedBooking.guestDetails.firstName} ${selectedBooking.guestDetails.lastName}` : 'Guest';
-      const roomInfo = selectedBooking?.roomUnit ? `Room ${selectedBooking.roomUnit}` : '';
+      const guestName = selectedBooking?.guestDetails ? `${selectedBooking.guestDetails.firstName || ''} ${selectedBooking.guestDetails.lastName || ''}`.trim() : 'Guest';
+      const roomNum = (typeof selectedBooking?.roomUnit === 'object' && selectedBooking?.roomUnit !== null)
+        ? (selectedBooking.roomUnit.roomNumber || '')
+        : (selectedBooking?.roomUnit || '');
+      const roomInfo = roomNum ? `(Room ${roomNum})` : '';
       
       await axios.post(`${API_BASE}/api/finance/transactions`, {
         type: 'Income',

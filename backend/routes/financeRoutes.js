@@ -81,18 +81,32 @@ router.get('/transactions', async (req, res) => {
             b.financials.paymentHistory.forEach(p => {
                 if (!date || (p.timestamp >= startOfDay && p.timestamp <= endOfDay)) {
                     if (p.mode === 'Online' || p.mode === 'Card' || p.mode === 'UPI' || p.mode === 'Bank Transfer') {
-                        bookingTx.push({
-                            _id: p._id || Math.random().toString(),
-                            type: 'Income',
-                            category: 'Room Rent',
-                            amount: p.amount,
-                            description: `${b.guestDetails.firstName} ${b.guestDetails.lastName} - Booking #${b._id.toString().slice(-8)}`,
-                            paymentMode: p.mode,
-                            recordedBy: p.staff || 'System',
-                            approved: true,
-                            createdAt: p.timestamp,
-                            date: p.timestamp
+                        // Check if a matching Transaction already exists in0decryptedTx to prevent double counting
+                        const isDuplicate = decryptedTx.some(tx => {
+                            const sameAmount = Math.abs(Number(tx.amount) - Number(p.amount)) < 0.01;
+                            const pTime = new Date(p.timestamp).getTime();
+                            const txTime = new Date(tx.date || tx.createdAt).getTime();
+                            const timeDiff = Math.abs(txTime - pTime);
+                            const lastName = (b.guestDetails?.lastName || '').toLowerCase();
+                            const txDesc = (tx.description || '').toLowerCase();
+                            const nameMatch = lastName.length > 1 && txDesc.includes(lastName);
+                            return sameAmount && (timeDiff < 10 * 60 * 1000 || nameMatch);
                         });
+
+                        if (!isDuplicate) {
+                            bookingTx.push({
+                                _id: p._id || Math.random().toString(),
+                                type: 'Income',
+                                category: 'Room Rent',
+                                amount: p.amount,
+                                description: `${b.guestDetails.firstName} ${b.guestDetails.lastName} - Booking #${b._id.toString().slice(-8)}`,
+                                paymentMode: p.mode,
+                                recordedBy: p.staff || 'System',
+                                approved: true,
+                                createdAt: p.timestamp,
+                                date: p.timestamp
+                            });
+                        }
                     }
                 }
             });
@@ -165,7 +179,7 @@ router.get('/daily-report', async (req, res) => {
             }
         });
         
-        // Include booking online payments
+        // Include3booking online payments only if not already in transactions
         const bookings = await Booking.find({
             'financials.paymentHistory.timestamp': { $gte: startOfDay, $lte: endOfDay }
         });
@@ -173,11 +187,25 @@ router.get('/daily-report', async (req, res) => {
             b.financials.paymentHistory.forEach(p => {
                 if (p.timestamp >= startOfDay && p.timestamp <= endOfDay) {
                     if (p.mode === 'Online' || p.mode === 'Card' || p.mode === 'UPI' || p.mode === 'Bank Transfer') {
-                        summary.totalIncome += p.amount;
-                        if (summary.incomeByMode[p.mode] !== undefined) {
-                            summary.incomeByMode[p.mode] += p.amount;
-                        } else {
-                            summary.incomeByMode['Online'] += p.amount;
+                        const isDuplicate = transactions.some(tx => {
+                            const txAmount = Number(decrypt(tx.amount)) || 0;
+                            const sameAmount = Math.abs(txAmount - Number(p.amount)) < 0.01;
+                            const pTime = new Date(p.timestamp).getTime();
+                            const txTime = new Date(tx.date || tx.createdAt).getTime();
+                            const timeDiff = Math.abs(txTime - pTime);
+                            const lastName = (b.guestDetails?.lastName || '').toLowerCase();
+                            const txDesc = (decrypt(tx.description) || '').toLowerCase();
+                            const nameMatch = lastName.length > 1 && txDesc.includes(lastName);
+                            return sameAmount && (timeDiff < 10 * 60 * 1000 || nameMatch);
+                        });
+
+                        if (!isDuplicate) {
+                            summary.totalIncome += p.amount;
+                            if (summary.incomeByMode[p.mode] !== undefined) {
+                                summary.incomeByMode[p.mode] += p.amount;
+                            } else {
+                                summary.incomeByMode['Online'] += p.amount;
+                            }
                         }
                     }
                 }
