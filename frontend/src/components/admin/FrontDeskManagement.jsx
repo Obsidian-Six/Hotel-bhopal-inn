@@ -326,343 +326,454 @@ const FrontDeskManagement = () => {
     }
   }, [isMeterModalOpen]);
 
+  const [selectedDashboardDate, setSelectedDashboardDate] = useState('');
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  };
+
+  // Derived filtered bookings for Dashboard Table based on Selected Calendar Date
+  const filteredDashboardBookings = (bookings || []).filter(b => {
+    if (!selectedDashboardDate) return true;
+    const targetDate = selectedDashboardDate;
+    const cIn = b.checkInDate ? b.checkInDate.split('T')[0] : '';
+    return cIn === targetDate;
+  });
+
   const handlePrint = (booking) => {
+    if (!booking) return;
+
     const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Please allow popups to print the0invoice.");
+      return;
+    }
     
     // Calculate total days
-    const checkIn = new Date(booking.checkInDate);
-    const checkOut = new Date(booking.checkOutDate);
+    const checkIn = booking.checkInDate ? new Date(booking.checkInDate) : new Date();
+    const checkOut = booking.checkOutDate ? new Date(booking.checkOutDate) : new Date();
     const diffTime = Math.abs(checkOut - checkIn);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
 
-    // Separate Lodging and Extra Guest charges
-    const extraGuestCharge = booking.financials.extraCharges?.find(c => 
-      c.description.toLowerCase().includes('extra') || c.source.toLowerCase().includes('guest')
+    const financials = booking.financials || {};
+    const extraChargesList = financials.extraCharges || [];
+
+    // Separate balance/extra0guest
+    const extraGuestCharge = extraChargesList.find(c => 
+      c.description?.toLowerCase().includes('extra') || c.source?.toLowerCase().includes('guest')
     )?.amount || 0;
     
-    const otherCharges = booking.financials.extraCharges?.filter(c => 
-      !c.description.toLowerCase().includes('extra') && !c.source.toLowerCase().includes('guest')
+    const otherCharges = extraChargesList.filter(c => 
+      !c.description?.toLowerCase().includes('extra') && !c.source?.toLowerCase().includes('guest')
     ) || [];
 
-    const html = `
+    const guestName = `${booking.guestDetails?.firstName || ''} ${booking.guestDetails?.lastName || ''}`.trim() || 'Valued Guest';
+    const roomNum = booking.roomUnit?.roomNumber || (booking.roomCategory?.title || 'Assigned');
+    const roomType = booking.roomCategory?.title || 'Standard';
+    const roomPlan = booking.roomPlan || 'EP';
+    const bookingId = booking._id ? `BK-${booking._id.slice(-6).toUpperCase()}` : 'N/A';
+    const slNo = booking._id ? (parseInt(booking._id.slice(-4), 16) % 9000 + 1000) : 1001;
+
+    const html = `<!DOCTYPE html>
       <html>
         <head>
-          <title>Invoice - ${booking.guestDetails.firstName}</title>
+          <title>Invoice - ${guestName}</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Roboto:wght@400;700;900&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
             
+            @page {
+              size: A4 portrait;
+              margin: 0;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
             body { 
-              font-family: 'Courier Prime', monospace; 
-              color: #000; 
-              padding: 20px; 
-              line-height: 1.2;
+              font-family: 'Montserrat', sans-serif; 
+              color: #1a2332; 
+              margin: 0; 
+              padding: 0;
               background: #fff;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
             
             .bill-container {
               width: 210mm;
+              height: 297mm;
+              box-sizing: border-box;
               margin: 0 auto;
-              border: 1px solid #ddd;
-              padding: 20px;
+              padding: 215px 45px 175px 45px;
+              background-image: url('/letterhead.png');
+              background-size: 100% 100%;
+              background-repeat: no-repeat;
+              background-position: center top;
               position: relative;
-            }
-
-            .header {
               display: flex;
               flex-direction: column;
-              align-items: center;
-              margin-bottom: 20px;
-              border-bottom: 2px solid #000;
-              padding-bottom: 10px;
             }
 
-            .header-top {
-              width: 100%;
+            .meta-header-row {
               display: flex;
               justify-content: space-between;
-              align-items: flex-start;
-              margin-bottom: 10px;
-            }
-
-            .logo-house {
-              width: 80px;
-              height: 80px;
-              border: 4px solid #BFA37E;
-              border-radius: 10px;
-              display: flex;
               align-items: center;
-              justify-content: center;
-              font-family: 'Roboto', sans-serif;
-              font-size: 40px;
-              font-weight: 900;
-              color: #1A2B48;
+              margin-bottom: 16px;
               position: relative;
             }
 
-            .logo-house:after {
-              content: '';
+            .room-pill-wrapper {
               position: absolute;
-              top: -20px;
-              left: -4px;
-              width: 0;
-              height: 0;
-              border-left: 44px solid transparent;
-              border-right: 44px solid transparent;
-              border-bottom: 20px solid #BFA37E;
+              left: 50%;
+              transform: translateX(-50%);
             }
 
-            .sl-no {
-              font-weight: bold;
-              font-size: 18px;
-            }
-            .sl-no span { color: #E74C3C; }
-
-            .hotel-main-info {
-              text-align: center;
-              flex-grow: 1;
-            }
-
-            .hotel-name {
-              font-family: 'Roboto', sans-serif;
-              font-size: 32px;
-              font-weight: 900;
-              margin: 0;
-              letter-spacing: 1px;
-            }
-            .hotel-name .by { font-size: 16px; font-weight: normal; font-style: italic; color: #666; margin: 0 5px; }
-            .hotel-name .tenonten { color: #BFA37E; }
-
-            .address {
-              font-size: 12px;
-              margin: 5px 0;
-              font-weight: bold;
+            .room-pill-box {
+              background-color: #f7f3ec;
+              border: 1.5px solid #cbb281;
+              color: #111827;
+              padding: 6px 28px;
+              border-radius: 12px;
+              font-weight: 800;
+              font-size: 15px;
+              letter-spacing: 0.5px;
             }
 
-            .contact-info {
-              width: 100%;
-              display: flex;
-              justify-content: space-between;
-              font-size: 12px;
-              font-weight: bold;
-              margin-top: 10px;
+            .sl-no-text {
+              margin-left: auto;
+              font-weight: 800;
+              font-size: 14px;
+              color: #111827;
+              letter-spacing: 0.5px;
+            }
+            .sl-no-text span {
+              color: #b58838;
             }
 
-            .guest-details {
+            .guest-info-card {
+              border: 1.5px solid #cbb281;
+              border-radius: 12px;
+              padding: 18px 22px 14px 22px;
+              margin-bottom: 20px;
+              background-color: rgba(255, 255, 255, 0.4);
+            }
+
+            .info-grid {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 15px;
+              column-gap: 30px;
+              row-gap: 14px;
+            }
+
+            .field-line {
+              display: flex;
+              align-items: baseline;
+              font-size: 13px;
+            }
+
+            .field-label {
+              font-weight: 700;
+              color: #111827;
+              white-space: nowrap;
+              margin-right: 8px;
+            }
+
+            .field-value-dotted {
+              flex-grow: 1;
+              border-bottom: 1px dotted #777;
+              padding-bottom: 2px;
+              padding-left: 4px;
+              font-weight: 600;
+              color: #1a2332;
+              min-height: 18px;
+            }
+
+            .dates-row {
+              margin-top: 14px;
+              display: flex;
+              justify-content: space-between;
+              font-size: 13px;
+            }
+
+            .date-group {
+              display: flex;
+              align-items: baseline;
+            }
+
+            .particulars-table {
+              width: 100%;
+              border-collapse: collapse;
               margin-bottom: 20px;
             }
 
-            .field-row {
-              margin-bottom: 10px;
-              display: flex;
-              align-items: flex-end;
+            .particulars-table th, 
+            .particulars-table td {
+              border: 1.5px solid #cbb281;
+              padding: 10px 14px;
+              font-size: 13px;
             }
 
-            .label {
-              white-space: nowrap;
-              margin-right: 10px;
-              font-weight: bold;
+            .particulars-table th {
+              background-color: #f7f3ec;
+              color: #111827;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
             }
 
-            .value {
-              flex-grow: 1;
-              border-bottom: 1px dotted #000;
-              padding-left: 10px;
-              min-height: 1.2em;
+            .col-sl {
+              width: 50px;
+              text-align: center !important;
+              font-weight: 700;
             }
 
-            .bill-grid {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 20px;
-            }
-
-            .bill-grid th, .bill-grid td {
-              border: 1.5px solid #000;
-              padding: 8px;
+            .col-desc {
               text-align: left;
+              font-weight: 500;
+              color: #334155;
             }
 
-            .bill-grid th {
-              background: #f0f0f0;
-            }
-
-            .amount-col {
-              width: 150px;
+            .col-amt {
+              width: 160px;
               text-align: right !important;
+              font-weight: 800;
+              color: #111827;
             }
 
-            .total-section {
-              margin-top: 30px;
+            .totals-container {
               display: flex;
               justify-content: flex-end;
+              margin-bottom: 25px;
             }
 
-            .total-table {
-              width: 300px;
+            .totals-table {
+              width: 360px;
               border-collapse: collapse;
             }
 
-            .total-table td {
-              padding: 5px;
-              border-bottom: 1px solid #000;
+            .totals-table td {
+              padding: 8px 12px;
+              font-size: 13px;
+              border-bottom: 1.5px solid #e2d4bd;
             }
 
-            .total-table .final-total {
-              font-weight: bold;
-              font-size: 18px;
-              background: #f0f0f0;
+            .totals-table .label-cell {
+              font-weight: 600;
+              color: #334155;
             }
 
-            .footer-note {
-              margin-top: 40px;
-              font-size: 12px;
+            .totals-table .value-cell {
+              text-align: right;
+              font-weight: 800;
+              color: #111827;
+            }
+
+            .totals-table .net-payable-row {
+              background-color: #f7f3ec;
+              border-top: 1.5px solid #cbb281;
+              border-bottom: 1.5px solid #cbb281;
+            }
+
+            .totals-table .net-payable-row td {
+              font-weight: 800;
+              font-size: 14px;
+              color: #111827;
+              padding: 10px 12px;
+            }
+
+            .signatures-container {
+              display: flex;
+              justify-content: space-between;
+              padding: 0 40px;
+              margin-top: auto;
+              margin-bottom: 0px;
+            }
+
+            .sig-box {
+              width: 180px;
               text-align: center;
-              font-style: italic;
             }
 
-            .jurisdiction {
-              position: absolute;
-              top: 100px;
-              right: 20px;
-              font-size: 10px;
-              font-weight: bold;
-              transform: rotate(0deg);
+            .sig-icon {
+              display: flex;
+              justify-content: center;
+              margin-bottom: 6px;
+              color: #b58838;
+            }
+
+            .sig-line-rule {
+              border-top: 1.5px solid #b58838;
+              margin-bottom: 6px;
+            }
+
+            .sig-title {
+              font-size: 13px;
+              font-weight: 800;
+              color: #111827;
             }
 
             @media print {
-              body { padding: 0; }
-              .bill-container { border: none; }
+              body { padding: 0; margin: 0; }
+              .bill-container { border: none; width: 100%; height: 100vh; }
               button { display: none; }
             }
           </style>
         </head>
         <body>
           <div class="bill-container">
-            <div class="jurisdiction">(Under Bhopal Jurisdiction)</div>
-            <div class="header">
-              <div class="header-top">
-                <div class="logo-house">18</div>
-                <div class="hotel-main-info">
-                  <h1 class="hotel-name">HOTEL BHOPAL INN <span class="by">by</span> <span class="tenonten">TENONTEN STAYS</span></h1>
-                  <p class="address">Add.: D2-214, Danish Nagar, Behind Ashima Mall, Hoshangabad Road, Bhopal-462026</p>
+            <!-- Room Pill Box & SL NO -->
+            <div class="meta-header-row">
+              <div class="room-pill-wrapper">
+                <div class="room-pill-box">
+                  ROOM: ${roomNum}
                 </div>
-                <div class="sl-no">SL. NO. <span>${Math.floor(100 + Math.random() * 900)}</span></div>
               </div>
-              <div class="contact-info">
-                <span>Mob.: 7225-888650, +91 9630732562</span>
-                <span>Date: ${new Date().toLocaleDateString('en-GB')}</span>
-                <span>GST : 23AAXFT4552...</span>
+              <div class="sl-no-text">
+                SL. NO. <span>#${slNo}</span>
               </div>
             </div>
 
-            <div class="guest-details">
-              <div class="left-col">
-                <div class="field-row"><span class="label">Name:</span> <span class="value">${booking.guestDetails.firstName} ${booking.guestDetails.lastName}</span></div>
-                <div class="field-row"><span class="label">From:</span> <span class="value">${booking.guestDetails.city || '--------------------'}</span></div>
-                <div class="field-row"><span class="label">No. of Person:</span> <span class="value">${(Number(booking.guestDetails.adults) || 0) + (Number(booking.guestDetails.children) || 0)}</span></div>
-                <div class="field-row"><span class="label">Room Plan:</span> <span class="value">${booking.roomPlan || 'EP'}</span></div>
+            <!-- Guest Details Card -->
+            <div class="guest-info-card">
+              <div class="info-grid">
+                <div class="field-line">
+                  <span class="field-label">Guest Name:</span>
+                  <span class="field-value-dotted">${guestName}</span>
+                </div>
+                <div class="field-line">
+                  <span class="field-label">Room Category:</span>
+                  <span class="field-value-dotted">${roomType}</span>
+                </div>
+                <div class="field-line">
+                  <span class="field-label">City / From:</span>
+                  <span class="field-value-dotted">${booking.guestDetails?.city || 'N/A'}</span>
+                </div>
+                <div class="field-line">
+                  <span class="field-label">Booking Ref ID:</span>
+                  <span class="field-value-dotted">${bookingId}</span>
+                </div>
+                <div class="field-line">
+                  <span class="field-label">Guests:</span>
+                  <span class="field-value-dotted">${Number(booking.guestDetails?.adults || 1)} Adults ${booking.guestDetails?.children ? `, ${booking.guestDetails.children} Children` : ''}</span>
+                </div>
+                <div class="field-line">
+                  <span class="field-label">Source / Channel:</span>
+                  <span class="field-value-dotted">${booking.source || 'Walk-in'} ${booking.otaReferenceId ? `(Ref: ${booking.otaReferenceId})` : ''}</span>
+                </div>
               </div>
-              <div class="right-col">
-                <div class="field-row"><span class="label">Room No.:</span> <span class="value">${booking.roomUnit?.roomNumber || '---'}</span></div>
-                <div class="field-row"><span class="label">Reg. S. No.:</span> <span class="value">BK-${booking._id.slice(-6).toUpperCase()}</span></div>
-                <div class="field-row"><span class="label">Source / Platform:</span> <span class="value">${booking.source || 'Walk-in'} ${booking.otaReferenceId ? `(Ref: ${booking.otaReferenceId})` : ''}</span></div>
+              
+              <div class="field-line" style="margin-top: 14px;">
+                <span class="field-label">Meal / Room Plan:</span>
+                <span class="field-value-dotted" style="max-width: 320px;">${roomPlan}</span>
+              </div>
+
+              <div class="dates-row">
+                <div class="date-group">
+                  <span class="field-label">Arrival:</span>
+                  <span class="field-label" style="margin-left: 10px;">Date</span>
+                  <span class="field-value-dotted" style="width: 100px;">${checkIn.toLocaleDateString('en-GB')}</span>
+                  <span class="field-label" style="margin-left: 15px;">Time</span>
+                  <span class="field-value-dotted" style="width: 80px;">${checkIn.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                </div>
+                <div class="date-group">
+                  <span class="field-label">Departure:</span>
+                  <span class="field-label" style="margin-left: 10px;">Date</span>
+                  <span class="field-value-dotted" style="width: 100px;">${checkOut.toLocaleDateString('en-GB')}</span>
+                  <span class="field-label" style="margin-left: 15px;">Time</span>
+                  <span class="field-value-dotted" style="width: 80px;">${checkOut.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                </div>
               </div>
             </div>
 
-            <div class="guest-details" style="grid-template-columns: 1fr 1fr; margin-top: -10px;">
-                <div class="field-row">
-                    <span class="label">Arrival:</span> 
-                    <span class="label">Date</span> <span class="value">${new Date(booking.checkInDate).toLocaleDateString('en-GB')}</span>
-                    <span class="label" style="margin-left: 10px;">Time</span> <span class="value">${new Date(booking.checkInDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                </div>
-                <div class="field-row">
-                    <span class="label">Departure:</span> 
-                    <span class="label">Date</span> <span class="value">${new Date(booking.checkOutDate).toLocaleDateString('en-GB')}</span>
-                    <span class="label" style="margin-left: 10px;">Time</span> <span class="value">${new Date(booking.checkOutDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                </div>
-            </div>
-
-            <table class="bill-grid">
+            <!-- Particulars Table -->
+            <table class="particulars-table">
               <thead>
                 <tr>
-                  <th>Particulars / Details</th>
-                  <th class="amount-col">Amount (₹)</th>
+                  <th class="col-sl">SL</th>
+                  <th class="col-desc">PARTICULARS / CHARGE DESCRIPTION</th>
+                  <th class="col-amt">AMOUNT (₹)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>TOTAL NO. OF DAYS</td>
-                  <td class="amount-col">${diffDays}</td>
+                  <td class="col-sl">1</td>
+                  <td class="col-desc">Room Stay Lodging (${diffDays} Night${diffDays > 1 ? 's' : ''} — ${roomType})</td>
+                  <td class="col-amt">${(financials.roomTariff || 0).toLocaleString()}</td>
                 </tr>
-                <tr>
-                  <td>Lodging (${booking.roomCategory?.title})</td>
-                  <td class="amount-col">${booking.financials.roomTariff?.toLocaleString()}</td>
-                </tr>
-                <tr>
-                  <td>Extra Guest Charge</td>
-                  <td class="amount-col">${extraGuestCharge > 0 ? extraGuestCharge.toLocaleString() : '-'}</td>
-                </tr>
-                ${otherCharges.map(charge => `
+                ${extraGuestCharge > 0 ? `
                   <tr>
-                    <td>${charge.description} (${charge.source})</td>
-                    <td class="amount-col">${charge.amount.toLocaleString()}</td>
+                    <td class="col-sl">2</td>
+                    <td class="col-desc">Extra Guest Charges</td>
+                    <td class="col-amt">${extraGuestCharge.toLocaleString()}</td>
                   </tr>
-                `).join('')}
-                <!-- Fill remaining rows to look like a bill book -->
-                ${Array(Math.max(0, 5 - otherCharges.length)).fill(0).map(() => `
-                  <tr style="height: 30px;">
-                    <td></td>
-                    <td class="amount-col"></td>
+                ` : ''}
+                ${otherCharges.map((charge, idx) => `
+                  <tr>
+                    <td class="col-sl">${(extraGuestCharge > 0 ? 3 : 2) + idx}</td>
+                    <td class="col-desc">${charge.description || ''} (${charge.source || ''})</td>
+                    <td class="col-amt">${(charge.amount || 0).toLocaleString()}</td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
 
-            <div class="total-section">
-              <table class="total-table">
+            <!-- Totals Section -->
+            <div class="totals-container">
+              <table class="totals-table">
                 <tr>
-                  <td>Total Billable Amount:</td>
-                  <td class="amount-col">₹${booking.financials.totalAmount?.toLocaleString()}</td>
+                  <td class="label-cell">Total Billable Amount:</td>
+                  <td class="value-cell">₹${(financials.totalAmount || 0).toLocaleString()}</td>
                 </tr>
                 <tr>
-                  <td>Total Amount Paid:</td>
-                  <td class="amount-col">₹${booking.financials.amountPaid?.toLocaleString()}</td>
+                  <td class="label-cell">Total Payments Received:</td>
+                  <td class="value-cell">₹${(financials.amountPaid || 0).toLocaleString()}</td>
                 </tr>
-                <tr class="final-total">
-                  <td><strong>Net Balance Payable:</strong></td>
-                  <td class="amount-col"><strong>₹${booking.financials.balance?.toLocaleString()}</strong></td>
+                <tr class="net-payable-row">
+                  <td class="label-cell">Net Balance Payable:</td>
+                  <td class="value-cell">₹${(financials.balance || 0).toLocaleString()}</td>
                 </tr>
               </table>
             </div>
 
-            <div class="footer-note">
-              <p>Thank you for staying with us! Please visit again.</p>
-              <div style="display: flex; justify-content: space-between; margin-top: 50px;">
-                <div style="border-top: 1px solid #000; width: 150px; padding-top: 5px;">Guest Signature</div>
-                <div style="border-top: 1px solid #000; width: 150px; padding-top: 5px;">Manager Signature</div>
+            <!-- Signatures Section -->
+            <div class="signatures-container">
+              <div class="sig-box">
+                <div class="sig-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#b58838" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                  </svg>
+                </div>
+                <div class="sig-line-rule"></div>
+                <div class="sig-title">Guest Signature</div>
+              </div>
+              <div class="sig-box">
+                <div class="sig-icon">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b58838" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </div>
+                <div class="sig-line-rule"></div>
+                <div class="sig-title">Authorized Manager</div>
               </div>
             </div>
           </div>
           <script>
             window.onload = function() { 
-              // Small delay to ensure styles are loaded
-              setTimeout(() => {
-                window.print(); 
-              }, 500);
-            }
+              window.print();
+              setTimeout(() => window.close(), 500);
+            };
           </script>
         </body>
       </html>
     `;
+
     printWindow.document.write(html);
     printWindow.document.close();
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
   };
 
   return (
@@ -802,14 +913,35 @@ const FrontDeskManagement = () => {
 
       {/* Unified Tracker Dashboard */}
       <div className="bg-white rounded-sm shadow-xl border border-slate-200 overflow-hidden">
-        <div className="bg-[#1A2B48] p-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
+        <div className="bg-[#1A2B48] p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <h2 className="text-white text-sm font-bold uppercase tracking-widest">Unified Front Desk Dashboard</h2>
-            <button onClick={fetchData} className="text-white/40 hover:text-white transition-colors">
+            <button onClick={fetchData} className="text-white/40 hover:text-white transition-colors" title="Refresh Dashboard">
               <History size={16} className={loading ? 'animate-spin' : ''} />
             </button>
+            
+            {/* Calendar Date Picker Filter */}
+            <div className="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded border border-slate-700">
+              <Calendar size={14} className="text-[#BFA37E]" />
+              <span className="text-[10px] font-bold text-slate-300 uppercase whitespace-nowrap">Filter Date:</span>
+              <input 
+                type="date"
+                value={selectedDashboardDate}
+                onChange={e => setSelectedDashboardDate(e.target.value)}
+                className="bg-slate-800 text-white text-xs font-bold px-2 py-0.5 rounded border border-slate-600 focus:outline-none focus:border-[#BFA37E] cursor-pointer"
+              />
+              {selectedDashboardDate && (
+                <button 
+                  onClick={() => setSelectedDashboardDate('')}
+                  className="text-[10px] bg-amber-500 hover:bg-amber-600 text-slate-950 px-2 py-0.5 rounded font-black uppercase tracking-wider transition-all ml-1"
+                >
+                  Show All
+                </button>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest hidden md:inline bg-[#BFA37E]/10 px-2.5 py-1 rounded border border-[#BFA37E]/20">
               Front Desk Intelligence
             </span>
@@ -841,7 +973,9 @@ const FrontDeskManagement = () => {
             <tbody className="text-xs">
               {loading && bookings.length === 0 ? (
                 <tr><td colSpan="7" className="p-12 text-center text-slate-400 uppercase font-bold tracking-widest">Syncing Dashboard...</td></tr>
-              ) : bookings.map((booking) => (
+              ) : filteredDashboardBookings.length === 0 ? (
+                <tr><td colSpan="7" className="p-12 text-center text-slate-400 uppercase font-bold tracking-widest">No bookings found for selected calendar date ({selectedDashboardDate}).</td></tr>
+              ) : filteredDashboardBookings.map((booking) => (
                 <tr key={booking._id} onClick={() => { setSelectedBooking(booking); setIsDetailOpen(true); }} className="border-b hover:bg-emerald-50/50 cursor-pointer transition-colors group">
                   <td className="px-6 py-5">
                     <div className="flex flex-col">

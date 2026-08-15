@@ -198,35 +198,55 @@ router.get('/analytics-date', async (req, res) => {
         const { date } = req.query;
         let startOfDay, endOfDay;
         let targetDateStr;
+        let queryDate;
 
         if (date && typeof date === 'string' && date.includes('-')) {
             targetDateStr = date;
             const [y, m, d] = date.split('-').map(Number);
+            queryDate = new Date(y, m - 1, d, 12, 0, 0);
             startOfDay = new Date(y, m - 1, d, 0, 0, 0, 0);
             endOfDay = new Date(y, m - 1, d, 23, 59, 59, 999);
         } else {
-            const now = date ? new Date(date) : new Date();
-            const y = now.getFullYear();
-            const m = now.getMonth();
-            const d = now.getDate();
+            queryDate = date ? new Date(date) : new Date();
+            const y = queryDate.getFullYear();
+            const m = queryDate.getMonth();
+            const d = queryDate.getDate();
             targetDateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             startOfDay = new Date(y, m, d, 0, 0, 0, 0);
             endOfDay = new Date(y, m, d, 23, 59, 59, 999);
         }
 
-        // 1. Room Bookings & Check-ins for selected date
+        // 1. Room Bookings & Check-ins for selected date (11:59 PM EOD Snapshot)
         const checkIns = await Booking.countDocuments({
-            checkInDate: { $gte: startOfDay, $lte: endOfDay },
-            status: { $ne: 'Cancelled' }
+            status: { $ne: 'Cancelled' },
+            checkInDate: { $gte: startOfDay, $lte: endOfDay }
         });
 
         const activeBookingsOnDate = await Booking.find({
             status: { $ne: 'Cancelled' },
             checkInDate: { $lte: endOfDay },
-            checkOutDate: { $gte: startOfDay }
+            checkOutDate: { $gt: startOfDay }
         }).populate('roomCategory').populate('roomUnit');
 
-        const occupiedCount = activeBookingsOnDate.filter(b => b.status === 'Checked-In').length;
+        // Check if guest was occupied in-house on this date at 11:59 PM EOD
+        const isOccupiedOnDate = (b) => {
+            if (b.status === 'Cancelled') return false;
+            
+            const nowTime = new Date();
+            const isToday = (endOfDay >= nowTime);
+
+            if (isToday) {
+                return b.status === 'Checked-In';
+            }
+
+            // For past dates: 11:59 PM EOD snapshot for bookings checked-in on this date
+            const cIn = new Date(b.checkInDate);
+            const cOut = new Date(b.checkOutDate);
+
+            return cIn >= startOfDay && cIn <= endOfDay && cOut > startOfDay;
+        };
+
+        const occupiedCount = activeBookingsOnDate.filter(isOccupiedOnDate).length;
 
         // Fetch all room units
         const allUnits = await RoomUnit.find().populate('category');
@@ -249,7 +269,7 @@ router.get('/analytics-date', async (req, res) => {
             });
 
             const catOccupiedUnits = activeBookingsOnDate.filter(b => {
-                if (b.status !== 'Checked-In') return false;
+                if (!isOccupiedOnDate(b)) return false;
                 const bRoomNum = b.roomUnit?.roomNumber;
                 const bCatTitle = b.roomCategory?.title || b.roomCategory?.category || '';
                 return categoryConfig[catName].includes(bRoomNum) || bCatTitle.toLowerCase().includes(catName.toLowerCase());
@@ -270,7 +290,7 @@ router.get('/analytics-date', async (req, res) => {
             totalVacant += vacantInCat;
         });
 
-        // Helper: Calculate financials for a specific date range (prevents double-counting room rent in Transaction table)
+        // Helper: Calculate financials for a specific date range (prevents double-counting and captures walk-in registration sales)
         const calculateFinancialsForRange = async (sDate, eDate) => {
             const txs = await Transaction.find({
                 date: { $gte: sDate, $lte: eDate },
@@ -297,20 +317,44 @@ router.get('/analytics-date', async (req, res) => {
             });
 
             const bookings = await Booking.find({
-                'financials.paymentHistory.timestamp': { $gte: sDate, $lte: eDate }
+                status: { $ne: 'Cancelled' },
+                $or: [
+                    { 'financials.paymentHistory.timestamp': { $gte: sDate, $lte: eDate } },
+                    { createdAt: { $gte: sDate, $lte: eDate } }
+                ]
             });
 
             bookings.forEach(b => {
-                b.financials.paymentHistory.forEach(p => {
-                    if (p.timestamp >= sDate && p.timestamp <= eDate) {
-                        const amt = Number(p.amount) || 0;
-                        if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe'].includes(p.mode)) {
-                            online += amt;
-                        } else if (p.mode === 'Cash') {
-                            cash += amt;
-                        }
+                const historyOnDate = (b.financials?.paymentHistory || []).filter(
+                    p => p.timestamp >= sDate && p.timestamp <= eDate
+                );
+
+                let historySumOnDate = 0;
+                historyOnDate.forEach(p => {
+                    const amt = Number(p.amount) || 0;
+                    historySumOnDate += amt;
+                    if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe'].includes(p.mode)) {
+                        online += amt;
+                    } else {
+                        cash += amt;
                     }
                 });
+
+                // For bookings / walk-in registrations created on this date
+                if (b.createdAt >= sDate && b.createdAt <= eDate) {
+                    const fin = b.financials || {};
+                    const bookingTotal = Number(fin.totalAmount || fin.paidAmount || fin.advancePayment) || 0;
+                    const remainingUnrecorded = Math.max(0, bookingTotal - historySumOnDate);
+
+                    if (remainingUnrecorded > 0) {
+                        const pMode = fin.paymentMode || 'Cash';
+                        if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe'].includes(pMode)) {
+                            online += remainingUnrecorded;
+                        } else {
+                            cash += remainingUnrecorded;
+                        }
+                    }
+                }
             });
 
             return { cash, online, total: cash + online, expenses };
@@ -346,13 +390,14 @@ router.get('/analytics-date', async (req, res) => {
         const cashBalanceCounter = openingBalanceCounter + totalSale - cashExpenses;
 
         // 4. Electricity Meter Analytics Calculation
-        const targetDateStr = queryDate.toISOString().split('T')[0];
-        
         const todayMeterDoc = await ElectricityReading.findOne({ dateStr: targetDateStr });
         
         const yesterdayObj = new Date(queryDate);
         yesterdayObj.setDate(yesterdayObj.getDate() - 1);
-        const yesterdayDateStr = yesterdayObj.toISOString().split('T')[0];
+        const yY = yesterdayObj.getFullYear();
+        const yM = String(yesterdayObj.getMonth() + 1).padStart(2, '0');
+        const yD = String(yesterdayObj.getDate()).padStart(2, '0');
+        const yesterdayDateStr = `${yY}-${yM}-${yD}`;
         
         const yesterdayMeterDoc = await ElectricityReading.findOne({ dateStr: yesterdayDateStr });
         
@@ -364,7 +409,7 @@ router.get('/analytics-date', async (req, res) => {
                 dateStr: { $lt: targetDateStr }
             }).sort({ dateStr: -1 });
 
-            if (priorMeterDoc) {
+            if (priorMeterDoc && priorMeterDoc.date) {
                 let currDate = new Date(priorMeterDoc.date);
                 currDate.setDate(currDate.getDate() + 1);
                 
@@ -413,7 +458,7 @@ router.get('/analytics-date', async (req, res) => {
         };
 
         res.json({
-            date: queryDate.toISOString().split('T')[0],
+            date: targetDateStr,
             formattedDate: queryDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
             checkIns,
             occupiedRooms: occupiedCount,
