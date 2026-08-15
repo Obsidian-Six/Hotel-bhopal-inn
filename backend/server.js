@@ -9,10 +9,34 @@ const app = express();
 const http = require('http');
 const { Server } = require('socket.io');
 const server = http.createServer(app);
+
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:8000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000',
+    'https://hotelbhopalinn.tenontenstays.com',
+    'http://hotelbhopalinn.tenontenstays.com'
+];
+
+if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+const checkCorsOrigin = (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin) || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+        return callback(null, true);
+    }
+    callback(null, true);
+};
+
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || "*",
-        methods: ["GET", "POST"]
+        origin: checkCorsOrigin,
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        credentials: true
     }
 });
 
@@ -20,7 +44,7 @@ const PORT = process.env.PORT || 8000;
 
 // Middleware
 app.use(cors({
-    origin: "*",
+    origin: checkCorsOrigin,
     credentials: true
 }));
 app.use(express.json());

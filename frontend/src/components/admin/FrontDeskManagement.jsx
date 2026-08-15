@@ -3,7 +3,7 @@ import axios from 'axios';
 import config from '../../config';
 import { 
   X, CheckCircle2, IndianRupee, Printer, LogOut, 
-  Plus, Info, ArrowRight, User, Calendar, CreditCard, AlertTriangle, History, FastForward, Coffee, TrendingUp, BarChart3, CalendarPlus, Zap, Activity
+  Plus, Info, ArrowRight, User, Calendar, CreditCard, AlertTriangle, History, FastForward, Coffee, TrendingUp, BarChart3, CalendarPlus, Zap, Activity, Bed
 } from 'lucide-react';
 import { socket } from '@/lib/socket';
 import FrontDeskAnalytics from './FrontDeskAnalytics';
