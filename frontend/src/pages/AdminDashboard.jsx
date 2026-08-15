@@ -93,85 +93,85 @@ const AdminDashboard = () => {
         </div>
 
         
-        <nav className="flex-grow p-4 space-y-2 mt-6">
+        <nav className="flex-grow p-4 space-y-1.5 mt-4">
           <button 
             onClick={() => setActiveTab('hero')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'hero' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'hero' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <ImageIcon size={16} />
-            Hero Slider
+            <ImageIcon size={18} className="shrink-0" />
+            <span className="truncate">Hero Slider</span>
           </button>
           <button 
             onClick={() => setActiveTab('rooms')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'rooms' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'rooms' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <Bed size={16} />
-            Room Management
+            <Bed size={18} className="shrink-0" />
+            <span className="truncate">Room Management</span>
           </button>
           <button 
             onClick={() => setActiveTab('banquet')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'banquet' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'banquet' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <Star size={16} />
-            Banquet & Events
+            <Star size={18} className="shrink-0" />
+            <span className="truncate">Banquet & Events</span>
           </button>
 
           <button 
             onClick={() => setActiveTab('offers')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'offers' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'offers' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <Tag size={16} />
-            Special Offers
+            <Tag size={18} className="shrink-0" />
+            <span className="truncate">Special Offers</span>
           </button>
           <button 
             onClick={() => setActiveTab('bookings')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'bookings' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'bookings' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <Users size={16} />
-            Front Desk
+            <Users size={18} className="shrink-0" />
+            <span className="truncate">Front Desk</span>
           </button>
           <button 
             onClick={() => setActiveTab('analytics')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'analytics' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'analytics' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <TrendingUp size={16} />
-            Front Desk Analytics
+            <TrendingUp size={18} className="shrink-0 text-amber-400" />
+            <span className="truncate">Front Desk Analytics</span>
           </button>
           <button 
             onClick={() => setActiveTab('inventory')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'inventory' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'inventory' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <Calendar size={16} />
-            Inventory Calendar
+            <Calendar size={18} className="shrink-0 text-cyan-400" />
+            <span className="truncate">Inventory Calendar</span>
           </button>
 
           <button 
             onClick={() => setActiveTab('finance')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'finance' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'finance' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <IndianRupee size={16} />
-            Finance — Income, Expense & Cash
+            <IndianRupee size={18} className="shrink-0 text-emerald-400" />
+            <span className="truncate">Finance Audit</span>
           </button>
           <button 
             onClick={() => setActiveTab('reels')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'reels' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'reels' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <Film size={16} />
-            Video Reels
+            <Film size={18} className="shrink-0" />
+            <span className="truncate">Video Reels</span>
           </button>
           <button 
             onClick={() => setActiveTab('menu')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'menu' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'menu' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <Utensils size={16} />
-            Food Menu
+            <Utensils size={18} className="shrink-0" />
+            <span className="truncate">Food Menu</span>
           </button>
           <button 
             onClick={() => setActiveTab('posts')}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-sm text-[10px] font-bold uppercase tracking-[0.2em] transition-all ${activeTab === 'posts' ? 'bg-[#BFA37E] text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'posts' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
-            <Camera size={16} />
-            Instagram Posts
+            <Camera size={18} className="shrink-0" />
+            <span className="truncate">Instagram Posts</span>
           </button>
         </nav>
 

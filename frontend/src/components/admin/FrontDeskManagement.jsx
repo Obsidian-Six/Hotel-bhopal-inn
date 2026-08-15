@@ -36,6 +36,21 @@ const FrontDeskManagement = () => {
   const [roomCategories, setRoomCategories] = useState([]);
   const [availableUnits, setAvailableUnits] = useState([]);
 
+  const [selectedRoomCategoryFilter, setSelectedRoomCategoryFilter] = useState('All');
+  const [selectedUnitForCleaning, setSelectedUnitForCleaning] = useState(null);
+  const [isCleaningModalOpen, setIsCleaningModalOpen] = useState(false);
+  const [isMarkedCleanChecked, setIsMarkedCleanChecked] = useState(true);
+
+  // Derived filtered units for Housekeeping Grid
+  const filteredRoomUnits = (availableUnits || []).filter(unit => {
+    if (selectedRoomCategoryFilter === 'All') return true;
+    const catTitle = unit.category?.title || unit.category?.category || '';
+    return catTitle.toLowerCase().includes(selectedRoomCategoryFilter.toLowerCase()) || 
+           (selectedRoomCategoryFilter === 'Balcony Deluxe' && ['101','102','201','202'].includes(unit.roomNumber)) ||
+           (selectedRoomCategoryFilter === 'Double Deluxe' && ['103','104','105','106','203','204','205','206'].includes(unit.roomNumber)) ||
+           (selectedRoomCategoryFilter === 'Super Deluxe' && ['107','108','207','208'].includes(unit.roomNumber));
+  });
+
   // Check-In Form state
   const [checkInForm, setCheckInForm] = useState({
     roomUnit: '',
@@ -85,8 +100,16 @@ const FrontDeskManagement = () => {
     fetchData();
     fetchSupportData();
     
-    socket.on('booking_updated', fetchData);
-    return () => socket.off('booking_updated', fetchData);
+    socket.on('booking_updated', () => {
+      fetchData();
+      fetchSupportData();
+    });
+    socket.on('room_unit_updated', fetchSupportData);
+
+    return () => {
+      socket.off('booking_updated');
+      socket.off('room_unit_updated');
+    };
   }, []);
 
   const fetchData = async () => {
@@ -678,6 +701,105 @@ const FrontDeskManagement = () => {
         </div>
       </div>
 
+      {/* Requirement 1: Interactive Room Cleaning & Housekeeping Status Grid */}
+      <div className="bg-white rounded-sm shadow-xl border border-slate-200 p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#1A2B48] text-white rounded">
+              <Bed size={22} />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase text-[#1A2B48] tracking-wider">
+                Room Housekeeping & Unit Status Grid
+              </h3>
+              <p className="text-xs text-slate-500 font-medium">
+                Click any room box to update cleaning status (Red = Dirty/Needs Cleaning, Green = Clean/Ready, Blue = Occupied)
+              </p>
+            </div>
+          </div>
+
+          {/* Room Category Filter Selection */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Filter Type:</span>
+            <select
+              value={selectedRoomCategoryFilter}
+              onChange={(e) => setSelectedRoomCategoryFilter(e.target.value)}
+              className="bg-slate-50 border-2 border-slate-200 text-[#1A2B48] px-3 py-2 rounded-sm text-xs font-bold outline-none focus:border-[#1A2B48] transition-all cursor-pointer w-full sm:w-auto"
+            >
+              <option value="All">All Room Types (16 Rooms)</option>
+              <option value="Balcony Deluxe">Balcony Deluxe (101, 102, 201, 202)</option>
+              <option value="Double Deluxe">Double Deluxe (103..106, 203..206)</option>
+              <option value="Super Deluxe">Super Deluxe (107, 108, 207, 208)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Legend Indicator */}
+        <div className="flex flex-wrap items-center gap-4 text-xs font-bold pt-1">
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 border border-rose-200 text-rose-800 rounded">
+            <div className="w-3 h-3 bg-rose-500 rounded-sm"></div>
+            <span>Dirty / Needs Cleaning (Red)</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded">
+            <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
+            <span>Clean & Ready for Guests (Green)</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-sky-50 border border-sky-200 text-sky-800 rounded">
+            <div className="w-3 h-3 bg-sky-600 rounded-sm"></div>
+            <span>Currently Occupied (Blue)</span>
+          </div>
+        </div>
+
+        {/* Square Boxes Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3 pt-2">
+          {filteredRoomUnits.map((unit) => {
+            const isOccupied = bookings.some(
+              b => b.status === 'Checked-In' && (b.roomUnit?._id === unit._id || b.roomUnit?.roomNumber === unit.roomNumber)
+            );
+            const isDirty = !isOccupied && unit.status === 'Dirty';
+
+            let bgColor = 'bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-600 shadow-emerald-100';
+            let statusText = 'CLEAN';
+            let badgeBg = 'bg-white/25 text-white';
+
+            if (isOccupied) {
+              bgColor = 'bg-sky-600 text-white hover:bg-sky-700 border-sky-700 shadow-sky-100';
+              statusText = 'OCCUPIED';
+              badgeBg = 'bg-white/25 text-white';
+            } else if (isDirty) {
+              bgColor = 'bg-rose-500 text-white hover:bg-rose-600 border-rose-600 shadow-rose-100 animate-pulse';
+              statusText = 'DIRTY';
+              badgeBg = 'bg-white/30 text-white';
+            }
+
+            return (
+              <button
+                key={unit._id || unit.roomNumber}
+                onClick={() => {
+                  if (isOccupied) {
+                    alert(`Room ${unit.roomNumber} is currently occupied by a checked-in guest.`);
+                    return;
+                  }
+                  setSelectedUnitForCleaning(unit);
+                  setIsMarkedCleanChecked(unit.status !== 'Dirty');
+                  setIsCleaningModalOpen(true);
+                }}
+                className={`p-4 rounded-sm border-2 flex flex-col items-center justify-center transition-all shadow-md active:scale-95 cursor-pointer relative overflow-hidden ${bgColor}`}
+                title={`Click to manage housekeeping status for Room ${unit.roomNumber}`}
+              >
+                <span className="text-2xl font-black tracking-tight">{unit.roomNumber}</span>
+                <span className="text-[9px] font-bold opacity-80 uppercase truncate max-w-full mt-0.5">
+                  {unit.category?.title || unit.category?.category || 'Deluxe'}
+                </span>
+                <span className={`mt-2 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${badgeBg}`}>
+                  {statusText}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Unified Tracker Dashboard */}
       <div className="bg-white rounded-sm shadow-xl border border-slate-200 overflow-hidden">
         <div className="bg-[#1A2B48] p-4 flex justify-between items-center">
@@ -749,9 +871,10 @@ const FrontDeskManagement = () => {
                     </span>
                   </td>
                   <td className="px-6 py-5 text-center">
-                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase shadow-sm ${
+                    <span className={`whitespace-nowrap inline-block px-3.5 py-1 rounded-full text-[10px] font-black uppercase shadow-sm ${
                         booking.status === 'Checked-In' ? 'bg-emerald-500 text-white' : 
-                        booking.status === 'Confirmed' ? 'bg-amber-500 text-white' : 'bg-slate-400 text-white'
+                        booking.status === 'Confirmed' ? 'bg-amber-500 text-white' : 
+                        booking.status === 'Checked-Out' ? 'bg-slate-700 text-white' : 'bg-slate-400 text-white'
                     }`}>
                       {booking.status}
                     </span>
@@ -1500,6 +1623,77 @@ const FrontDeskManagement = () => {
                 </table>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Room Housekeeping Cleaning Control Modal (Requirement 1) */}
+      {isCleaningModalOpen && selectedUnitForCleaning && (
+        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[150] flex items-center justify-center p-4 backdrop-blur-md">
+          <div className="bg-white w-full max-w-md rounded-sm shadow-2xl p-8 border-t-8 border-[#1A2B48] animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-2xl font-black text-[#1A2B48] uppercase">Room Housekeeping Status</h3>
+                <p className="text-xs text-slate-500 font-bold mt-0.5">
+                  Room Unit Number: <span className="text-[#1A2B48] font-extrabold">{selectedUnitForCleaning.roomNumber}</span>
+                </p>
+              </div>
+              <button onClick={() => setIsCleaningModalOpen(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><X size={20}/></button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const targetStatus = isMarkedCleanChecked ? 'Available' : 'Dirty';
+                  await axios.put(`${API_BASE}/api/inventory/units/${selectedUnitForCleaning._id}/status`, {
+                    status: targetStatus
+                  });
+                  alert(`Room ${selectedUnitForCleaning.roomNumber} marked as ${targetStatus === 'Available' ? 'CLEAN & READY (Green)' : 'DIRTY (Red)'}!`);
+                  setIsCleaningModalOpen(false);
+                  fetchSupportData();
+                } catch (err) {
+                  console.error(err);
+                  alert('Failed to update room housekeeping status: ' + (err.response?.data?.message || err.message));
+                }
+              }}
+              className="space-y-6"
+            >
+              <div className="bg-slate-50 p-4 border border-slate-200 rounded-sm space-y-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-bold text-slate-500 uppercase">Category:</span>
+                  <span className="font-black text-[#1A2B48] uppercase">{selectedUnitForCleaning.category?.title || selectedUnitForCleaning.category?.category || 'Deluxe'}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200">
+                  <span className="font-bold text-slate-500 uppercase">Current Status:</span>
+                  <span className={`px-2.5 py-1 rounded text-[10px] font-black uppercase ${
+                    selectedUnitForCleaning.status === 'Dirty' ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  }`}>
+                    {selectedUnitForCleaning.status === 'Dirty' ? 'Dirty / Needs Cleaning (Red)' : 'Clean & Ready (Green)'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 border-2 border-emerald-500 bg-emerald-50/60 rounded-sm">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    checked={isMarkedCleanChecked}
+                    onChange={(e) => setIsMarkedCleanChecked(e.target.checked)}
+                    className="w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-black uppercase text-emerald-900 block">Is Room Cleaned & Ready?</span>
+                    <span className="text-[10px] font-bold text-emerald-700 block">Check box to set room status to Clean / Available (Green)</span>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex gap-4 pt-2">
+                <button type="button" onClick={() => setIsCleaningModalOpen(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-400 hover:text-slate-700">Cancel</button>
+                <button type="submit" className="flex-1 bg-[#1A2B48] hover:bg-[#253d66] text-white py-4 text-xs font-black uppercase shadow-xl transition-all">Save Housekeeping Status</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

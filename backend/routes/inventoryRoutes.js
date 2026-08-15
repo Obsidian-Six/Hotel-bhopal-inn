@@ -266,6 +266,28 @@ router.get('/units/available', async (req, res) => {
     }
 });
 
+router.put('/units/:id/status', async (req, res) => {
+    try {
+        const { status } = req.body;
+        const unit = await RoomUnit.findByIdAndUpdate(
+            req.params.id, 
+            { status }, 
+            { new: true }
+        ).populate('category');
+        
+        if (!unit) return res.status(404).json({ message: 'Room unit not found' });
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('room_unit_updated', { unitId: unit._id, status: unit.status, roomNumber: unit.roomNumber });
+        }
+
+        res.json(unit);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
 router.delete('/units/:id', async (req, res) => {
     try {
         await RoomUnit.findByIdAndDelete(req.params.id);

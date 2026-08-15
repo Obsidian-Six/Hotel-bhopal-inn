@@ -443,7 +443,7 @@ Prepared By: ${preparedBy}
                   ₹{(rd.cashBalanceCounter || 0).toLocaleString('en-IN')}
                 </p>
                 <div className="bg-slate-800/80 p-3 rounded text-[11px] text-slate-300 font-medium mt-2 border border-slate-700">
-                  <span className="text-slate-400 font-bold">Formula:</span> Opening Balance + Cash Sale - Cash Expenses = ₹{(rd.openingBalanceCounter || 0).toLocaleString()} + ₹{(rd.cashSale || 0).toLocaleString()} - ₹{(rd.cashExpenses || 0).toLocaleString()}
+                  <span className="text-slate-400 font-bold">Formula:</span> Opening Balance + Today Total Payments - Expenses = ₹{(rd.openingBalanceCounter || 0).toLocaleString()} + ₹{(rd.totalSale || 0).toLocaleString()} - ₹{(rd.cashExpenses || 0).toLocaleString()}
                 </div>
               </div>
             </div>

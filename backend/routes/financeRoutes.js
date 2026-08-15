@@ -305,44 +305,56 @@ router.get('/analytics-date', async (req, res) => {
 
         const totalSale = cashSale + onlineSale;
 
-        // 3. Counter Opening Balance calculation (starts from 10th Aug 2026 where opening balance was 0)
+        // 3. Counter Opening Balance calculation (starts from 10th Aug 2026 where opening balance on Aug 10 = 0)
         const aug10Start = new Date('2026-08-10T00:00:00.000Z');
-        let openingBalanceCounter = 0;
+        let runningBalance = 0;
 
         if (startOfDay > aug10Start) {
-            const priorTx = await Transaction.find({
+            const allPriorTx = await Transaction.find({
                 date: { $gte: aug10Start, $lt: startOfDay },
                 isVoided: false
             });
 
-            let priorCashIncome = 0;
-            let priorCashExpense = 0;
-
-            priorTx.forEach(tx => {
-                const amount = Number(decrypt(tx.amount)) || 0;
-                if (tx.type === 'Income' && tx.paymentMode === 'Cash') {
-                    priorCashIncome += amount;
-                } else if (tx.type === 'Expense' && tx.approved && (tx.paymentMode === 'Cash' || !tx.paymentMode)) {
-                    priorCashExpense += amount;
-                }
-            });
-
-            const priorBookings = await Booking.find({
+            const allPriorBookings = await Booking.find({
                 'financials.paymentHistory.timestamp': { $gte: aug10Start, $lt: startOfDay }
             });
 
-            priorBookings.forEach(b => {
-                b.financials.paymentHistory.forEach(p => {
-                    if (p.timestamp >= aug10Start && p.timestamp < startOfDay && p.mode === 'Cash') {
-                        priorCashIncome += Number(p.amount) || 0;
+            let currDate = new Date(aug10Start);
+            while (currDate < startOfDay) {
+                const nextDate = new Date(currDate);
+                nextDate.setDate(nextDate.getDate() + 1);
+
+                let dayTotalPayments = 0;
+                let dayExpenditure = 0;
+
+                allPriorTx.forEach(tx => {
+                    const txDate = new Date(tx.date);
+                    if (txDate >= currDate && txDate < nextDate) {
+                        const amount = Number(decrypt(tx.amount)) || 0;
+                        if (tx.type === 'Income') {
+                            dayTotalPayments += amount;
+                        } else if (tx.type === 'Expense' && tx.approved) {
+                            dayExpenditure += amount;
+                        }
                     }
                 });
-            });
 
-            openingBalanceCounter = Math.max(0, priorCashIncome - priorCashExpense);
+                allPriorBookings.forEach(b => {
+                    b.financials.paymentHistory.forEach(p => {
+                        const pDate = new Date(p.timestamp);
+                        if (pDate >= currDate && pDate < nextDate) {
+                            dayTotalPayments += Number(p.amount) || 0;
+                        }
+                    });
+                });
+
+                runningBalance = runningBalance + dayTotalPayments - dayExpenditure;
+                currDate = nextDate;
+            }
         }
 
-        const cashBalanceCounter = openingBalanceCounter + cashSale - cashExpenses;
+        const openingBalanceCounter = runningBalance;
+        const cashBalanceCounter = openingBalanceCounter + totalSale - cashExpenses;
 
         // 4. Electricity Meter Analytics Calculation
         const targetDateStr = queryDate.toISOString().split('T')[0];
