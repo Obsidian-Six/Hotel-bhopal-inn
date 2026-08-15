@@ -767,7 +767,7 @@ const FrontDeskManagement = () => {
               statusText = 'OCCUPIED';
               badgeBg = 'bg-white/25 text-white';
             } else if (isDirty) {
-              bgColor = 'bg-rose-500 text-white hover:bg-rose-600 border-rose-600 shadow-rose-100 animate-pulse';
+              bgColor = 'bg-rose-500 text-white hover:bg-rose-600 border-rose-600 shadow-rose-100';
               statusText = 'DIRTY';
               badgeBg = 'bg-white/30 text-white';
             }
