@@ -58,7 +58,7 @@ const FrontDeskManagement = () => {
   });
 
   const [isFBModalOpen, setIsFBModalOpen] = useState(false);
-  const [fbForm, setFbForm] = useState({ description: '', amount: '' });
+  const [fbForm, setFbForm] = useState({ description: '', amount: '', paymentMode: 'Cash' });
 
   // Walk-in form state
   const [walkInForm, setWalkInForm] = useState({
@@ -68,6 +68,7 @@ const FrontDeskManagement = () => {
     checkInDate: new Date().toISOString().split('T')[0],
     checkOutDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     financials: { roomTariff: 0, amountPaid: 0, totalAmount: 0, balance: 0 },
+    paymentMode: 'Cash',
     source: 'Walk-in',
     otaPlatform: '',
     otaReferenceId: '',
@@ -216,7 +217,7 @@ const FrontDeskManagement = () => {
       const updated = (await axios.get(`${API_BASE}/api/bookings`)).data.find(b => b._id === id);
       setSelectedBooking(updated);
       setIsFBModalOpen(false);
-      setFbForm({ description: '', amount: '' });
+      setFbForm({ description: '', amount: '', paymentMode: 'Cash' });
     } catch (err) {
       alert('Failed to add charge');
     }
@@ -232,6 +233,7 @@ const FrontDeskManagement = () => {
         checkInDate: walkInForm.checkInDate,
         checkOutDate: walkInForm.checkOutDate,
         financials: walkInForm.financials,
+        paymentMode: walkInForm.paymentMode || 'Cash',
         source: walkInForm.source,
         otaPlatform: walkInForm.otaPlatform,
         otaReferenceId: walkInForm.otaReferenceId,
@@ -243,12 +245,13 @@ const FrontDeskManagement = () => {
       
       // Record Advance Payment in Finance if exists
       if (walkInForm.financials.amountPaid > 0) {
+          const selectedMode = walkInForm.paymentMode || 'Cash';
           await axios.post(`${API_BASE}/api/finance/transactions`, {
             type: 'Income',
             category: 'Room Rent',
             amount: Number(walkInForm.financials.amountPaid),
             description: `Walk-in Advance (${walkInForm.source}) - ${walkInForm.guestDetails.firstName} ${walkInForm.guestDetails.lastName}`,
-            paymentMode: 'Cash', // Default for walk-ins
+            paymentMode: selectedMode,
             date: new Date(),
             recordedBy: 'FrontDesk'
           });
@@ -263,6 +266,7 @@ const FrontDeskManagement = () => {
         checkInDate: new Date().toISOString().split('T')[0],
         checkOutDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
         financials: { roomTariff: 0, amountPaid: 0, totalAmount: 0, balance: 0 },
+        paymentMode: 'Cash',
         source: 'Walk-in',
         otaPlatform: '',
         otaReferenceId: '',
@@ -1343,7 +1347,22 @@ const FrontDeskManagement = () => {
                   <InputField label="Children" type="number" value={walkInForm.guestDetails.children} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, children: Number(v)}})} />
                </div>
                <div className="grid grid-cols-2 gap-6">
-                  <InputField label="Advance Paid" type="number" value={walkInForm.financials.amountPaid} onChange={v => setWalkInForm({...walkInForm, financials: {...walkInForm.financials, amountPaid: Number(v)}})} required={false} />
+                  <InputField label="Advance Paid (₹)" type="number" value={walkInForm.financials.amountPaid} onChange={v => setWalkInForm({...walkInForm, financials: {...walkInForm.financials, amountPaid: Number(v)}})} required={false} />
+                  <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Advance Payment Mode</label>
+                      <select 
+                        className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all font-semibold focus:outline-none"
+                        value={walkInForm.paymentMode || 'Cash'}
+                        onChange={e => setWalkInForm({...walkInForm, paymentMode: e.target.value})}
+                      >
+                        <option value="Cash">Cash</option>
+                        <option value="Online">Online / UPI</option>
+                        <option value="Card">Credit/Debit Card</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                      </select>
+                  </div>
+               </div>
+               <div className="grid grid-cols-1 gap-6">
                   <InputField label="ID Proof Number" value={walkInForm.guestDetails.idProof} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, idProof: v}})} required={false} />
                </div>
                <div className="grid grid-cols-2 gap-6">
@@ -1509,14 +1528,27 @@ const FrontDeskManagement = () => {
                   onChange={e => setFbForm({...fbForm, amount: e.target.value})}
                 />
               </div>
-              <div className="flex flex-col gap-2">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Payment Mode (If Paid Now)</label>
+                <select 
+                  className="w-full border p-3 text-sm focus:outline-none focus:border-amber-500 font-semibold"
+                  value={fbForm.paymentMode || 'Cash'}
+                  onChange={e => setFbForm({...fbForm, paymentMode: e.target.value})}
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Online">Online / UPI</option>
+                  <option value="Card">Credit/Debit Card</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-2 pt-2">
                 <button 
                   onClick={() => addCharge(selectedBooking._id, fbForm.description, Number(fbForm.amount), 'F&B')}
                   className="w-full bg-[#1A2B48] text-white py-3 font-black uppercase text-xs shadow-md hover:bg-[#253d66]"
                 >
-                  Add to Room Bill
+                  Add to Room Bill (Pay Later)
                 </button>
-                <div className="flex items-center gap-2 py-2">
+                <div className="flex items-center gap-2 py-1">
                   <div className="h-px bg-slate-200 flex-grow"></div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase">OR</span>
                   <div className="h-px bg-slate-200 flex-grow"></div>
@@ -1525,16 +1557,18 @@ const FrontDeskManagement = () => {
                   onClick={async () => {
                     if(!fbForm.amount || Number(fbForm.amount) <= 0) return;
                     try {
+                      const selectedMode = fbForm.paymentMode || 'Cash';
                       // 1. Add to bill first
                       await addCharge(selectedBooking._id, fbForm.description, Number(fbForm.amount), 'F&B');
-                      // 2. Immediately collect payment
-                      await collectPayment(selectedBooking._id, Number(fbForm.amount), 'Cash');
+                      // 2. Immediately collect payment with chosen mode
+                      await collectPayment(selectedBooking._id, Number(fbForm.amount), selectedMode);
                       setIsFBModalOpen(false);
+                      setFbForm({ description: '', amount: '', paymentMode: 'Cash' });
                     } catch (err) { console.error(err); }
                   }}
                   className="w-full bg-emerald-600 text-white py-4 font-black uppercase text-xs shadow-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
                 >
-                  <CreditCard size={14} /> Paid Now (Cash)
+                  <CreditCard size={14} /> Paid Now ({fbForm.paymentMode || 'Cash'})
                 </button>
               </div>
             </div>

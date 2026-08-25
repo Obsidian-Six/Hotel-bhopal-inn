@@ -110,7 +110,7 @@ router.post('/', async (req, res) => {
 // POST: Walk-in / OTA Registration (Creates + Optional immediate check-in)
 router.post('/walk-in', async (req, res) => {
     try {
-        const { guestDetails, roomCategory, roomUnit, checkInDate, checkOutDate, financials, immediateCheckIn, source, otaPlatform, roomPlan } = req.body;
+        const { guestDetails, roomCategory, roomUnit, checkInDate, checkOutDate, financials, immediateCheckIn, source, otaPlatform, roomPlan, paymentMode } = req.body;
         
         const booking = new Booking({
             guestDetails,
@@ -124,6 +124,19 @@ router.post('/walk-in', async (req, res) => {
             roomPlan: roomPlan || 'EP',
             status: immediateCheckIn ? 'Checked-In' : 'Confirmed'
         });
+
+        if (paymentMode) {
+            booking.financials.paymentMode = paymentMode;
+        }
+
+        if (financials && financials.amountPaid > 0) {
+            booking.financials.paymentHistory.push({
+                amount: Number(financials.amountPaid),
+                mode: paymentMode || 'Cash',
+                staff: 'FrontDesk',
+                timestamp: new Date()
+            });
+        }
 
         if (immediateCheckIn) {
             booking.actualCheckInTime = new Date();
