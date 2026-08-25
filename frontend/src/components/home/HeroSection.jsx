@@ -83,6 +83,8 @@ const HeroSection = () => {
                 <img
                   src={images[current].url.startsWith('http') ? images[current].url : `${config.API_URL}${images[current].url}`}
                   loading="eager"
+                  fetchPriority="high"
+                  decoding="async"
                   className="w-full h-full object-cover"
                   alt={`Hero ${current + 1}`}
                 />

@@ -81,6 +81,8 @@ const RoomCategories = () => {
                   <img 
                     src={getFullUrl(room.images && room.images.length > 0 ? room.images[0] : null)} 
                     alt={room.title} 
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                 </Link>

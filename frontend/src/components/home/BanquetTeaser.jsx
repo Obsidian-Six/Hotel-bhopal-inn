@@ -27,7 +27,9 @@ const BanquetTeaser = () => {
               <img 
                 src="banquet_main.jpg" 
                 alt="Banquet Hall" 
-                className="w-full h-[300px] md:h-[500px] object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-700 shadow-2xl"
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-700 shadow-2xl"
               />
               <div className="absolute bottom-6 left-6 md:bottom-10 md:left-10 bg-white p-4 md:p-8 shadow-2xl">
                 <span className="text-xl md:text-2xl font-serif font-bold text-[#000000] block">upto 50</span>

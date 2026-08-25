@@ -127,7 +127,7 @@ const FoodMenu = () => {
                                         className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 p-3 flex flex-col items-center group border border-slate-100"
                                     >
                                         <div className="w-full aspect-square rounded-xl overflow-hidden mb-4">
-                                            <img src={`${config.API_URL}${cat.image}`} alt={cat.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                            <img src={`${config.API_URL}${cat.image}`} alt={cat.name} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                         </div>
                                         <span className="text-sm font-bold text-slate-700 group-hover:text-[#BFA37E] transition-colors pb-2">{cat.name}</span>
                                     </button>
@@ -177,7 +177,7 @@ const FoodMenu = () => {
                                                     className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col group"
                                                 >
                                                     <div className="aspect-[16/11] relative overflow-hidden">
-                                                        <img src={`${config.API_URL}${item.picture}`} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                                        <img src={`${config.API_URL}${item.picture}`} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                                         <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm p-2 rounded-xl shadow-md">
                                                             <div className={`w-4 h-4 border-[1.5px] p-[2px] flex items-center justify-center ${item.isVeg ? 'border-green-500' : 'border-red-500'}`}>
                                                                 <div className={`w-full h-full rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></div>

@@ -35,6 +35,8 @@ const RoomCard = ({ room, onZoom }) => {
         <Link to={`/rooms/${room.category}`}>
           <img 
             src={getFullUrl(room.images[0])} 
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
             alt={room.title} 
           />
