@@ -26,12 +26,15 @@ router.get('/', async (req, res) => {
     }
 });
 
+const { optimizeImage } = require('../utils/imageOptimizer');
+
 router.post('/', upload.array('images', 10), async (req, res) => {
     try {
         const { title, category } = req.body;
         const uploadedImages = [];
 
         for (const file of req.files) {
+            await optimizeImage(file.path);
             const newImage = new EventGallery({
                 title: title || category,
                 category,

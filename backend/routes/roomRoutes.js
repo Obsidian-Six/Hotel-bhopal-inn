@@ -74,6 +74,8 @@ router.get('/:category', async (req, res) => {
     }
 });
 
+const { optimizeImage } = require('../utils/imageOptimizer');
+
 // Create/Update Room (Admin)
 router.post('/', upload.array('images', 10), async (req, res) => {
     try {
@@ -82,6 +84,12 @@ router.post('/', upload.array('images', 10), async (req, res) => {
         console.log('--- Room Save Request ---');
         console.log('Category:', category);
         console.log('Files received:', req.files ? req.files.length : 0);
+
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                await optimizeImage(file.path);
+            }
+        }
 
         // Parse JSON strings from form-data with fallback
         let parsedAmenities = [];

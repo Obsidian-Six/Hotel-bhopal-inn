@@ -28,7 +28,10 @@ router.get('/categories', async (req, res) => {
     }
 });
 
+const { optimizeImage } = require('../utils/imageOptimizer');
+
 router.post('/categories', upload.single('image'), async (req, res) => {
+    if (req.file) await optimizeImage(req.file.path);
     const category = new Category({
         name: req.body.name,
         image: `/uploads/${req.file.filename}`
@@ -66,6 +69,7 @@ router.get('/items', async (req, res) => {
 });
 
 router.post('/items', upload.single('picture'), async (req, res) => {
+    if (req.file) await optimizeImage(req.file.path);
     const item = new MenuItem({
         ...req.body,
         picture: `/uploads/${req.file.filename}`
@@ -82,6 +86,7 @@ router.put('/items/:id', upload.single('picture'), async (req, res) => {
     try {
         const update = { ...req.body };
         if (req.file) {
+            await optimizeImage(req.file.path);
             update.picture = `/uploads/${req.file.filename}`;
         }
         const updated = await MenuItem.findByIdAndUpdate(req.params.id, update, { new: true });

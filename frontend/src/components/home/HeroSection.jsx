@@ -75,7 +75,7 @@ const HeroSection = () => {
                   playsInline
                   loop={images.length === 1}
                   onEnded={handleNext}
-                  preload="auto"
+                  preload="metadata"
                   className="w-full h-full object-cover"
                 />
 

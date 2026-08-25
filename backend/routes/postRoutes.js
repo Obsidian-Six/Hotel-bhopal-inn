@@ -25,8 +25,11 @@ router.get('/', async (req, res) => {
     }
 });
 
+const { optimizeImage } = require('../utils/imageOptimizer');
+
 router.post('/', upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'Please upload an image' });
+    await optimizeImage(req.file.path);
     const post = new Post({
         image: `/uploads/${req.file.filename}`,
         caption: req.body.caption

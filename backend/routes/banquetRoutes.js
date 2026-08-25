@@ -47,12 +47,15 @@ router.put('/', async (req, res) => {
     }
 });
 
+const { optimizeImage } = require('../utils/imageOptimizer');
+
 // @route   POST /api/banquet/hero
 // @desc    Upload hero image
 router.post('/hero', upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'Please upload an image' });
 
     try {
+        await optimizeImage(req.file.path);
         let banquet = await Banquet.findOne();
         if (!banquet) banquet = new Banquet();
 
@@ -90,6 +93,7 @@ router.post('/overview', upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'Please upload an image' });
 
     try {
+        await optimizeImage(req.file.path);
         let banquet = await Banquet.findOne();
         if (!banquet) banquet = new Banquet();
 

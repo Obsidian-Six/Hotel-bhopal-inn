@@ -38,11 +38,18 @@ router.get('/', async (req, res) => {
     }
 });
 
+const { optimizeImage } = require('../utils/imageOptimizer');
+
 // @route   POST /api/hero-images
 // @desc    Upload a new hero content (image or video)
 router.post('/', protect, admin, upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Please upload a file' });
+    }
+
+    // Auto-optimize image uploads for super fast page loads
+    if (req.file.mimetype && req.file.mimetype.startsWith('image/')) {
+        await optimizeImage(req.file.path);
     }
 
     const url = `/uploads/${req.file.filename}`;

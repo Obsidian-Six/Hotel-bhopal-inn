@@ -39,6 +39,8 @@ router.get('/active', async (req, res) => {
     }
 });
 
+const { optimizeImage } = require('../utils/imageOptimizer');
+
 // @route   POST /api/offers
 // @desc    Add a new offer
 router.post('/', (req, res) => {
@@ -48,6 +50,7 @@ router.post('/', (req, res) => {
         }
         
         try {
+            if (req.file) await optimizeImage(req.file.path);
             const { title, description, validity, terms, isActive } = req.body;
             
             const newOffer = new Offer({
