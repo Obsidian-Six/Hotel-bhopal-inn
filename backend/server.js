@@ -17,7 +17,11 @@ const allowedOrigins = [
     'http://127.0.0.1:5173',
     'http://127.0.0.1:3000',
     'https://hotelbhopalinn.tenontenstays.com',
-    'http://hotelbhopalinn.tenontenstays.com'
+    'http://hotelbhopalinn.tenontenstays.com',
+    'https://hotelbhopalinn.com',
+    'http://hotelbhopalinn.com',
+    'https://www.hotelbhopalinn.com',
+    'http://www.hotelbhopalinn.com'
 ];
 
 if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
@@ -110,9 +114,27 @@ app.use('/api/reels', reelRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/posts', postRoutes);
 
-app.get('/', (req, res) => {
-    res.send('Hotel Site API is running...');
-});
+// Serve frontend static build if available
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+const localDistPath = path.join(__dirname, 'dist');
+
+if (fs.existsSync(frontendDistPath)) {
+    app.use(express.static(frontendDistPath));
+    app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
+        res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+} else if (fs.existsSync(localDistPath)) {
+    app.use(express.static(localDistPath));
+    app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
+        res.sendFile(path.join(localDistPath, 'index.html'));
+    });
+} else {
+    app.get('/', (req, res) => {
+        res.send('Hotel Site API is running...');
+    });
+}
 
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
