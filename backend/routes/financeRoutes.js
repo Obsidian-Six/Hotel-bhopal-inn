@@ -3,8 +3,10 @@ const router = express.Router();
 const Transaction = require('../models/Transaction');
 const CashHandover = require('../models/CashHandover');
 const Booking = require('../models/Booking');
+const Room = require('../models/Room');
 const RoomUnit = require('../models/RoomUnit');
 const ElectricityReading = require('../models/ElectricityReading');
+const Amendment = require('../models/Amendment');
 const { encrypt, decrypt } = require('../utils/crypto');
 
 // Add a transaction
@@ -163,30 +165,43 @@ router.get('/daily-report', async (req, res) => {
                 UPI: 0,
                 Card: 0,
                 'Bank Transfer': 0,
-                Online: 0
-            }
+                Online: 0,
+                OTA: 0 // Approved OTA
+            },
+            otaTotal: 0,
+            otaApproved: 0,
+            otaPending: 0
         };
 
         transactions.forEach(tx => {
             const amount = Number(decrypt(tx.amount)) || 0;
             if (tx.type === 'Income') {
-                summary.totalIncome += amount;
-                if (summary.incomeByMode[tx.paymentMode] !== undefined) {
-                    summary.incomeByMode[tx.paymentMode] += amount;
+                if (tx.paymentMode === 'OTA') {
+                    summary.otaTotal += amount;
+                    if (tx.approved) {
+                        summary.otaApproved += amount;
+                        summary.totalIncome += amount;
+                        summary.incomeByMode['OTA'] += amount;
+                    }
+                } else {
+                    summary.totalIncome += amount;
+                    if (summary.incomeByMode[tx.paymentMode] !== undefined) {
+                        summary.incomeByMode[tx.paymentMode] += amount;
+                    }
                 }
             } else if (tx.type === 'Expense' && tx.approved) {
                 summary.totalExpense += amount;
             }
         });
         
-        // Include3booking online payments only if not already in transactions
+        // Include booking payments (online and OTA) only if not already in transactions
         const bookings = await Booking.find({
             'financials.paymentHistory.timestamp': { $gte: startOfDay, $lte: endOfDay }
         });
         bookings.forEach(b => {
             b.financials.paymentHistory.forEach(p => {
                 if (p.timestamp >= startOfDay && p.timestamp <= endOfDay) {
-                    if (p.mode === 'Online' || p.mode === 'Card' || p.mode === 'UPI' || p.mode === 'Bank Transfer') {
+                    if (p.mode === 'Online' || p.mode === 'Card' || p.mode === 'UPI' || p.mode === 'Bank Transfer' || p.mode === 'OTA') {
                         const isDuplicate = transactions.some(tx => {
                             const txAmount = Number(decrypt(tx.amount)) || 0;
                             const sameAmount = Math.abs(txAmount - Number(p.amount)) < 0.01;
@@ -200,11 +215,16 @@ router.get('/daily-report', async (req, res) => {
                         });
 
                         if (!isDuplicate) {
-                            summary.totalIncome += p.amount;
-                            if (summary.incomeByMode[p.mode] !== undefined) {
-                                summary.incomeByMode[p.mode] += p.amount;
+                            if (p.mode === 'OTA') {
+                                summary.otaTotal += p.amount;
+                                // OTA from booking without approved transaction is unapproved by default
                             } else {
-                                summary.incomeByMode['Online'] += p.amount;
+                                summary.totalIncome += p.amount;
+                                if (summary.incomeByMode[p.mode] !== undefined) {
+                                    summary.incomeByMode[p.mode] += p.amount;
+                                } else {
+                                    summary.incomeByMode['Online'] += p.amount;
+                                }
                             }
                         }
                     }
@@ -212,6 +232,7 @@ router.get('/daily-report', async (req, res) => {
             });
         });
 
+        summary.otaPending = Math.max(0, summary.otaTotal - summary.otaApproved);
         summary.netCashHandover = summary.incomeByMode['Cash'] - summary.totalExpense;
 
         res.json(summary);
@@ -327,15 +348,29 @@ router.get('/analytics-date', async (req, res) => {
 
             let cash = 0;
             let online = 0;
+            let otaTotal = 0;
+            let otaApproved = 0;
+            let otaApprovedCount = 0;
+            let otaPendingCount = 0;
             let expenses = 0;
 
             txs.forEach(tx => {
                 const amount = Number(decrypt(tx.amount)) || 0;
-                if (tx.type === 'Income' && tx.category !== 'Room Rent') {
-                    if (tx.paymentMode === 'Cash') {
-                        cash += amount;
-                    } else {
-                        online += amount;
+                if (tx.type === 'Income') {
+                    if (tx.paymentMode === 'OTA') {
+                        otaTotal += amount;
+                        if (tx.approved) {
+                            otaApproved += amount;
+                            otaApprovedCount++;
+                        } else {
+                            otaPendingCount++;
+                        }
+                    } else if (tx.category !== 'Room Rent') {
+                        if (tx.paymentMode === 'Cash') {
+                            cash += amount;
+                        } else {
+                            online += amount;
+                        }
                     }
                 } else if (tx.type === 'Expense' && tx.approved) {
                     if (tx.paymentMode === 'Cash' || !tx.paymentMode) {
@@ -361,7 +396,16 @@ router.get('/analytics-date', async (req, res) => {
                 historyOnDate.forEach(p => {
                     const amt = Number(p.amount) || 0;
                     historySumOnDate += amt;
-                    if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe'].includes(p.mode)) {
+                    if (p.mode === 'OTA') {
+                        const hasTx = txs.some(t => {
+                            const tAmt = Number(decrypt(t.amount)) || 0;
+                            return t.paymentMode === 'OTA' && Math.abs(tAmt - amt) < 0.01;
+                        });
+                        if (!hasTx) {
+                            otaTotal += amt;
+                            otaPendingCount++;
+                        }
+                    } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(p.mode)) {
                         online += amt;
                     } else {
                         cash += amt;
@@ -376,7 +420,16 @@ router.get('/analytics-date', async (req, res) => {
 
                     if (remainingUnrecorded > 0) {
                         const pMode = fin.paymentMode || 'Cash';
-                        if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe'].includes(pMode)) {
+                        if (pMode === 'OTA' || ['Booking.com', 'MakeMyTrip', 'Goibibo', 'Agoda', 'Expedia', 'Airbnb', 'OTA'].includes(b.source)) {
+                            const hasTx = txs.some(t => {
+                                const tAmt = Number(decrypt(t.amount)) || 0;
+                                return t.paymentMode === 'OTA' && Math.abs(tAmt - remainingUnrecorded) < 0.01;
+                            });
+                            if (!hasTx) {
+                                otaTotal += remainingUnrecorded;
+                                otaPendingCount++;
+                            }
+                        } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(pMode)) {
                             online += remainingUnrecorded;
                         } else {
                             cash += remainingUnrecorded;
@@ -385,13 +438,29 @@ router.get('/analytics-date', async (req, res) => {
                 }
             });
 
-            return { cash, online, total: cash + online, expenses };
+            // CRITICAL: Only approved OTA is added to total
+            const otaPending = Math.max(0, otaTotal - otaApproved);
+            return { 
+                cash, 
+                online, 
+                otaTotal, 
+                otaApproved, 
+                otaPending,
+                otaApprovedCount,
+                otaPendingCount,
+                ota: otaApproved, 
+                total: cash + online + otaApproved, 
+                expenses 
+            };
         };
 
         // 2. Today's Financials
         const todayFin = await calculateFinancialsForRange(startOfDay, endOfDay);
         const cashSale = todayFin.cash;
         const onlineSale = todayFin.online;
+        const otaSale = todayFin.otaApproved;
+        const otaTotal = todayFin.otaTotal;
+        const otaApproved = todayFin.otaApproved;
         const totalSale = todayFin.total;
         const cashExpenses = todayFin.expenses;
 
@@ -496,6 +565,12 @@ router.get('/analytics-date', async (req, res) => {
             readingDifference: {
                 cashSale,
                 onlineSale,
+                otaSale: otaApproved,
+                otaTotal,
+                otaApproved,
+                otaPending: Math.max(0, otaTotal - otaApproved),
+                otaApprovedCount: todayFin.otaApprovedCount || 0,
+                otaPendingCount: todayFin.otaPendingCount || 0,
                 totalSale,
                 cashExpenses,
                 openingBalanceCounter,
@@ -509,20 +584,44 @@ router.get('/analytics-date', async (req, res) => {
     }
 });
 
-// Get pending dues from bookings
+// Get pending dues from bookings with amendment status
 router.get('/pending-dues', async (req, res) => {
     try {
         const bookings = await Booking.find({
             status: { $in: ['Confirmed', 'Checked-In', 'Checked-Out'] },
             'financials.balance': { $gt: 0 }
-        }).populate('roomCategory');
+        }).populate('roomCategory').populate('roomUnit').sort({ 'financials.balance': -1 });
         
-        const dues = bookings.map(b => ({
-            _id: b._id,
-            guestName: `${b.guestDetails.firstName} ${b.guestDetails.lastName}`,
-            room: b.roomCategory ? b.roomCategory.title : 'Unassigned',
-            balance: b.financials.balance
-        }));
+        const bookingIds = bookings.map(b => b._id);
+        const amendments = await Amendment.find({
+            booking: { $in: bookingIds }
+        }).sort({ updatedAt: -1 });
+
+        const dues = bookings.map(b => {
+            const amend = amendments.find(a => a.booking.toString() === b._id.toString());
+            const roomNumber = b.roomUnit ? b.roomUnit.roomNumber : '';
+            const roomCat = b.roomCategory ? (b.roomCategory.title || b.roomCategory.category) : 'Unassigned';
+
+            return {
+                _id: b._id,
+                guestName: `${b.guestDetails.firstName} ${b.guestDetails.lastName}`,
+                phone: b.guestDetails?.phone || '',
+                room: roomNumber ? `Room ${roomNumber} (${roomCat})` : roomCat,
+                roomNumber,
+                roomCategory: roomCat,
+                checkInDate: b.checkInDate,
+                checkOutDate: b.checkOutDate,
+                totalAmount: b.financials.totalAmount || 0,
+                amountPaid: b.financials.amountPaid || 0,
+                balance: b.financials.balance || 0,
+                status: b.status,
+                hasActiveAmendment: !!(amend && amend.status !== 'Closed'),
+                amendmentId: amend ? amend._id : null,
+                amendmentStatus: amend ? amend.status : null,
+                latestMessage: amend && amend.messages?.length > 0 ? amend.messages[amend.messages.length - 1] : null,
+                superAdminNote: amend ? amend.superAdminNote : null
+            };
+        });
         
         res.json(dues);
     } catch (err) {
@@ -626,6 +725,337 @@ router.get('/meter-readings', async (req, res) => {
         const readings = await ElectricityReading.find().sort({ dateStr: -1 }).limit(50);
         res.json(readings);
     } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// GET: Fetch all OTA transactions (with optional ?date=YYYY-MM-DD and ?status=all|pending|approved)
+router.get('/ota-transactions', async (req, res) => {
+    try {
+        const { date, status } = req.query;
+        let query = {
+            paymentMode: 'OTA',
+            isVoided: false
+        };
+
+        if (status === 'pending') {
+            query.approved = false;
+        } else if (status === 'approved') {
+            query.approved = true;
+        }
+
+        if (date) {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
+            query.date = { $gte: startOfDay, $lte: endOfDay };
+        }
+
+        const transactions = await Transaction.find(query).sort({ date: -1, createdAt: -1 });
+
+        let otaTotal = 0;
+        let otaApproved = 0;
+
+        const decryptedTxs = transactions.map(tx => {
+            const obj = tx.toObject();
+            const amt = Number(decrypt(obj.amount)) || 0;
+            obj.amount = amt;
+            obj.description = decrypt(obj.description);
+            otaTotal += amt;
+            if (obj.approved) {
+                otaApproved += amt;
+            }
+            return obj;
+        });
+
+        res.json({
+            transactions: decryptedTxs,
+            otaTotal,
+            otaApproved,
+            otaPending: Math.max(0, otaTotal - otaApproved),
+            pendingCount: decryptedTxs.filter(t => !t.approved).length,
+            approvedCount: decryptedTxs.filter(t => t.approved).length
+        });
+    } catch (err) {
+        console.error('Error fetching OTA transactions:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// POST: Approve an OTA transaction
+router.post('/ota-transactions/:id/approve', async (req, res) => {
+    try {
+        const tx = await Transaction.findById(req.params.id);
+        if (!tx) {
+            return res.status(404).json({ message: 'Transaction not found.' });
+        }
+
+        if (tx.paymentMode !== 'OTA') {
+            return res.status(400).json({ message: 'Only OTA transactions require this approval flow.' });
+        }
+
+        tx.approved = true;
+        tx.approvedBy = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email : 'Admin';
+        await tx.save();
+
+        const responseTx = tx.toObject();
+        responseTx.amount = Number(decrypt(responseTx.amount)) || 0;
+        responseTx.description = decrypt(responseTx.description);
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('finance_updated', responseTx);
+        }
+
+        res.json({
+            message: `OTA transaction for ₹${responseTx.amount} approved and added to Total Sales.`,
+            transaction: responseTx
+        });
+    } catch (err) {
+        console.error('Error approving OTA transaction:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// POST: Batch approve all pending OTA transactions
+router.post('/ota-transactions/approve-all', async (req, res) => {
+    try {
+        const { date } = req.body;
+        let query = {
+            paymentMode: 'OTA',
+            approved: false,
+            isVoided: false
+        };
+
+        if (date) {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
+            query.date = { $gte: startOfDay, $lte: endOfDay };
+        }
+
+        const approver = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email : 'Admin';
+
+        const updateResult = await Transaction.updateMany(query, {
+            $set: { approved: true, approvedBy: approver }
+        });
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('finance_updated', { type: 'batch_ota_approved' });
+        }
+
+        res.json({
+            message: `${updateResult.modifiedCount} OTA transaction(s) approved and added to Total Sales.`,
+            count: updateResult.modifiedCount
+        });
+    } catch (err) {
+        console.error('Error batch approving OTA transactions:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// GET: Dedicated Front Desk Analytics Monthly Report
+router.get('/monthly-report', async (req, res) => {
+    try {
+        const { month, year: qYear } = req.query;
+        let targetYear, targetMonth; // 1-indexed
+
+        if (month && month.includes('-')) {
+            const [y, m] = month.split('-').map(Number);
+            targetYear = y;
+            targetMonth = m;
+        } else if (qYear && month) {
+            targetYear = Number(qYear);
+            targetMonth = Number(month);
+        } else {
+            const now = new Date();
+            targetYear = now.getFullYear();
+            targetMonth = now.getMonth() + 1;
+        }
+
+        const startDate = new Date(targetYear, targetMonth - 1, 1, 0, 0, 0, 0);
+        const lastDay = new Date(targetYear, targetMonth, 0).getDate();
+        const endDate = new Date(targetYear, targetMonth - 1, lastDay, 23, 59, 59, 999);
+
+        // Fetch all transactions for this month
+        const transactions = await Transaction.find({
+            date: { $gte: startDate, $lte: endDate },
+            isVoided: false
+        });
+
+        // Fetch all bookings with checkIn or paymentHistory in this month
+        const bookings = await Booking.find({
+            status: { $ne: 'Cancelled' },
+            $or: [
+                { checkInDate: { $gte: startDate, $lte: endDate } },
+                { 'financials.paymentHistory.timestamp': { $gte: startDate, $lte: endDate } },
+                { createdAt: { $gte: startDate, $lte: endDate } }
+            ]
+        }).lean();
+
+        // Total hotel room capacity (16 rooms)
+        const totalRooms = 16;
+        const totalPossibleRoomNights = totalRooms * lastDay;
+
+        // Daily breakdown array
+        const dailyBreakdown = [];
+        let monthCash = 0;
+        let monthOnline = 0;
+        let monthOtaTotal = 0;
+        let monthOtaApproved = 0;
+        let monthExpenses = 0;
+        let monthCheckIns = 0;
+        let monthOccupiedNights = 0;
+
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        for (let d = 1; d <= lastDay; d++) {
+            const dayStart = new Date(targetYear, targetMonth - 1, d, 0, 0, 0, 0);
+            const dayEnd = new Date(targetYear, targetMonth - 1, d, 23, 59, 59, 999);
+            const dateStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dayOfWeek = dayNames[dayStart.getDay()];
+
+            // 1. Transactions on this day
+            let dayCash = 0;
+            let dayOnline = 0;
+            let dayOtaTotal = 0;
+            let dayOtaApproved = 0;
+            let dayExpenses = 0;
+
+            const dayTxs = transactions.filter(t => t.date >= dayStart && t.date <= dayEnd);
+            dayTxs.forEach(tx => {
+                const amt = Number(decrypt(tx.amount)) || 0;
+                if (tx.type === 'Income') {
+                    if (tx.paymentMode === 'OTA') {
+                        dayOtaTotal += amt;
+                        if (tx.approved) dayOtaApproved += amt;
+                    } else if (tx.category !== 'Room Rent') {
+                        if (tx.paymentMode === 'Cash') dayCash += amt;
+                        else dayOnline += amt;
+                    }
+                } else if (tx.type === 'Expense' && tx.approved) {
+                    if (tx.paymentMode === 'Cash' || !tx.paymentMode) {
+                        dayExpenses += amt;
+                    }
+                }
+            });
+
+            // 2. Bookings & Payments on this day
+            const dayCheckIns = bookings.filter(b => {
+                const cIn = new Date(b.checkInDate);
+                return cIn >= dayStart && cIn <= dayEnd;
+            }).length;
+
+            bookings.forEach(b => {
+                // Payment history
+                const pHistory = (b.financials?.paymentHistory || []).filter(
+                    p => p.timestamp >= dayStart && p.timestamp <= dayEnd
+                );
+                let pSum = 0;
+                pHistory.forEach(p => {
+                    const amt = Number(p.amount) || 0;
+                    pSum += amt;
+                    if (p.mode === 'OTA') {
+                        const hasTx = dayTxs.some(t => {
+                            const tAmt = Number(decrypt(t.amount)) || 0;
+                            return t.paymentMode === 'OTA' && Math.abs(tAmt - amt) < 0.01;
+                        });
+                        if (!hasTx) dayOtaTotal += amt;
+                    } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(p.mode)) {
+                        dayOnline += amt;
+                    } else {
+                        dayCash += amt;
+                    }
+                });
+
+                // Walk-in / new booking on this day
+                if (b.createdAt >= dayStart && b.createdAt <= dayEnd) {
+                    const fin = b.financials || {};
+                    const bTotal = Number(fin.totalAmount || fin.paidAmount || fin.advancePayment) || 0;
+                    const unrecorded = Math.max(0, bTotal - pSum);
+                    if (unrecorded > 0) {
+                        const pMode = fin.paymentMode || 'Cash';
+                        if (pMode === 'OTA' || ['Booking.com', 'MakeMyTrip', 'Goibibo', 'Agoda', 'Expedia', 'Airbnb', 'OTA'].includes(b.source)) {
+                            const hasTx = dayTxs.some(t => {
+                                const tAmt = Number(decrypt(t.amount)) || 0;
+                                return t.paymentMode === 'OTA' && Math.abs(tAmt - unrecorded) < 0.01;
+                            });
+                            if (!hasTx) dayOtaTotal += unrecorded;
+                        } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(pMode)) {
+                            dayOnline += unrecorded;
+                        } else {
+                            dayCash += unrecorded;
+                        }
+                    }
+                }
+
+                // In-house occupancy count for this day
+                const cIn = new Date(b.checkInDate);
+                const cOut = new Date(b.checkOutDate);
+                if (cIn <= dayEnd && cOut > dayStart) {
+                    monthOccupiedNights += 1;
+                }
+            });
+
+            const dayTotalSale = dayCash + dayOnline + dayOtaApproved;
+            const dayNet = dayTotalSale - dayExpenses;
+
+            monthCash += dayCash;
+            monthOnline += dayOnline;
+            monthOtaTotal += dayOtaTotal;
+            monthOtaApproved += dayOtaApproved;
+            monthExpenses += dayExpenses;
+            monthCheckIns += dayCheckIns;
+
+            dailyBreakdown.push({
+                dateStr,
+                dayNumber: d,
+                dayOfWeek,
+                checkIns: dayCheckIns,
+                cashSale: dayCash,
+                onlineSale: dayOnline,
+                otaTotal: dayOtaTotal,
+                otaApproved: dayOtaApproved,
+                totalSale: dayTotalSale,
+                expenses: dayExpenses,
+                netCashflow: dayNet
+            });
+        }
+
+        const monthTotalSale = monthCash + monthOnline + monthOtaApproved;
+        const monthNetProfit = monthTotalSale - monthExpenses;
+        const occupancyRate = totalPossibleRoomNights > 0 
+            ? Number(((monthOccupiedNights / totalPossibleRoomNights) * 100).toFixed(1)) 
+            : 0;
+
+        const monthName = new Date(targetYear, targetMonth - 1, 1).toLocaleDateString('en-US', { month: 'long' });
+
+        res.json({
+            year: targetYear,
+            month: targetMonth,
+            monthName,
+            formattedHeading: `${monthName} ${targetYear}`,
+            summary: {
+                totalSale: monthTotalSale,
+                cashSale: monthCash,
+                onlineSale: monthOnline,
+                otaTotal: monthOtaTotal,
+                otaApproved: monthOtaApproved,
+                otaPending: Math.max(0, monthOtaTotal - monthOtaApproved),
+                totalExpenses: monthExpenses,
+                netProfit: monthNetProfit,
+                totalCheckIns: monthCheckIns,
+                totalRoomNights: monthOccupiedNights,
+                totalPossibleRoomNights,
+                occupancyRate
+            },
+            dailyBreakdown
+        });
+    } catch (err) {
+        console.error('Error generating monthly report:', err);
         res.status(500).json({ message: err.message });
     }
 });

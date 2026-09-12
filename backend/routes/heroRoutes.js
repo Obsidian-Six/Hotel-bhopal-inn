@@ -22,17 +22,24 @@ const upload = multer({
         if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
             cb(null, true);
         } else {
-            cb(new Error('Only images and videos are allowed'), false);
+            cb(new Error('Only images and videos are allowed for the hero slider'), false);
         }
     }
 });
 
 // @route   GET /api/hero-images
-// @desc    Get all hero content (images/videos)
+// @desc    Get all hero content (verified images)
 router.get('/', async (req, res) => {
     try {
         const content = await HeroContent.find().sort({ createdAt: -1 });
-        res.json(content);
+        const validContent = content.filter(item => {
+            if (item.url && item.url.startsWith('/uploads/')) {
+                const filePath = path.join(__dirname, '..', item.url);
+                return fs.existsSync(filePath);
+            }
+            return true;
+        });
+        res.json(validContent);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

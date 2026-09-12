@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/lib/AuthContext'
 import ProtectedRoute from '@/lib/ProtectedRoute'
 import { GoogleOAuthProvider } from '@react-oauth/google'
@@ -18,6 +18,7 @@ const Banquet = lazy(() => import('@/pages/Banquet'))
 const Gallery = lazy(() => import('@/pages/Gallery'))
 const About = lazy(() => import('@/pages/About'))
 const AdminLogin = lazy(() => import('@/pages/AdminLogin'))
+const SuperAdminLogin = lazy(() => import('@/pages/SuperAdminLogin'))
 const FoodMenu = lazy(() => import('@/pages/FoodMenu'))
 const PrivacyPolicy = lazy(() => import('@/pages/PrivacyPolicy'))
 const TermsAndConditions = lazy(() => import('@/pages/TermsAndConditions'))
@@ -79,11 +80,22 @@ function App() {
               path="/admin" 
               element={
                 <ProtectedRoute adminOnly={true}>
-                  <AdminDashboard />
+                  <AdminDashboard portalMode="admin" />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/super-admin" 
+              element={
+                <ProtectedRoute superAdminOnly={true}>
+                  <AdminDashboard portalMode="superadmin" />
                 </ProtectedRoute>
               } 
             />
             <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/super-admin-login" element={<SuperAdminLogin />} />
+            <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
+            <Route path="/superadmin-login" element={<Navigate to="/super-admin-login" replace />} />
             
             <Route path="/faq" element={<FAQ />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />

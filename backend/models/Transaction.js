@@ -23,7 +23,7 @@ const TransactionSchema = new mongoose.Schema({
     },
     paymentMode: {
         type: String,
-        enum: ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Online'],
+        enum: ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Online', 'OTA'],
         required: true
     },
     recordedBy: {
@@ -45,6 +45,16 @@ const TransactionSchema = new mongoose.Schema({
     voidReason: {
         type: String,
         default: ''
+    },
+    amendment: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Amendment',
+        default: null
+    },
+    booking: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Booking',
+        default: null
     }
 }, { timestamps: true });
 

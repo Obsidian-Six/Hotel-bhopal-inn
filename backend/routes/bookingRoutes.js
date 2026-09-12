@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const Booking = require('../models/Booking');
+const Amendment = require('../models/Amendment');
 const Room = require('../models/Room');
 const RoomUnit = require('../models/RoomUnit');
 const DailyInventory = require('../models/DailyInventory');
-
-const { protect } = require('../middleware/auth');
+const User = require('../models/User');
+const jwt = require('jsonwebtoken');
+const { protect, admin, superAdmin } = require('../middleware/auth');
+const Transaction = require('../models/Transaction');
+const { encrypt, decrypt } = require('../utils/crypto');
 const axios = require('axios');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -107,42 +111,115 @@ router.post('/', async (req, res) => {
     }
 });
 
-// POST: Walk-in / OTA Registration (Creates + Optional immediate check-in)
+// POST: Walk-in / OTA Registration (Creates + Optional immediate check-in / historical entries)
 router.post('/walk-in', async (req, res) => {
     try {
-        const { guestDetails, roomCategory, roomUnit, checkInDate, checkOutDate, financials, immediateCheckIn, source, otaPlatform, roomPlan, paymentMode } = req.body;
+        const { 
+            guestDetails, 
+            roomCategory, 
+            roomUnit, 
+            checkInDate, 
+            checkOutDate, 
+            financials, 
+            immediateCheckIn, 
+            source, 
+            otaPlatform, 
+            roomPlan, 
+            paymentMode,
+            status: customStatus,
+            paymentDate,
+            bookingDate
+        } = req.body;
         
+        const todayStr = new Date().toISOString().split('T')[0];
+        const isPastEntry = (checkInDate && checkInDate < todayStr) || customStatus === 'Checked-Out' || req.body.isHistorical;
+
+        if (isPastEntry) {
+            let token = req.headers.authorization && req.headers.authorization.startsWith('Bearer') 
+                ? req.headers.authorization.split(' ')[1] 
+                : null;
+            if (!token) {
+                return res.status(403).json({ message: 'Historical and previous-date booking entries are restricted to Super Admin only.' });
+            }
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                const user = await User.findById(decoded.id);
+                if (!user || user.role !== 'superadmin') {
+                    return res.status(403).json({ message: 'Access denied. Previous-date entries require Super Admin privileges.' });
+                }
+            } catch (authErr) {
+                return res.status(403).json({ message: 'Invalid token for Super Admin historical entry.' });
+            }
+        }
+
+        let initialStatus = customStatus;
+        if (!initialStatus) {
+            initialStatus = immediateCheckIn ? 'Checked-In' : 'Confirmed';
+        }
+
+        const totalAmt = financials ? Number(financials.totalAmount || financials.roomTariff || 0) : 0;
+        const paidAmt = financials ? Number(financials.amountPaid || 0) : 0;
+        const balAmt = Math.max(0, totalAmt - paidAmt);
+
         const booking = new Booking({
             guestDetails,
             roomCategory,
             roomUnit: roomUnit || null,
             checkInDate,
             checkOutDate,
-            financials,
+            financials: {
+                ...financials,
+                totalAmount: totalAmt,
+                amountPaid: paidAmt,
+                balance: balAmt,
+                paymentMode: paymentMode || (financials && financials.paymentMode) || 'Pending'
+            },
             source: source || 'Walk-in',
             otaPlatform: otaPlatform || '',
             roomPlan: roomPlan || 'EP',
-            status: immediateCheckIn ? 'Checked-In' : 'Confirmed'
+            status: initialStatus
         });
 
-        if (paymentMode) {
-            booking.financials.paymentMode = paymentMode;
+        if (bookingDate) {
+            booking.createdAt = new Date(bookingDate);
         }
 
-        if (financials && financials.amountPaid > 0) {
+        if (paidAmt > 0) {
             booking.financials.paymentHistory.push({
-                amount: Number(financials.amountPaid),
+                amount: paidAmt,
                 mode: paymentMode || 'Cash',
-                staff: 'FrontDesk',
-                timestamp: new Date()
+                staff: req.user ? `${req.user.firstName} ${req.user.lastName}` : 'FrontDesk',
+                note: 'Advance payment at registration',
+                timestamp: paymentDate ? new Date(paymentDate) : new Date()
             });
+
+            if (paymentMode === 'OTA') {
+                const encryptedAmount = encrypt(paidAmt.toString());
+                const desc = `OTA Advance (${otaPlatform || source || 'OTA'}) - ${guestDetails.firstName} ${guestDetails.lastName} - Ref #${booking._id.toString().slice(-8)}`;
+                const encryptedDesc = encrypt(desc);
+
+                const otaTx = new Transaction({
+                    type: 'Income',
+                    category: 'Room Rent',
+                    amount: encryptedAmount,
+                    description: encryptedDesc,
+                    paymentMode: 'OTA',
+                    recordedBy: req.user ? `${req.user.firstName} ${req.user.lastName}` : 'FrontDesk',
+                    approved: false,
+                    date: paymentDate ? new Date(paymentDate) : new Date()
+                });
+                await otaTx.save();
+            }
         }
 
-        if (immediateCheckIn) {
-            booking.actualCheckInTime = new Date();
+        if (initialStatus === 'Checked-In') {
+            booking.actualCheckInTime = checkInDate ? new Date(checkInDate) : new Date();
             if (roomUnit) {
                 await RoomUnit.findByIdAndUpdate(roomUnit, { status: 'Occupied' });
             }
+        } else if (initialStatus === 'Checked-Out') {
+            booking.actualCheckInTime = checkInDate ? new Date(checkInDate) : new Date();
+            booking.actualCheckOutTime = checkOutDate ? new Date(checkOutDate) : new Date();
         }
 
         await booking.save();
@@ -303,7 +380,32 @@ router.post('/:id/collect-payment', async (req, res) => {
         }
 
         await booking.save();
-        req.app.get('socketio').emit('booking_updated', { type: 'payment', bookingId: booking._id });
+
+        // USER REQUIREMENT: "once pending amount is collected add them into sales amount"
+        const numAmount = Number(amount);
+        const encryptedAmount = encrypt(numAmount.toString());
+        const desc = `Pending Balance Settlement (${mode}) - ${booking.guestDetails.firstName} ${booking.guestDetails.lastName} - Ref #${booking._id.toString().slice(-8)}`;
+        const encryptedDesc = encrypt(desc);
+
+        const isOtaMode = mode === 'OTA';
+        const newTx = new Transaction({
+            type: 'Income',
+            category: 'Room Rent',
+            amount: encryptedAmount,
+            description: encryptedDesc,
+            paymentMode: mode,
+            recordedBy: staff || 'FrontDesk',
+            approved: !isOtaMode, // OTA requires approval
+            date: new Date()
+        });
+        await newTx.save();
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('booking_updated', { type: 'payment', bookingId: booking._id });
+            io.emit('finance_updated', newTx);
+        }
+
         res.json(booking);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -342,30 +444,6 @@ router.post('/:id/check-out', async (req, res) => {
         const booking = await Booking.findById(req.params.id);
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
-        // Late Checkout Logic (Simulated 11 AM threshold)
-        const now = new Date();
-        const scheduledOut = new Date(booking.checkOutDate);
-        scheduledOut.setHours(11, 0, 0, 0);
-
-        if (now > scheduledOut) {
-            // Auto add late fee if not already added
-            const hoursLate = (now - scheduledOut) / (1000 * 60 * 60);
-            if (hoursLate > 1) {
-                // Check if late fee already exists
-                const hasLateFee = booking.financials.extraCharges.some(c => c.source === 'LateCheckout');
-                if (!hasLateFee) {
-                    const lateFee = (booking.financials.roomTariff || 1000) * 0.5; // 50% charge
-                    booking.financials.extraCharges.push({
-                        description: 'Late Checkout Penalty (50%)',
-                        amount: lateFee,
-                        source: 'LateCheckout',
-                        date: new Date()
-                    });
-                    booking.financials.totalAmount += lateFee;
-                    booking.financials.balance = booking.financials.totalAmount - booking.financials.amountPaid;
-                }
-            }
-        }
 
         // Strict Balance Check
         if (booking.financials.balance > 0 && !req.body.override) {
@@ -386,6 +464,318 @@ router.post('/:id/check-out', async (req, res) => {
 
         req.app.get('socketio').emit('booking_updated', { type: 'check-out', bookingId: booking._id });
         res.json(booking);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// PUT: Edit Existing Booking (Super Admin Only)
+router.put('/:id', protect, superAdmin, async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        const {
+            guestDetails,
+            checkInDate,
+            checkOutDate,
+            roomCategory,
+            roomUnit,
+            roomPlan,
+            status,
+            financials,
+            source,
+            otaPlatform,
+            otaReferenceId
+        } = req.body;
+
+        // Update guest details
+        if (guestDetails) {
+            booking.guestDetails = {
+                ...booking.guestDetails.toObject(),
+                ...guestDetails
+            };
+        }
+
+        if (checkInDate) booking.checkInDate = new Date(checkInDate);
+        if (checkOutDate) booking.checkOutDate = new Date(checkOutDate);
+        if (roomCategory) booking.roomCategory = roomCategory;
+        if (roomPlan) booking.roomPlan = roomPlan;
+        if (source) booking.source = source;
+        if (otaPlatform !== undefined) booking.otaPlatform = otaPlatform;
+        if (otaReferenceId !== undefined) booking.otaReferenceId = otaReferenceId;
+
+        // Handle room unit change
+        const oldUnit = booking.roomUnit ? booking.roomUnit.toString() : null;
+        const newUnit = roomUnit ? roomUnit.toString() : null;
+
+        if (oldUnit && oldUnit !== newUnit) {
+            // Free the old room unit
+            await RoomUnit.findByIdAndUpdate(oldUnit, { status: 'Available' });
+        }
+
+        if (newUnit) {
+            booking.roomUnit = newUnit;
+            if (status === 'Checked-In' || (!status && booking.status === 'Checked-In')) {
+                await RoomUnit.findByIdAndUpdate(newUnit, { status: 'Occupied' });
+            }
+        } else if (roomUnit === null) {
+            booking.roomUnit = null;
+        }
+
+        // Handle status update
+        if (status && status !== booking.status) {
+            booking.status = status;
+            if (status === 'Checked-In') {
+                if (!booking.actualCheckInTime) booking.actualCheckInTime = new Date();
+                if (booking.roomUnit) await RoomUnit.findByIdAndUpdate(booking.roomUnit, { status: 'Occupied' });
+            } else if (status === 'Checked-Out' || status === 'Cancelled') {
+                if (status === 'Checked-Out' && !booking.actualCheckOutTime) booking.actualCheckOutTime = new Date();
+                if (booking.roomUnit) await RoomUnit.findByIdAndUpdate(booking.roomUnit, { status: 'Available' });
+            }
+        }
+
+        // Handle financial updates
+        if (financials) {
+            const curFinancials = booking.financials ? booking.financials.toObject() : {};
+            const totalAmt = financials.totalAmount !== undefined ? Number(financials.totalAmount) : (curFinancials.totalAmount || 0);
+            const paidAmt = financials.amountPaid !== undefined ? Number(financials.amountPaid) : (curFinancials.amountPaid || 0);
+            const balAmt = Math.max(0, totalAmt - paidAmt);
+
+            booking.financials = {
+                ...curFinancials,
+                ...financials,
+                totalAmount: totalAmt,
+                amountPaid: paidAmt,
+                balance: balAmt,
+                paymentHistory: curFinancials.paymentHistory || []
+            };
+        }
+
+        await booking.save();
+
+        const updatedBooking = await Booking.findById(booking._id)
+            .populate('roomCategory')
+            .populate('roomUnit');
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('booking_updated', updatedBooking);
+            io.emit('room_updated', { roomUnit: booking.roomUnit });
+        }
+
+        res.json(updatedBooking);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// DELETE: Delete Booking (Super Admin Only - for duplicates & cleanup)
+router.delete('/:id', protect, superAdmin, async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        // If roomUnit was occupied by this booking, reset it to Available
+        if (booking.roomUnit) {
+            await RoomUnit.findByIdAndUpdate(booking.roomUnit, { status: 'Available', currentBooking: null });
+        }
+
+        // Release daily inventory if booked
+        if (booking.roomCategory && booking.checkInDate && booking.checkOutDate) {
+            try {
+                const checkIn = new Date(booking.checkInDate);
+                const checkOut = new Date(booking.checkOutDate);
+                const cur = new Date(checkIn);
+                while (cur < checkOut) {
+                    const dateStr = cur.toISOString().split('T')[0];
+                    await DailyInventory.updateOne(
+                        { roomCategory: booking.roomCategory, date: new Date(dateStr) },
+                        { $inc: { bookedUnits: -1 } }
+                    );
+                    cur.setDate(cur.getDate() + 1);
+                }
+            } catch (invErr) {
+                console.error('Error reverting daily inventory:', invErr);
+            }
+        }
+
+        // Clean up linked transactions (cash, online, ota, room rent) so they don't linger in sales/audit
+        const bookingRef = `#${booking._id.toString().slice(-8)}`;
+        const linkedTxs = await Transaction.find({
+            $or: [
+                { booking: booking._id },
+                { isVoided: false, category: 'Room Rent', type: 'Income' },
+                { isVoided: false, paymentMode: 'OTA' }
+            ]
+        });
+
+        let totalDeducted = 0;
+        const txIdsToDelete = [];
+        for (const tx of linkedTxs) {
+            const isMatchBooking = tx.booking && tx.booking.toString() === booking._id.toString();
+            if (isMatchBooking) {
+                const amt = Number(decrypt(tx.amount)) || 0;
+                totalDeducted += amt;
+                txIdsToDelete.push(tx._id);
+            } else if (bookingRef) {
+                const dDesc = decrypt(tx.description) || '';
+                if (dDesc.includes(bookingRef)) {
+                    const amt = Number(decrypt(tx.amount)) || 0;
+                    totalDeducted += amt;
+                    txIdsToDelete.push(tx._id);
+                }
+            }
+        }
+
+        if (txIdsToDelete.length > 0) {
+            await Transaction.deleteMany({ _id: { $in: txIdsToDelete } });
+        }
+
+        // Clean up any amendments for this booking
+        await Amendment.deleteMany({ booking: req.params.id });
+
+        await Booking.findByIdAndDelete(req.params.id);
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('booking_deleted', { id: req.params.id, bookingId: req.params.id });
+            io.emit('booking_updated', { type: 'delete', bookingId: req.params.id });
+            if (booking.roomUnit) {
+                io.emit('room_unit_updated', { roomUnit: booking.roomUnit, status: 'Available' });
+                io.emit('room_updated', { roomUnit: booking.roomUnit, status: 'Available' });
+            }
+            io.emit('amendment_deleted', { bookingId: req.params.id });
+            io.emit('finance_updated', { voided: true, deducted: totalDeducted });
+        }
+
+        res.json({ 
+            message: 'Booking record and all associated data permanently deleted.', 
+            bookingId: req.params.id, 
+            deductedAmount: totalDeducted 
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// POST: Add Payment Entry to Booking (Super Admin Only - Cash, Online, UPI, Card)
+router.post('/:id/payment', protect, superAdmin, async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        const { amount, mode, note, date, staff } = req.body;
+        const paymentAmount = Number(amount);
+        if (isNaN(paymentAmount) || paymentAmount <= 0) {
+            return res.status(400).json({ message: 'Valid payment amount is required' });
+        }
+
+        const newPayment = {
+            amount: paymentAmount,
+            mode: mode || 'Cash',
+            staff: staff || (req.user ? `${req.user.firstName} ${req.user.lastName}` : 'FrontDesk'),
+            note: note || '',
+            timestamp: date ? new Date(date) : new Date()
+        };
+
+        if (!booking.financials) {
+            booking.financials = { totalAmount: 0, amountPaid: 0, balance: 0, paymentHistory: [] };
+        }
+        if (!booking.financials.paymentHistory) {
+            booking.financials.paymentHistory = [];
+        }
+
+        booking.financials.paymentHistory.push(newPayment);
+
+        // Recalculate amountPaid and balance
+        const totalPaid = booking.financials.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        booking.financials.amountPaid = totalPaid;
+        booking.financials.balance = Math.max(0, (booking.financials.totalAmount || 0) - totalPaid);
+        if (mode) booking.financials.paymentMode = mode;
+
+        await booking.save();
+
+        const updatedBooking = await Booking.findById(booking._id)
+            .populate('roomCategory')
+            .populate('roomUnit');
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('booking_updated', updatedBooking);
+        }
+
+        res.json(updatedBooking);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// PUT: Edit Specific Payment Entry (Super Admin Only)
+router.put('/:id/payment/:paymentIndex', protect, superAdmin, async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        const idx = parseInt(req.params.paymentIndex, 10);
+        if (isNaN(idx) || !booking.financials.paymentHistory[idx]) {
+            return res.status(404).json({ message: 'Payment record not found' });
+        }
+
+        const { amount, mode, note, date } = req.body;
+        if (amount !== undefined) booking.financials.paymentHistory[idx].amount = Number(amount);
+        if (mode) booking.financials.paymentHistory[idx].mode = mode;
+        if (note !== undefined) booking.financials.paymentHistory[idx].note = note;
+        if (date) booking.financials.paymentHistory[idx].timestamp = new Date(date);
+
+        // Recalculate
+        const totalPaid = booking.financials.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        booking.financials.amountPaid = totalPaid;
+        booking.financials.balance = Math.max(0, (booking.financials.totalAmount || 0) - totalPaid);
+
+        await booking.save();
+
+        const updatedBooking = await Booking.findById(booking._id)
+            .populate('roomCategory')
+            .populate('roomUnit');
+
+        const io = req.app.get('socketio');
+        if (io) io.emit('booking_updated', updatedBooking);
+
+        res.json(updatedBooking);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// DELETE: Remove Payment Entry (Super Admin Only)
+router.delete('/:id/payment/:paymentIndex', protect, superAdmin, async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+
+        const idx = parseInt(req.params.paymentIndex, 10);
+        if (isNaN(idx) || !booking.financials.paymentHistory[idx]) {
+            return res.status(404).json({ message: 'Payment record not found' });
+        }
+
+        booking.financials.paymentHistory.splice(idx, 1);
+
+        // Recalculate
+        const totalPaid = booking.financials.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+        booking.financials.amountPaid = totalPaid;
+        booking.financials.balance = Math.max(0, (booking.financials.totalAmount || 0) - totalPaid);
+
+        await booking.save();
+
+        const updatedBooking = await Booking.findById(booking._id)
+            .populate('roomCategory')
+            .populate('roomUnit');
+
+        const io = req.app.get('socketio');
+        if (io) io.emit('booking_updated', updatedBooking);
+
+        res.json(updatedBooking);
     } catch (err) {
         res.status(400).json({ message: err.message });
     }

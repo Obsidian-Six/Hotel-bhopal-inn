@@ -97,6 +97,7 @@ const authRoutes = require('./routes/authRoutes');
 const reelRoutes = require('./routes/reelRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const postRoutes = require('./routes/postRoutes');
+const amendmentRoutes = require('./routes/amendmentRoutes');
 
 app.use('/api/hero-images', heroRoutes);
 app.use('/api/rooms', roomRoutes);
@@ -113,6 +114,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/reels', reelRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/amendments', amendmentRoutes);
 
 // Serve frontend static build if available
 const frontendDistPath = path.join(__dirname, '../frontend/dist');

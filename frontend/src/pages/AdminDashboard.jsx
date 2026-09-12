@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import config from '../config';
-import { Image as ImageIcon, Bed, LogOut, Home, Star, MessageSquare } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
+import { Image as ImageIcon, Bed, LogOut, Home, Star, MessageSquare, ShieldCheck, FileEdit } from 'lucide-react';
 import RoomManagement from '@/components/admin/RoomManagement';
 import BanquetManagement from '@/components/admin/BanquetManagement';
 
@@ -13,9 +15,29 @@ import ReelManagement from '@/components/admin/ReelManagement';
 import FoodMenuManagement from '@/components/admin/FoodMenuManagement';
 import PostManagement from '@/components/admin/PostManagement';
 import FrontDeskAnalytics from '@/components/admin/FrontDeskAnalytics';
+import AmendmentsManagement from '@/components/admin/AmendmentsManagement';
+import { socket } from '@/lib/socket';
 import { Tag, Calendar, Users, IndianRupee, Film, Utensils, Camera, TrendingUp } from 'lucide-react';
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ portalMode }) => {
+  const { user: authUser, logout, isSuperAdmin: authIsSuperAdmin } = useAuth();
+  const location = useLocation();
+
+  let localUser = null;
+  try {
+    const stored = localStorage.getItem('user');
+    if (stored) localUser = JSON.parse(stored);
+  } catch (e) {}
+
+  const user = authUser || localUser;
+  const isSuperUser = user?.role === 'superadmin' || user?.isSuperAdmin === true || authIsSuperAdmin;
+
+  // Strict route differentiation:
+  // When at /super-admin and user has superadmin credentials => isSuperAdminView is true.
+  // When at /admin, isSuperAdminView is STRICTLY false, preserving the clean Staff Admin experience.
+  const isSuperAdminRoute = portalMode === 'superadmin' || location.pathname.startsWith('/super-admin');
+  const isSuperAdminView = isSuperAdminRoute && isSuperUser;
+
   const [activeTab, setActiveTab] = useState('hero'); // 'hero', 'rooms', or 'banquet'
   const [images, setImages] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -23,29 +45,52 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const API_URL = `${config.API_URL}/api/hero-images`;
+  const [activeAmendmentsCount, setActiveAmendmentsCount] = useState(0);
+
+  const API_HERO = `${config.API_URL}/api/hero-images`;
+
+  const fetchAmendmentsCount = async () => {
+    try {
+      const res = await axios.get(`${config.API_URL}/api/amendments?status=active`);
+      setActiveAmendmentsCount(res.data.length);
+    } catch (err) {
+      console.error('Error fetching active amendments count:', err);
+    }
+  };
 
   useEffect(() => {
     fetchImages();
+    fetchAmendmentsCount();
+
+    socket.on('amendment_created', fetchAmendmentsCount);
+    socket.on('amendment_updated', fetchAmendmentsCount);
+    socket.on('finance_updated', fetchAmendmentsCount);
+
+    return () => {
+      socket.off('amendment_created', fetchAmendmentsCount);
+      socket.off('amendment_updated', fetchAmendmentsCount);
+      socket.off('finance_updated', fetchAmendmentsCount);
+    };
   }, []);
 
   const fetchImages = async () => {
     try {
-      const res = await axios.get(API_URL);
+      const res = await axios.get(API_HERO);
       setImages(res.data);
     } catch (err) {
       console.error('Error fetching images:', err);
     }
   };
 
-  const onFileChange = (e) => {
+  const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
   };
+  const onFileChange = handleFileChange;
 
   const onUpload = async (e) => {
     e.preventDefault();
     if (!selectedFile) {
-      setMessage('Please select a file first');
+      setMessage('Please select a file to upload');
       return;
     }
 
@@ -54,32 +99,34 @@ const AdminDashboard = () => {
     formData.append('title', title);
 
     setLoading(true);
+    setMessage('');
+
     try {
-      await axios.post(API_URL, formData, {
+      await axios.post(API_HERO, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setMessage('Image uploaded successfully!');
-      setTitle('');
+      setMessage('Upload successful!');
       setSelectedFile(null);
+      setTitle('');
       fetchImages();
     } catch (err) {
-      setMessage('Upload failed');
-      console.error(err);
+      setMessage('Upload failed: ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
   };
 
-  const onDelete = async (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this image?')) return;
 
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await axios.delete(`${API_HERO}/${id}`);
       fetchImages();
     } catch (err) {
       console.error('Delete failed:', err);
     }
   };
+  const onDelete = handleDelete;
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex">
@@ -89,7 +136,35 @@ const AdminDashboard = () => {
           <div className="h-16 w-full overflow-hidden flex items-center justify-center bg-white rounded-sm p-1">
             <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain scale-[2.2]" />
           </div>
-          <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em] mt-2">CMS Admin Panel</p>
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">
+              {isSuperAdminView ? 'Super Admin Portal' : 'CMS Admin Panel'}
+            </p>
+          </div>
+          {isSuperAdminView ? (
+            <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#BFA37E]/20 text-[#BFA37E] border border-[#BFA37E]/40 text-[9px] font-black uppercase tracking-wider rounded-sm shadow-xs">
+              <ShieldCheck size={12} />
+              <span>Super Admin Portal</span>
+            </div>
+          ) : (
+            <div className="mt-2 inline-block px-2 py-0.5 bg-white/10 text-white/70 text-[9px] font-bold uppercase tracking-wider rounded-sm">
+              Staff Admin Portal
+            </div>
+          )}
+
+          {/* Quick Portal Switcher (Only visible to Super Admin to switch down to Staff Admin) */}
+          {isSuperAdminView && (
+            <div className="mt-3">
+              <Link
+                to="/admin"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-white/5 hover:bg-white/10 border border-white/15 text-white/80 hover:text-white text-[9px] font-bold uppercase tracking-wider rounded-sm transition-all"
+                title="Switch view to Staff Admin Portal"
+              >
+                <span>Switch to Staff Admin</span>
+                <span>→</span>
+              </Link>
+            </div>
+          )}
         </div>
 
         
@@ -153,6 +228,20 @@ const AdminDashboard = () => {
             <span className="truncate">Finance Audit</span>
           </button>
           <button 
+            onClick={() => setActiveTab('amendments')}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'amendments' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <FileEdit size={18} className="shrink-0 text-amber-300" />
+              <span className="truncate">Amendments</span>
+            </div>
+            {activeAmendmentsCount > 0 && (
+              <span className="ml-1 px-2 py-0.5 bg-rose-600 text-white rounded-full text-[10px] font-black animate-pulse shrink-0">
+                {activeAmendmentsCount}
+              </span>
+            )}
+          </button>
+          <button 
             onClick={() => setActiveTab('reels')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'reels' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
@@ -175,11 +264,23 @@ const AdminDashboard = () => {
           </button>
         </nav>
 
-        <div className="p-4 border-t border-white/10">
-          <a href="/" className="flex items-center gap-4 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 hover:text-[#BFA37E] transition-all">
+        <div className="p-4 border-t border-white/10 space-y-1">
+          {user && (
+            <div className="px-4 py-2 text-[10px] text-white/50 truncate font-mono">
+              {user.email}
+            </div>
+          )}
+          <a href="/" className="flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 hover:text-[#BFA37E] transition-all">
             <Home size={16} />
             Back to Site
           </a>
+          <button 
+            onClick={logout}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-red-400 hover:bg-red-950/30 transition-all text-left"
+          >
+            <LogOut size={16} />
+            Sign Out
+          </button>
         </div>
       </aside>
 
@@ -194,25 +295,25 @@ const AdminDashboard = () => {
 
               {/* Upload Section */}
               <div className="bg-white p-8 rounded-sm shadow-sm border border-slate-100">
-                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-6">Upload New Hero Image or Video</h3>
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-6">Upload New Hero Content (Image or Video)</h3>
                 <form onSubmit={onUpload} className="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Content Title</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Media Title</label>
                       <input 
                         type="text" 
                         value={title} 
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="e.g. Deluxe Room View"
+                        onChange={(e) => setTitle(e.target.value)} 
+                        placeholder="e.g. Luxury Ambience Video / Suite View" 
                         className="w-full bg-[#FDFBF7] border border-slate-100 p-3 text-xs font-bold text-[#000000] focus:outline-none focus:border-[#BFA37E]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Select File (Image/Video)</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Select Media File (Image or Video)</label>
                       <input 
                         type="file" 
                         accept="image/*,video/*"
-                        onChange={onFileChange}
+                        onChange={handleFileChange}
                         className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-[10px] file:font-bold file:uppercase file:tracking-widest file:bg-[#BFA37E] file:text-white hover:file:bg-[#000000] transition-all"
                       />
                     </div>
@@ -278,13 +379,15 @@ const AdminDashboard = () => {
           ) : activeTab === 'offers' ? (
             <OfferManagement />
           ) : activeTab === 'bookings' ? (
-            <FrontDeskManagement />
+            <FrontDeskManagement isSuperAdmin={isSuperAdminView} role={isSuperAdminView ? 'Super Admin' : 'Admin'} />
           ) : activeTab === 'analytics' ? (
-            <FrontDeskAnalytics />
+            <FrontDeskAnalytics isSuperAdmin={isSuperAdminView} />
           ) : activeTab === 'inventory' ? (
             <InventoryManagement />
           ) : activeTab === 'finance' ? (
-            <FinanceManagement role="Admin" />
+            <FinanceManagement isSuperAdmin={isSuperAdminView} role={isSuperAdminView ? 'Super Admin' : 'Admin'} />
+          ) : activeTab === 'amendments' ? (
+            <AmendmentsManagement isSuperAdmin={isSuperAdminView} />
           ) : activeTab === 'reels' ? (
             <ReelManagement />
           ) : activeTab === 'menu' ? (

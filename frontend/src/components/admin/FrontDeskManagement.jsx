@@ -3,14 +3,18 @@ import axios from 'axios';
 import config from '../../config';
 import { 
   X, CheckCircle2, IndianRupee, Printer, LogOut, 
-  Plus, Info, ArrowRight, User, Calendar, CreditCard, AlertTriangle, History, FastForward, Coffee, TrendingUp, BarChart3, CalendarPlus, Zap, Activity, Bed
+  Plus, Info, ArrowRight, User, Calendar, CreditCard, AlertTriangle, History, FastForward, Coffee, TrendingUp, BarChart3, CalendarPlus, Zap, Activity, Bed,
+  Trash2, Edit3, ShieldCheck, DollarSign, CalendarCheck, Tag
 } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
 import { socket } from '@/lib/socket';
 import FrontDeskAnalytics from './FrontDeskAnalytics';
 
 const API_BASE = config.API_URL;
 
-const FrontDeskManagement = () => {
+const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } = {}) => {
+  const { user, isSuperAdmin: authIsSuperAdmin } = useAuth();
+  const isSuperAdmin = propIsSuperAdmin !== undefined ? propIsSuperAdmin : authIsSuperAdmin;
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ checkIns: 0, checkOuts: 0, inHouse: 0, available: 0 });
@@ -24,6 +28,39 @@ const FrontDeskManagement = () => {
 
   const [isCollectPaymentOpen, setIsCollectPaymentOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ amount: '', mode: 'Cash' });
+
+  // Super Admin: Edit Booking State
+  const [isEditBookingOpen, setIsEditBookingOpen] = useState(false);
+  const [editBookingForm, setEditBookingForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    idProof: '',
+    adults: 2,
+    children: 0,
+    roomCategory: '',
+    roomUnit: '',
+    checkInDate: '',
+    checkOutDate: '',
+    roomPlan: 'EP',
+    roomTariff: 0,
+    totalAmount: 0,
+    amountPaid: 0,
+    status: 'Confirmed',
+    source: 'Walk-in',
+    otaPlatform: '',
+    otaReferenceId: ''
+  });
+
+  // Super Admin: Manage Payments & Cash vs Online State
+  const [isManagePaymentsOpen, setIsManagePaymentsOpen] = useState(false);
+  const [newPaymentForm, setNewPaymentForm] = useState({
+    amount: '',
+    mode: 'Cash',
+    note: '',
+    date: new Date().toISOString().split('T')[0]
+  });
 
   const [isMeterModalOpen, setIsMeterModalOpen] = useState(false);
   const [meterForm, setMeterForm] = useState({
@@ -73,7 +110,10 @@ const FrontDeskManagement = () => {
     otaPlatform: '',
     otaReferenceId: '',
     roomPlan: 'EP',
-    immediateCheckIn: false
+    immediateCheckIn: false,
+    isHistorical: false,
+    customStatus: 'Confirmed',
+    paymentDate: ''
   });
 
   // Calculate Walk-in Financials dynamically based on stay duration
@@ -101,15 +141,19 @@ const FrontDeskManagement = () => {
     fetchData();
     fetchSupportData();
     
-    socket.on('booking_updated', () => {
+    const handleRefresh = () => {
       fetchData();
       fetchSupportData();
-    });
+    };
+
+    socket.on('booking_updated', handleRefresh);
+    socket.on('booking_deleted', handleRefresh);
     socket.on('room_unit_updated', fetchSupportData);
 
     return () => {
-      socket.off('booking_updated');
-      socket.off('room_unit_updated');
+      socket.off('booking_updated', handleRefresh);
+      socket.off('booking_deleted', handleRefresh);
+      socket.off('room_unit_updated', fetchSupportData);
     };
   }, []);
 
@@ -229,7 +273,7 @@ const FrontDeskManagement = () => {
       const payload = {
         guestDetails: walkInForm.guestDetails,
         roomCategory: walkInForm.roomCategory,
-        roomUnit: walkInForm.immediateCheckIn ? walkInForm.roomUnit : null,
+        roomUnit: (walkInForm.immediateCheckIn || walkInForm.customStatus === 'Checked-In') ? walkInForm.roomUnit : null,
         checkInDate: walkInForm.checkInDate,
         checkOutDate: walkInForm.checkOutDate,
         financials: walkInForm.financials,
@@ -238,7 +282,10 @@ const FrontDeskManagement = () => {
         otaPlatform: walkInForm.otaPlatform,
         otaReferenceId: walkInForm.otaReferenceId,
         roomPlan: walkInForm.roomPlan,
-        immediateCheckIn: walkInForm.immediateCheckIn
+        immediateCheckIn: walkInForm.immediateCheckIn,
+        status: walkInForm.isHistorical ? (walkInForm.customStatus || 'Confirmed') : (walkInForm.immediateCheckIn ? 'Checked-In' : 'Confirmed'),
+        paymentDate: walkInForm.paymentDate || walkInForm.checkInDate,
+        bookingDate: walkInForm.checkInDate
       };
 
       await axios.post(`${API_BASE}/api/bookings/walk-in`, payload);
@@ -252,12 +299,13 @@ const FrontDeskManagement = () => {
             amount: Number(walkInForm.financials.amountPaid),
             description: `Walk-in Advance (${walkInForm.source}) - ${walkInForm.guestDetails.firstName} ${walkInForm.guestDetails.lastName}`,
             paymentMode: selectedMode,
-            date: new Date(),
-            recordedBy: 'FrontDesk'
+            date: walkInForm.paymentDate ? new Date(walkInForm.paymentDate) : new Date(walkInForm.checkInDate),
+            recordedBy: isSuperAdmin ? 'SuperAdmin' : 'FrontDesk'
           });
       }
 
       setIsWalkInOpen(false);
+      fetchData();
       // Reset form state
       setWalkInForm({
         guestDetails: { firstName: '', lastName: '', phone: '', email: '', idProof: '', adults: 2, children: 0 },
@@ -271,14 +319,173 @@ const FrontDeskManagement = () => {
         otaPlatform: '',
         otaReferenceId: '',
         roomPlan: 'EP',
-        immediateCheckIn: false
+        immediateCheckIn: false,
+        isHistorical: false,
+        customStatus: 'Confirmed',
+        paymentDate: ''
       });
-      fetchData();
     } catch (err) {
-      console.error(err);
-      alert('Walk-in booking failed: ' + (err.response?.data?.message || err.message));
+      alert('Failed to register walk-in: ' + (err.response?.data?.message || err.message));
     }
   };
+
+  // Super Admin: Delete Booking & Cleanup Duplicate
+  const handleDeleteBooking = async (bookingId) => {
+    if (!window.confirm('⚠️ Super Admin Action: Permanently delete this booking record? If this was an active or duplicate booking, the associated room unit will be immediately freed.')) {
+      return;
+    }
+    try {
+      await axios.delete(`${API_BASE}/api/bookings/${bookingId}`);
+      setIsDetailOpen(false);
+      setSelectedBooking(null);
+      fetchData();
+      alert('Booking permanently removed.');
+    } catch (err) {
+      alert('Failed to delete booking: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  // Super Admin & Admin: Open Edit Booking Modal
+  const openEditBookingModal = (booking) => {
+    setEditBookingForm({
+      firstName: booking.guestDetails?.firstName || '',
+      lastName: booking.guestDetails?.lastName || '',
+      phone: booking.guestDetails?.phone || '',
+      email: booking.guestDetails?.email || '',
+      idProof: booking.guestDetails?.idProof || '',
+      adults: booking.guestDetails?.adults || 1,
+      children: booking.guestDetails?.children || 0,
+      roomCategory: booking.roomCategory?._id || booking.roomCategory || '',
+      roomUnit: booking.roomUnit?._id || booking.roomUnit || '',
+      checkInDate: booking.checkInDate ? new Date(booking.checkInDate).toISOString().split('T')[0] : '',
+      checkOutDate: booking.checkOutDate ? new Date(booking.checkOutDate).toISOString().split('T')[0] : '',
+      roomPlan: booking.roomPlan || 'EP',
+      roomTariff: booking.financials?.roomTariff || 0,
+      totalAmount: booking.financials?.totalAmount || 0,
+      amountPaid: booking.financials?.amountPaid || 0,
+      status: booking.status || 'Confirmed',
+      source: booking.source || 'Walk-in',
+      otaPlatform: booking.otaPlatform || '',
+      otaReferenceId: booking.otaReferenceId || ''
+    });
+    setIsEditBookingOpen(true);
+  };
+
+  // Super Admin & Admin: Save Edited Booking Details
+  const handleEditBookingSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedBooking) return;
+    try {
+      const payload = {
+        guestDetails: {
+          firstName: editBookingForm.firstName,
+          lastName: editBookingForm.lastName,
+          phone: editBookingForm.phone,
+          email: editBookingForm.email,
+          idProof: editBookingForm.idProof,
+          adults: Number(editBookingForm.adults),
+          children: Number(editBookingForm.children)
+        },
+        checkInDate: editBookingForm.checkInDate,
+        checkOutDate: editBookingForm.checkOutDate,
+        roomCategory: editBookingForm.roomCategory,
+        roomUnit: editBookingForm.roomUnit || null,
+        roomPlan: editBookingForm.roomPlan,
+        status: editBookingForm.status,
+        source: editBookingForm.source,
+        otaPlatform: editBookingForm.otaPlatform,
+        otaReferenceId: editBookingForm.otaReferenceId,
+        financials: {
+          roomTariff: Number(editBookingForm.roomTariff),
+          totalAmount: Number(editBookingForm.totalAmount),
+          amountPaid: Number(editBookingForm.amountPaid),
+          balance: Math.max(0, Number(editBookingForm.totalAmount) - Number(editBookingForm.amountPaid))
+        }
+      };
+
+      const res = await axios.put(`${API_BASE}/api/bookings/${selectedBooking._id}`, payload);
+      setSelectedBooking(res.data);
+      setIsEditBookingOpen(false);
+      fetchData();
+      alert('Booking details successfully updated.');
+    } catch (err) {
+      alert('Failed to update booking: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  // Financial Management: Add Payment Entry
+  const handleAddPayment = async (e) => {
+    e.preventDefault();
+    if (!selectedBooking) return;
+    try {
+      const res = await axios.post(`${API_BASE}/api/bookings/${selectedBooking._id}/payment`, {
+        amount: Number(newPaymentForm.amount),
+        mode: newPaymentForm.mode,
+        note: newPaymentForm.note,
+        date: newPaymentForm.date ? new Date(newPaymentForm.date) : new Date(),
+        staff: user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'FrontDesk'
+      });
+
+      // Record in Finance Transactions as well
+      await axios.post(`${API_BASE}/api/finance/transactions`, {
+        type: 'Income',
+        category: 'Room Rent',
+        amount: Number(newPaymentForm.amount),
+        description: `Payment Added (${newPaymentForm.mode}) - ${selectedBooking.guestDetails?.firstName} ${selectedBooking.guestDetails?.lastName}`,
+        paymentMode: newPaymentForm.mode,
+        date: newPaymentForm.date ? new Date(newPaymentForm.date) : new Date(),
+        recordedBy: isSuperAdmin ? 'SuperAdmin' : 'FrontDesk'
+      });
+
+      setSelectedBooking(res.data);
+      setNewPaymentForm({
+        amount: '',
+        mode: 'Cash',
+        note: '',
+        date: new Date().toISOString().split('T')[0]
+      });
+      fetchData();
+      alert('Payment record added.');
+    } catch (err) {
+      alert('Failed to add payment: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  // Super Admin: Change Payment Mode or Amount of Existing Entry
+  const handleEditPaymentMode = async (index, currentPayment) => {
+    const newMode = prompt(`Change Payment Mode for entry #${index + 1} (currently: ${currentPayment.mode}):\nType: Cash, Online, Card, or Bank Transfer`, currentPayment.mode);
+    if (!newMode) return;
+    const newAmountStr = prompt(`Verify Amount (₹):`, currentPayment.amount);
+    const newAmount = newAmountStr ? Number(newAmountStr) : currentPayment.amount;
+
+    try {
+      const res = await axios.put(`${API_BASE}/api/bookings/${selectedBooking._id}/payment/${index}`, {
+        mode: newMode,
+        amount: newAmount
+      });
+      setSelectedBooking(res.data);
+      fetchData();
+      alert('Payment record updated.');
+    } catch (err) {
+      alert('Failed to update payment: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  // Super Admin: Remove Erroneous or Duplicate Payment Entry
+  const handleDeletePayment = async (index, payment) => {
+    if (!window.confirm(`⚠️ Super Admin: Delete payment entry of ₹${payment.amount} (${payment.mode})? Net balance and total paid will be recalculated.`)) {
+      return;
+    }
+    try {
+      const res = await axios.delete(`${API_BASE}/api/bookings/${selectedBooking._id}/payment/${index}`);
+      setSelectedBooking(res.data);
+      fetchData();
+      alert('Payment entry removed.');
+    } catch (err) {
+      alert('Failed to delete payment entry: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
 
   const handleExtendStaySubmit = async (e) => {
     e.preventDefault();
@@ -1054,20 +1261,35 @@ const FrontDeskManagement = () => {
             <div className="flex-grow overflow-y-auto p-6">
               {/* Alert for Balance Due */}
               {selectedBooking.checkoutError && (
-                <div className="mb-6 bg-rose-600 text-white p-4 rounded-sm flex items-center justify-between animate-bounce shadow-xl border-4 border-rose-800">
+                <div className="mb-6 bg-rose-600 text-white p-4 rounded-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl border-2 border-rose-800">
                     <div className="flex items-center gap-4">
-                        <AlertTriangle size={32} />
+                        <AlertTriangle size={32} className="shrink-0" />
                         <div>
                             <p className="font-black text-lg">{selectedBooking.checkoutError}</p>
-                            <p className="text-xs uppercase font-bold opacity-80">COLLECT FULL PAYMENT BEFORE CHECKOUT OR USE MANAGER OVERRIDE</p>
+                            <p className="text-xs uppercase font-bold opacity-90">
+                              Please collect full pending balance before checkout {isSuperAdmin ? 'or use Super Admin Manager Override' : ''}.
+                            </p>
                         </div>
                     </div>
-                    <button 
-                        onClick={() => handleCheckOut(selectedBooking._id, true)}
-                        className="bg-white text-rose-600 px-6 py-2 rounded-sm font-black text-xs uppercase"
-                    >
-                        Manager Override
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button 
+                            onClick={() => {
+                                setPaymentForm({ amount: selectedBooking.financials?.balance || 0, mode: 'Cash' });
+                                setIsCollectPaymentOpen(true);
+                            }}
+                            className="bg-white text-rose-700 hover:bg-rose-50 px-4 py-2.5 rounded-sm font-black text-xs uppercase shadow transition-all"
+                        >
+                            Collect Balance
+                        </button>
+                        {isSuperAdmin && (
+                            <button 
+                                onClick={() => handleCheckOut(selectedBooking._id, true)}
+                                className="bg-rose-950 hover:bg-black text-white border border-rose-400/50 px-4 py-2.5 rounded-sm font-black text-xs uppercase transition-all"
+                            >
+                                Manager Override
+                            </button>
+                        )}
+                    </div>
                 </div>
               )}
 
@@ -1146,13 +1368,35 @@ const FrontDeskManagement = () => {
                             {selectedBooking.financials?.paymentHistory?.map((p, i) => (
                                 <div key={i} className="flex justify-between items-center p-3 bg-emerald-50 border border-emerald-100 rounded-sm">
                                     <div className="flex gap-4 items-center">
-                                        <CheckCircle2 size={16} className="text-emerald-600" />
+                                        <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
                                         <div>
-                                            <p className="text-xs font-bold text-emerald-900">₹{p.amount?.toLocaleString()} - {p.mode}</p>
-                                            <p className="text-[9px] text-emerald-600 font-bold uppercase">{new Date(p.timestamp).toLocaleString()} | Collected by: {p.staff}</p>
+                                            <p className="text-xs font-bold text-emerald-900">₹{p.amount?.toLocaleString()} — <span className="bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded text-[10px]">{p.mode}</span></p>
+                                            <p className="text-[9px] text-emerald-600 font-bold uppercase">{new Date(p.timestamp).toLocaleString()} | By: {p.staff} {p.note ? `| Note: ${p.note}` : ''}</p>
                                         </div>
                                     </div>
-                                    <span className="text-[9px] font-black text-emerald-700 uppercase">Verified</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[9px] font-black text-emerald-700 uppercase">Verified</span>
+                                        {isSuperAdmin && (
+                                            <div className="flex items-center gap-1">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleEditPaymentMode(i, p)} 
+                                                    className="px-2 py-1 text-[9px] font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 rounded border border-amber-300 uppercase transition-all"
+                                                    title="Change Mode or Amount"
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleDeletePayment(i, p)} 
+                                                    className="px-2 py-1 text-[9px] font-bold bg-rose-100 text-rose-800 hover:bg-rose-200 rounded border border-rose-300 uppercase transition-all"
+                                                    title="Delete this payment entry"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                             {(selectedBooking.financials?.paymentHistory?.length || 0) === 0 && <p className="text-xs text-slate-400 italic">No payments logged for this journey.</p>}
@@ -1215,6 +1459,35 @@ const FrontDeskManagement = () => {
                             onClick={() => handleCheckOut(selectedBooking._id)}
                             disabled={selectedBooking.status !== 'Checked-In'}
                         />
+
+                        {/* Super Admin Exclusive Feature Suite (Hidden for Normal Admin) */}
+                        {isSuperAdmin && (
+                            <div className="pt-3 border-t-2 border-dashed border-amber-300/80 mt-2 space-y-2.5 bg-amber-50/70 p-3 rounded-sm border border-amber-200 animate-in fade-in duration-200">
+                                <div className="flex items-center gap-1.5 text-amber-900 text-[10px] font-black uppercase tracking-widest pb-1 border-b border-amber-200">
+                                    <ShieldCheck size={14} className="text-amber-600" />
+                                    <span>Super Admin Elevated Controls</span>
+                                </div>
+                                <ActionButton 
+                                    icon={<Edit3 size={18} />} 
+                                    label="Edit Booking Details" 
+                                    color="bg-blue-600 hover:bg-blue-700" 
+                                    onClick={() => openEditBookingModal(selectedBooking)}
+                                />
+                                <ActionButton 
+                                    icon={<CreditCard size={18} />} 
+                                    label="Manage Payments & Modes" 
+                                    color="bg-purple-700 hover:bg-purple-800" 
+                                    onClick={() => setIsManagePaymentsOpen(true)}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeleteBooking(selectedBooking._id)}
+                                    className="w-full flex items-center justify-center gap-2 bg-red-800 hover:bg-red-900 text-white p-3.5 rounded-sm font-black text-xs uppercase tracking-wider shadow-lg border border-red-700 hover:scale-[1.01] active:scale-[0.99] transition-all"
+                                >
+                                    <Trash2 size={16} /> Delete Booking (Super Admin)
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
               </div>
@@ -1339,8 +1612,14 @@ const FrontDeskManagement = () => {
                   <InputField label="Room Tariff (Rack Rate / Night)" type="number" value={walkInForm.financials.roomTariff} onChange={v => setWalkInForm({...walkInForm, financials: {...walkInForm.financials, roomTariff: Number(v)}})} />
                </div>
                <div className="grid grid-cols-2 gap-6">
-                  <InputField label="Check-In" type="date" value={walkInForm.checkInDate} onChange={v => setWalkInForm({...walkInForm, checkInDate: v})} />
-                  <InputField label="Check-Out" type="date" value={walkInForm.checkOutDate} onChange={v => setWalkInForm({...walkInForm, checkOutDate: v})} />
+                   <InputField 
+                     label="Check-In" 
+                     type="date" 
+                     value={walkInForm.checkInDate} 
+                     min={!isSuperAdmin ? new Date().toISOString().split('T')[0] : undefined}
+                     onChange={v => setWalkInForm({...walkInForm, checkInDate: v})} 
+                   />
+                   <InputField label="Check-Out" type="date" value={walkInForm.checkOutDate} onChange={v => setWalkInForm({...walkInForm, checkOutDate: v})} />
                </div>
                <div className="grid grid-cols-2 gap-6">
                   <InputField label="Adults" type="number" value={walkInForm.guestDetails.adults} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, adults: Number(v)}})} />
@@ -1357,6 +1636,7 @@ const FrontDeskManagement = () => {
                       >
                         <option value="Cash">Cash</option>
                         <option value="Online">Online / UPI</option>
+                        <option value="OTA">OTA (MakeMyTrip / Agoda / Booking.com)</option>
                         <option value="Card">Credit/Debit Card</option>
                         <option value="Bank Transfer">Bank Transfer</option>
                       </select>
@@ -1401,71 +1681,127 @@ const FrontDeskManagement = () => {
                   </div>
                </div>
 
-               {walkInForm.source !== 'Walk-in' && walkInForm.source !== 'Website' && (
-                 <div className="grid grid-cols-1 gap-6">
-                   <InputField 
-                     label="OTA Reference ID / Confirmation Number" 
-                     value={walkInForm.otaReferenceId} 
-                     onChange={v => setWalkInForm({...walkInForm, otaReferenceId: v})} 
-                     required={false} 
-                     placeholder="e.g. BK-98723412 or MMT-6543"
-                   />
-                 </div>
-               )}
+                {walkInForm.source !== 'Walk-in' && walkInForm.source !== 'Website' && (
+                  <div className="grid grid-cols-1 gap-6">
+                    <InputField 
+                      label="OTA Reference ID / Confirmation Number" 
+                      value={walkInForm.otaReferenceId} 
+                      onChange={v => setWalkInForm({...walkInForm, otaReferenceId: v})} 
+                      required={false} 
+                      placeholder="e.g. BK-98723412 or MMT-6543"
+                    />
+                  </div>
+                )}
 
                <div className="grid grid-cols-2 gap-6">
-                  <div className="flex flex-col justify-end">
-                      <label className="flex items-center gap-3 cursor-pointer p-3 hover:bg-slate-50 transition-colors border border-dashed border-slate-200 rounded-sm">
-                          <input 
-                              type="checkbox" 
-                              checked={walkInForm.immediateCheckIn} 
-                              onChange={e => setWalkInForm({...walkInForm, immediateCheckIn: e.target.checked})} 
-                              className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded"
-                          />
-                          <div className="flex flex-col">
-                              <span className="text-[10px] font-black uppercase text-slate-700">Immediate Check-In</span>
-                              <span className="text-[9px] text-slate-400">Check in guest and occupy room unit now</span>
-                          </div>
-                      </label>
-                  </div>
-               </div>
+                   <div className="flex flex-col justify-end">
+                       <label className="flex items-center gap-3 cursor-pointer p-3 hover:bg-slate-50 transition-colors border border-dashed border-slate-200 rounded-sm">
+                           <input 
+                               type="checkbox" 
+                               checked={walkInForm.immediateCheckIn} 
+                               onChange={e => setWalkInForm({...walkInForm, immediateCheckIn: e.target.checked})} 
+                               className="w-4 h-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded"
+                           />
+                           <div className="flex flex-col">
+                               <span className="text-[10px] font-black uppercase text-slate-700">Immediate Check-In</span>
+                               <span className="text-[9px] text-slate-400">Check in guest and occupy room unit now</span>
+                           </div>
+                       </label>
+                   </div>
+                   
+                   {/* Historical Entry Toggle: Restricted to Super Admin Only */}
+                   {isSuperAdmin && (
+                       <div className="flex flex-col justify-end animate-in fade-in duration-200">
+                           <label className="flex items-center gap-3 cursor-pointer p-3 hover:bg-amber-50/70 transition-colors border border-dashed border-amber-400 rounded-sm bg-amber-50/50">
+                               <input 
+                                   type="checkbox" 
+                                   checked={walkInForm.isHistorical} 
+                                   onChange={e => setWalkInForm({
+                                     ...walkInForm, 
+                                     isHistorical: e.target.checked,
+                                     paymentDate: e.target.checked ? walkInForm.checkInDate : ''
+                                   })} 
+                                   className="w-4 h-4 text-amber-600 focus:ring-amber-500 border-amber-300 rounded"
+                               />
+                               <div className="flex flex-col">
+                                   <span className="text-[10px] font-black uppercase text-amber-900 flex items-center gap-1.5">
+                                       <ShieldCheck size={13} className="text-amber-600" /> Historical / Past-Date Entry
+                                   </span>
+                                   <span className="text-[9px] text-amber-700">Super Admin: add booking for past dates & backdated payments</span>
+                               </div>
+                           </label>
+                       </div>
+                   )}
+                </div>
 
-               {walkInForm.immediateCheckIn && (
-                  <div className="animate-in slide-in-from-top-2 duration-200 space-y-2">
-                      <label className="block text-[10px] font-black text-slate-400 uppercase">Assign Room Unit</label>
-                      <select 
-                          className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all font-semibold focus:outline-none" 
-                          value={walkInForm.roomUnit} 
-                          onChange={e => setWalkInForm({...walkInForm, roomUnit: e.target.value})} 
-                          required={walkInForm.immediateCheckIn}
-                      >
-                          <option value="">-- Choose Room Unit --</option>
-                          {availableUnits
-                            .filter(u => {
-                              if (!u.category || !walkInForm.roomCategory) return false;
-                              const uCatId = (u.category?._id || u.category).toString();
-                              const bCatId = walkInForm.roomCategory.toString();
-                              return uCatId === bCatId;
-                            })
-                            .map(u => (
-                              <option key={u._id} value={u._id} disabled={u.status === 'Occupied' || u.status === 'Maintenance'}>
-                                Room {u.roomNumber} ({u.status === 'Dirty' ? '⚠️ Dirty' : '✓ Ready'})
-                              </option>
-                            ))
-                          }
-                      </select>
-                      {availableUnits.filter(u => {
-                            if (!u.category || !walkInForm.roomCategory) return false;
-                            const uCatId = (u.category?._id || u.category).toString();
-                            const bCatId = walkInForm.roomCategory.toString();
-                            return uCatId === bCatId;
-                          }).length === 0 && (
-                          <p className="text-xs text-rose-600 font-bold mt-2 uppercase flex items-center gap-2">
-                            <AlertTriangle size={14} /> No room units created or available for this category.
-                          </p>
-                      )}
-                  </div>
-               )}
+                {/* Historical Settings: Restricted to Super Admin Only */}
+                {isSuperAdmin && walkInForm.isHistorical && (
+                   <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-sm space-y-4 animate-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-center gap-2 text-amber-900 text-xs font-bold uppercase tracking-wider">
+                         <CalendarCheck size={16} /> Past Record Management Settings (Super Admin Exclusive)
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                         <div>
+                            <label className="block text-[10px] font-black text-amber-800 uppercase mb-2">Historical Booking Status</label>
+                            <select 
+                               className="w-full border-2 border-amber-200 p-3 text-sm focus:border-amber-600 transition-all font-semibold bg-white focus:outline-none"
+                               value={walkInForm.customStatus || 'Confirmed'}
+                               onChange={e => setWalkInForm({...walkInForm, customStatus: e.target.value})}
+                            >
+                               <option value="Confirmed">Confirmed (Reserved)</option>
+                               <option value="Checked-In">Checked-In (Occupied)</option>
+                               <option value="Checked-Out">Checked-Out (Past Completed Stay)</option>
+                            </select>
+                         </div>
+                         <div>
+                            <label className="block text-[10px] font-black text-amber-800 uppercase mb-2">Payment Received Date</label>
+                            <input 
+                               type="date"
+                               className="w-full border-2 border-amber-200 p-3 text-sm focus:border-amber-600 transition-all font-semibold bg-white focus:outline-none"
+                               value={walkInForm.paymentDate || walkInForm.checkInDate}
+                               onChange={e => setWalkInForm({...walkInForm, paymentDate: e.target.value})}
+                            />
+                         </div>
+                      </div>
+                   </div>
+                )}
+
+                {(walkInForm.immediateCheckIn || walkInForm.customStatus === 'Checked-In') && (
+                   <div className="animate-in slide-in-from-top-2 duration-200 space-y-2">
+                       <label className="block text-[10px] font-black text-slate-400 uppercase">Assign Room Unit</label>
+                       <select 
+                           className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all font-semibold focus:outline-none" 
+                           value={walkInForm.roomUnit} 
+                           onChange={e => setWalkInForm({...walkInForm, roomUnit: e.target.value})} 
+                           required={walkInForm.immediateCheckIn || walkInForm.customStatus === 'Checked-In'}
+                       >
+                           <option value="">-- Choose Room Unit --</option>
+                           {availableUnits
+                             .filter(u => {
+                               if (!u.category || !walkInForm.roomCategory) return false;
+                               const uCatId = (u.category?._id || u.category).toString();
+                               const bCatId = walkInForm.roomCategory.toString();
+                               return uCatId === bCatId;
+                             })
+                             .map(u => (
+                               <option key={u._id} value={u._id} disabled={u.status === 'Occupied' || u.status === 'Maintenance'}>
+                                 Room {u.roomNumber} ({u.status === 'Dirty' ? '⚠️ Dirty' : '✓ Ready'})
+                               </option>
+                             ))
+                           }
+                       </select>
+                       {availableUnits.filter(u => {
+                             if (!u.category || !walkInForm.roomCategory) return false;
+                             const uCatId = (u.category?._id || u.category).toString();
+                             const bCatId = walkInForm.roomCategory.toString();
+                             return uCatId === bCatId;
+                           }).length === 0 && (
+                           <p className="text-xs text-rose-600 font-bold mt-2 uppercase flex items-center gap-2">
+                             <AlertTriangle size={14} /> No room units created or available for this category.
+                           </p>
+                       )}
+                   </div>
+                )}
 
                {/* Dynamic Bill Preview */}
                <div className="bg-slate-50 p-4 border border-slate-200 rounded-sm space-y-1">
@@ -1674,27 +2010,38 @@ const FrontDeskManagement = () => {
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Payment Mode Selection</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     type="button"
                     onClick={() => setPaymentForm({...paymentForm, mode: 'Cash'})}
-                    className={`p-4 rounded-sm border-2 font-black text-xs uppercase flex flex-col items-center gap-2 transition-all ${
+                    className={`p-3 rounded-sm border-2 font-black text-xs uppercase flex flex-col items-center gap-1.5 transition-all ${
                       paymentForm.mode === 'Cash' ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-md' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
                     }`}
                   >
-                    <IndianRupee size={20} />
-                    <span>Cash (Manual Cash)</span>
+                    <IndianRupee size={18} />
+                    <span className="text-[11px]">Cash</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentForm({...paymentForm, mode: 'Online'})}
-                    className={`p-4 rounded-sm border-2 font-black text-xs uppercase flex flex-col items-center gap-2 transition-all ${
+                    className={`p-3 rounded-sm border-2 font-black text-xs uppercase flex flex-col items-center gap-1.5 transition-all ${
                       paymentForm.mode === 'Online' ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-md' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
                     }`}
                   >
-                    <CreditCard size={20} />
-                    <span>Online (PhonePe / UPI)</span>
+                    <CreditCard size={18} />
+                    <span className="text-[11px]">Online / UPI</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentForm({...paymentForm, mode: 'OTA'})}
+                    className={`p-3 rounded-sm border-2 font-black text-xs uppercase flex flex-col items-center gap-1.5 transition-all ${
+                      paymentForm.mode === 'OTA' ? 'border-amber-600 bg-amber-50 text-amber-900 shadow-md' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Tag size={18} />
+                    <span className="text-[11px]">OTA Portal</span>
                   </button>
                 </div>
               </div>
@@ -1869,6 +2216,338 @@ const FrontDeskManagement = () => {
         </div>
       )}
 
+      {/* Super Admin Exclusive: Edit Booking Details Modal */}
+      {isSuperAdmin && isEditBookingOpen && (
+        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[120] flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white w-full max-w-3xl rounded-sm p-8 shadow-2xl border-t-8 border-blue-600 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6 border-b pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-2xl font-black text-[#1A2B48] uppercase tracking-wide">Edit Booking Record</h3>
+                  <span className="bg-blue-100 text-blue-800 text-[10px] font-black px-2 py-0.5 rounded uppercase">Administrative Access</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Modify guest details, reservation dates, room assignment, or financial totals.</p>
+              </div>
+              <button onClick={() => setIsEditBookingOpen(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditBookingSubmit} className="space-y-6">
+              {/* Guest Details */}
+              <div>
+                <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider mb-3">1. Guest Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <InputField label="First Name" value={editBookingForm.firstName} onChange={v => setEditBookingForm({...editBookingForm, firstName: v})} />
+                  <InputField label="Last Name" value={editBookingForm.lastName} onChange={v => setEditBookingForm({...editBookingForm, lastName: v})} />
+                </div>
+                <div className="grid grid-cols-3 gap-4 mt-4">
+                  <InputField label="Phone" value={editBookingForm.phone} onChange={v => setEditBookingForm({...editBookingForm, phone: v})} />
+                  <InputField label="Email" type="email" value={editBookingForm.email} onChange={v => setEditBookingForm({...editBookingForm, email: v})} required={false} />
+                  <InputField label="ID Proof Number" value={editBookingForm.idProof} onChange={v => setEditBookingForm({...editBookingForm, idProof: v})} required={false} />
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <InputField label="Adults" type="number" value={editBookingForm.adults} onChange={v => setEditBookingForm({...editBookingForm, adults: v})} />
+                  <InputField label="Children" type="number" value={editBookingForm.children} onChange={v => setEditBookingForm({...editBookingForm, children: v})} />
+                </div>
+              </div>
+
+              {/* Stay & Room Details */}
+              <div className="border-t pt-4">
+                <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider mb-3">2. Stay & Room Allocation</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <InputField label="Check-In Date" type="date" value={editBookingForm.checkInDate} onChange={v => setEditBookingForm({...editBookingForm, checkInDate: v})} />
+                  <InputField label="Check-Out Date" type="date" value={editBookingForm.checkOutDate} onChange={v => setEditBookingForm({...editBookingForm, checkOutDate: v})} />
+                </div>
+                <div className="grid grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Room Category</label>
+                    <select 
+                      className="w-full border-2 border-slate-200 p-3 text-sm focus:border-blue-600 transition-all font-semibold focus:outline-none"
+                      value={editBookingForm.roomCategory}
+                      onChange={e => setEditBookingForm({...editBookingForm, roomCategory: e.target.value})}
+                      required
+                    >
+                      <option value="">-- Choose Category --</option>
+                      {roomCategories.map(cat => (
+                        <option key={cat._id} value={cat._id}>{cat.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Assigned Unit (Room #)</label>
+                    <select 
+                      className="w-full border-2 border-slate-200 p-3 text-sm focus:border-blue-600 transition-all font-semibold focus:outline-none"
+                      value={editBookingForm.roomUnit}
+                      onChange={e => setEditBookingForm({...editBookingForm, roomUnit: e.target.value})}
+                    >
+                      <option value="">-- Unassigned / None --</option>
+                      {availableUnits
+                        .filter(u => {
+                          if (!u.category || !editBookingForm.roomCategory) return true;
+                          const uCatId = (u.category?._id || u.category).toString();
+                          const bCatId = editBookingForm.roomCategory.toString();
+                          return uCatId === bCatId || u._id === editBookingForm.roomUnit;
+                        })
+                        .map(u => (
+                          <option key={u._id} value={u._id}>
+                            Room {u.roomNumber} ({u.status})
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Room Plan</label>
+                    <select 
+                      className="w-full border-2 border-slate-200 p-3 text-sm focus:border-blue-600 transition-all font-semibold focus:outline-none"
+                      value={editBookingForm.roomPlan}
+                      onChange={e => setEditBookingForm({...editBookingForm, roomPlan: e.target.value})}
+                    >
+                      <option value="EP">EP — European Plan</option>
+                      <option value="CP">CP — Continental Plan</option>
+                      <option value="MAP">MAP — Modified American</option>
+                      <option value="AP">AP — American Plan</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status & Source */}
+              <div className="border-t pt-4">
+                <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider mb-3">3. Status & Channel</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Booking Status</label>
+                    <select 
+                      className="w-full border-2 border-slate-200 p-3 text-sm focus:border-blue-600 transition-all font-semibold focus:outline-none font-bold"
+                      value={editBookingForm.status}
+                      onChange={e => setEditBookingForm({...editBookingForm, status: e.target.value})}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Checked-In">Checked-In</option>
+                      <option value="Checked-Out">Checked-Out</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Booking Source</label>
+                    <select 
+                      className="w-full border-2 border-slate-200 p-3 text-sm focus:border-blue-600 transition-all font-semibold focus:outline-none"
+                      value={editBookingForm.source}
+                      onChange={e => setEditBookingForm({...editBookingForm, source: e.target.value})}
+                    >
+                      <option value="Walk-in">Walk-in</option>
+                      <option value="Website">Website</option>
+                      <option value="Booking.com">Booking.com</option>
+                      <option value="MakeMyTrip">MakeMyTrip</option>
+                      <option value="Goibibo">Goibibo</option>
+                      <option value="Agoda">Agoda</option>
+                      <option value="Expedia">Expedia</option>
+                      <option value="Airbnb">Airbnb</option>
+                      <option value="OTA">OTA</option>
+                    </select>
+                  </div>
+                  <InputField label="OTA Ref / Booking ID" value={editBookingForm.otaReferenceId} onChange={v => setEditBookingForm({...editBookingForm, otaReferenceId: v})} required={false} />
+                </div>
+              </div>
+
+              {/* Financial Overrides */}
+              <div className="border-t pt-4 bg-slate-50 p-4 rounded-sm">
+                <h4 className="text-xs font-black uppercase text-slate-600 tracking-wider mb-3">4. Financial Adjustments</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <InputField label="Room Tariff Rate (₹)" type="number" value={editBookingForm.roomTariff} onChange={v => setEditBookingForm({...editBookingForm, roomTariff: v})} />
+                  <InputField label="Total Booking Amount (₹)" type="number" value={editBookingForm.totalAmount} onChange={v => setEditBookingForm({...editBookingForm, totalAmount: v})} />
+                  <InputField label="Total Amount Paid (₹)" type="number" value={editBookingForm.amountPaid} onChange={v => setEditBookingForm({...editBookingForm, amountPaid: v})} />
+                </div>
+                <div className="mt-3 flex justify-between items-center text-xs font-bold text-slate-700">
+                  <span>Recalculated Due Balance:</span>
+                  <span className={(Number(editBookingForm.totalAmount) - Number(editBookingForm.amountPaid)) > 0 ? 'text-rose-600 font-black' : 'text-emerald-600 font-black'}>
+                    ₹{Math.max(0, Number(editBookingForm.totalAmount) - Number(editBookingForm.amountPaid)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-2">
+                <button type="button" onClick={() => setIsEditBookingOpen(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-400 hover:text-slate-700">
+                  Cancel
+                </button>
+                <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 text-xs font-black uppercase shadow-xl transition-all">
+                  Save Booking Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Exclusive: Manage Payments & Cash vs Online Modal */}
+      {isSuperAdmin && isManagePaymentsOpen && selectedBooking && (
+        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[120] flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
+          <div className="bg-white w-full max-w-3xl rounded-sm p-8 shadow-2xl border-t-8 border-purple-600 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6 border-b pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-2xl font-black text-[#1A2B48] uppercase tracking-wide">Manage Financial Transactions</h3>
+                  <span className="bg-purple-100 text-purple-800 text-[10px] font-black px-2 py-0.5 rounded uppercase">Payment Controls</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Guest: <span className="font-bold text-slate-800">{selectedBooking.guestDetails?.firstName} {selectedBooking.guestDetails?.lastName}</span> | 
+                  Room: <span className="font-bold text-slate-800">{selectedBooking.roomUnit?.roomNumber || 'N/A'}</span>
+                </p>
+              </div>
+              <button onClick={() => setIsManagePaymentsOpen(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Financial Overview Cards */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-sm text-center">
+                <span className="text-[10px] font-black uppercase text-slate-400 block mb-1">Gross Total</span>
+                <span className="text-xl font-black text-slate-800">₹{selectedBooking.financials?.totalAmount?.toLocaleString()}</span>
+              </div>
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-sm text-center">
+                <span className="text-[10px] font-black uppercase text-emerald-600 block mb-1">Total Paid</span>
+                <span className="text-xl font-black text-emerald-700">₹{selectedBooking.financials?.amountPaid?.toLocaleString()}</span>
+              </div>
+              <div className="p-4 bg-rose-50 border border-rose-200 rounded-sm text-center">
+                <span className="text-[10px] font-black uppercase text-rose-500 block mb-1">Current Balance Due</span>
+                <span className="text-xl font-black text-rose-600">₹{selectedBooking.financials?.balance?.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Existing Payments Table */}
+            <div className="mb-8">
+              <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider mb-3 flex items-center justify-between">
+                <span>Recorded Payment History ({selectedBooking.financials?.paymentHistory?.length || 0})</span>
+                {isSuperAdmin && <span className="text-[10px] font-bold text-amber-600">★ Super Admin Editing Enabled</span>}
+              </h4>
+              <div className="border border-slate-200 rounded-sm overflow-hidden text-xs">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-100 text-[10px] uppercase font-bold text-slate-600 border-b">
+                    <tr>
+                      <th className="p-3">#</th>
+                      <th className="p-3">Date</th>
+                      <th className="p-3">Amount</th>
+                      <th className="p-3">Mode</th>
+                      <th className="p-3">Staff / Note</th>
+                      {isSuperAdmin && <th className="p-3 text-right">Super Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(selectedBooking.financials?.paymentHistory?.length || 0) === 0 ? (
+                      <tr><td colSpan={isSuperAdmin ? 6 : 5} className="p-4 text-center text-slate-400 italic">No payments logged yet.</td></tr>
+                    ) : (
+                      selectedBooking.financials?.paymentHistory?.map((p, i) => (
+                        <tr key={i} className="hover:bg-slate-50">
+                          <td className="p-3 text-slate-400 font-bold">{i + 1}</td>
+                          <td className="p-3 font-semibold">{new Date(p.timestamp).toLocaleDateString('en-GB')} {new Date(p.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                          <td className="p-3 font-black text-emerald-700">₹{p.amount?.toLocaleString()}</td>
+                          <td className="p-3">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                              p.mode === 'Cash' ? 'bg-emerald-100 text-emerald-800' :
+                              p.mode === 'Online' || p.mode === 'UPI' || p.mode === 'Online / UPI' ? 'bg-blue-100 text-blue-800' :
+                              p.mode === 'OTA' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                              p.mode === 'Card' ? 'bg-purple-100 text-purple-800' : 'bg-slate-200 text-slate-800'
+                            }`}>
+                              {p.mode}
+                            </span>
+                          </td>
+                          <td className="p-3 text-slate-600">
+                            <div>{p.staff}</div>
+                            {p.note && <div className="text-[10px] text-slate-400 italic">{p.note}</div>}
+                          </td>
+                          {isSuperAdmin && (
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditPaymentMode(i, p)}
+                                  className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-bold text-[10px] uppercase border border-amber-300 transition-all"
+                                  title="Change mode (Cash/Online) or amount"
+                                >
+                                  Edit Mode
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePayment(i, p)}
+                                  className="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-900 rounded font-bold text-[10px] uppercase border border-rose-300 transition-all"
+                                  title="Delete payment entry"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Add Payment Form */}
+            <div className="border-t pt-6 bg-slate-50 p-6 rounded-sm">
+              <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider mb-4 flex items-center gap-2">
+                <Plus size={16} /> Add / Record Payment Entry
+              </h4>
+              <form onSubmit={handleAddPayment} className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <InputField 
+                    label="Payment Amount (₹)" 
+                    type="number" 
+                    value={newPaymentForm.amount} 
+                    onChange={v => setNewPaymentForm({...newPaymentForm, amount: v})} 
+                    placeholder="e.g. 2000"
+                  />
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Payment Mode</label>
+                    <select 
+                      className="w-full border-2 border-slate-200 p-3 text-sm focus:border-purple-600 transition-all font-semibold focus:outline-none bg-white"
+                      value={newPaymentForm.mode}
+                      onChange={e => setNewPaymentForm({...newPaymentForm, mode: e.target.value})}
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="Online">Online / UPI</option>
+                      <option value="OTA">OTA Channel Settlement</option>
+                      <option value="Card">Credit/Debit Card</option>
+                      <option value="Bank Transfer">Bank Transfer</option>
+                      <option value="Other">Other Mode</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Payment Date</label>
+                    <input 
+                      type="date"
+                      className="w-full border-2 border-slate-200 p-3 text-sm focus:border-purple-600 transition-all font-semibold focus:outline-none bg-white"
+                      value={newPaymentForm.date}
+                      onChange={e => setNewPaymentForm({...newPaymentForm, date: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1">
+                  <InputField 
+                    label="Transaction Note / Reference (Optional)" 
+                    value={newPaymentForm.note} 
+                    onChange={v => setNewPaymentForm({...newPaymentForm, note: v})} 
+                    required={false}
+                    placeholder="e.g. Received via GPay / Handed to Front Desk"
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  className="w-full bg-purple-700 hover:bg-purple-800 text-white py-4 font-black uppercase text-xs shadow-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <DollarSign size={16} /> Record Payment & Sync Accounts
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Front Desk Analytics Full-Page Modal View */}
       {isAnalyticsOpen && (
         <div className="fixed inset-0 z-[200] bg-slate-950/95 overflow-y-auto animate-in fade-in duration-200">
@@ -1896,10 +2575,19 @@ const ActionButton = ({ icon, label, color, onClick, disabled }) => (
     </button>
 );
 
-const InputField = ({ label, value, onChange, type = "text", required = true }) => (
+const InputField = ({ label, value, onChange, type = "text", required = true, min, max, placeholder }) => (
   <div>
     <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">{label}</label>
-    <input type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all focus:outline-none" required={required} />
+    <input 
+      type={type} 
+      value={value} 
+      min={min} 
+      max={max} 
+      placeholder={placeholder} 
+      onChange={e => onChange(e.target.value)} 
+      className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all focus:outline-none" 
+      required={required} 
+    />
   </div>
 );
 

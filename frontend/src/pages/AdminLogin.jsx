@@ -20,7 +20,7 @@ const AdminLogin = () => {
         if (result.success) {
             // Check if user is admin after login
             const storedUser = JSON.parse(localStorage.getItem('user'));
-            if (storedUser && storedUser.role === 'admin') {
+            if (storedUser && (storedUser.role === 'admin' || storedUser.role === 'superadmin')) {
                 navigate('/admin');
             } else {
                 setError('Access denied. You do not have administrator privileges.');

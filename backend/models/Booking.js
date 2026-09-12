@@ -55,8 +55,9 @@ const BookingSchema = new mongoose.Schema({
         balance: { type: Number, default: 0 },
         paymentHistory: [{
             amount: Number,
-            mode: { type: String, enum: ['Cash', 'UPI', 'Card', 'Online'] },
+            mode: { type: String, enum: ['Cash', 'UPI', 'Card', 'Online', 'Online / UPI', 'Bank Transfer', 'OTA', 'Other'], default: 'Cash' },
             staff: { type: String, default: 'System' },
+            note: { type: String, default: '' },
             timestamp: { type: Date, default: Date.now }
         }],
         paymentMode: { type: String, default: 'Pending' }

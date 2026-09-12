@@ -36,13 +36,62 @@ export const AuthProvider = ({ children }) => {
                 firstName: res.data.firstName,
                 lastName: res.data.lastName,
                 email: res.data.email,
-                role: res.data.role
+                role: res.data.role,
+                isSuperAdmin: res.data.role === 'superadmin' || res.data.isSuperAdmin === true
             };
             localStorage.setItem('user', JSON.stringify(userData));
             setUser(userData);
-            return { success: true };
+            return { success: true, user: userData };
         } catch (error) {
             return { success: false, message: error.response?.data?.message || 'Login failed' };
+        }
+    };
+
+    const superAdminLogin = async (email, password) => {
+        try {
+            const res = await axios.post(`${config.API_URL}/api/auth/super-admin-login`, { email, password });
+            localStorage.setItem('token', res.data.token);
+            axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+            const userData = {
+                _id: res.data._id,
+                firstName: res.data.firstName,
+                lastName: res.data.lastName,
+                email: res.data.email,
+                role: res.data.role,
+                isSuperAdmin: true
+            };
+            localStorage.setItem('user', JSON.stringify(userData));
+            setUser(userData);
+            return { success: true, user: userData };
+        } catch (error) {
+            console.error('Super Admin Dedicated Login Error:', error);
+            // Fallback: try standard /api/auth/login if dedicated endpoint was not found or unreachable
+            try {
+                const fallbackRes = await axios.post(`${config.API_URL}/api/auth/login`, { email, password });
+                if (fallbackRes.data.role === 'superadmin' || fallbackRes.data.isSuperAdmin) {
+                    localStorage.setItem('token', fallbackRes.data.token);
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${fallbackRes.data.token}`;
+                    const userData = {
+                        _id: fallbackRes.data._id,
+                        firstName: fallbackRes.data.firstName,
+                        lastName: fallbackRes.data.lastName,
+                        email: fallbackRes.data.email,
+                        role: fallbackRes.data.role,
+                        isSuperAdmin: true
+                    };
+                    localStorage.setItem('user', JSON.stringify(userData));
+                    setUser(userData);
+                    return { success: true, user: userData };
+                }
+            } catch (fbErr) {
+                console.error('Standard Login Fallback Error:', fbErr);
+            }
+
+            const errorMsg = error.response?.data?.message || 
+                (error.message && error.message.toLowerCase().includes('network') 
+                    ? `Cannot reach backend at ${config.API_URL}. Ensure backend server is active.` 
+                    : error.message || 'Super Admin authentication failed');
+            return { success: false, message: errorMsg };
         }
     };
 
@@ -93,8 +142,11 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    const isSuperAdmin = user?.role === 'superadmin' || user?.isSuperAdmin === true;
+    const isAdmin = user?.role === 'admin' || isSuperAdmin;
+
     return (
-        <AuthContext.Provider value={{ user, login, googleLogin, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, superAdminLogin, googleLogin, register, logout, loading, isSuperAdmin, isAdmin }}>
             {children}
         </AuthContext.Provider>
     );
