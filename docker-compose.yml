@@ -7,13 +7,13 @@ services:
     volumes:
       - /var/www/hotel-data/uploads:/app/uploads
     networks:
-      - web-proxy  # Added this to talk to your global Traefik
+      - web-proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`api.hotelbhopalinn.tenontenstays.com`)"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.tls.certresolver=myresolver"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.hotel-bhopal-backend.rule=Host(`api.hotelbhopalinn.com`)"
+      - "traefik.http.routers.hotel-bhopal-backend.entrypoints=websecure"
+      - "traefik.http.routers.hotel-bhopal-backend.tls.certresolver=myresolver"
+      - "traefik.http.services.hotel-bhopal-backend.loadbalancer.server.port=8000"
     restart: always
 
   frontend:
@@ -22,13 +22,13 @@ services:
     depends_on:
       - backend
     networks:
-      - web-proxy  # Added this
+      - web-proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`hotelbhopalinn.tenontenstays.com`) || Host(`www.hotelbhopalinn.tenontenstays.com`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls.certresolver=myresolver"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.hotel-bhopal-frontend.rule=Host(`hotelbhopalinn.com`) || Host(`www.hotelbhopalinn.com`)"
+      - "traefik.http.routers.hotel-bhopal-frontend.entrypoints=websecure"
+      - "traefik.http.routers.hotel-bhopal-frontend.tls.certresolver=myresolver"
+      - "traefik.http.services.hotel-bhopal-frontend.loadbalancer.server.port=80"
     restart: always
 
 networks:
