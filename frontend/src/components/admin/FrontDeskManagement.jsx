@@ -4,7 +4,7 @@ import config from '../../config';
 import { 
   X, CheckCircle2, IndianRupee, Printer, LogOut, 
   Plus, Info, ArrowRight, User, Calendar, CreditCard, AlertTriangle, History, FastForward, Coffee, TrendingUp, BarChart3, CalendarPlus, Zap, Activity, Bed,
-  Trash2, Edit3, ShieldCheck, DollarSign, CalendarCheck, Tag
+  Trash2, Edit3, ShieldCheck, DollarSign, CalendarCheck, Tag, FileEdit
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { socket } from '@/lib/socket';
@@ -28,6 +28,14 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
 
   const [isCollectPaymentOpen, setIsCollectPaymentOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ amount: '', mode: 'Cash' });
+  const [isSubmittingWalkIn, setIsSubmittingWalkIn] = useState(false);
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+
+  // Amendment Request State
+  const [isAmendModalOpen, setIsAmendModalOpen] = useState(false);
+  const [amendBooking, setAmendBooking] = useState(null);
+  const [amendReason, setAmendReason] = useState('');
+  const [submittingAmend, setSubmittingAmend] = useState(false);
 
   // Super Admin: Edit Booking State
   const [isEditBookingOpen, setIsEditBookingOpen] = useState(false);
@@ -215,30 +223,14 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
   };
 
   const collectPayment = async (id, amount, mode) => {
-    if(!amount || amount <= 0) return;
+    if(!amount || amount <= 0 || isSubmittingPayment) return;
     try {
-      // 1. Record in Booking History
+      setIsSubmittingPayment(true);
+      // 1. Record in Booking History and create linked Finance Transaction via backend
       await axios.post(`${API_BASE}/api/bookings/${id}/collect-payment`, { 
         amount: Number(amount), 
         mode,
         staff: 'Admin_Staff' 
-      });
-
-      // 2. Automatically Record in Finance Ledger
-      const guestName = selectedBooking?.guestDetails ? `${selectedBooking.guestDetails.firstName || ''} ${selectedBooking.guestDetails.lastName || ''}`.trim() : 'Guest';
-      const roomNum = (typeof selectedBooking?.roomUnit === 'object' && selectedBooking?.roomUnit !== null)
-        ? (selectedBooking.roomUnit.roomNumber || '')
-        : (selectedBooking?.roomUnit || '');
-      const roomInfo = roomNum ? `(Room ${roomNum})` : '';
-      
-      await axios.post(`${API_BASE}/api/finance/transactions`, {
-        type: 'Income',
-        category: 'Room Rent',
-        amount: Number(amount),
-        description: `Payment Collection - ${guestName} ${roomInfo}`.trim(),
-        paymentMode: mode,
-        date: new Date(),
-        recordedBy: 'FrontDesk'
       });
 
       fetchData();
@@ -246,7 +238,9 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
       setSelectedBooking(updated);
     } catch (err) {
       console.error('Payment sync error:', err);
-      alert('Payment collection failed to sync with Finance.');
+      alert('Payment collection failed: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSubmittingPayment(false);
     }
   };
 
@@ -269,7 +263,9 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
 
   const handleWalkInSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmittingWalkIn) return;
     try {
+      setIsSubmittingWalkIn(true);
       const payload = {
         guestDetails: walkInForm.guestDetails,
         roomCategory: walkInForm.roomCategory,
@@ -289,20 +285,6 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
       };
 
       await axios.post(`${API_BASE}/api/bookings/walk-in`, payload);
-      
-      // Record Advance Payment in Finance if exists
-      if (walkInForm.financials.amountPaid > 0) {
-          const selectedMode = walkInForm.paymentMode || 'Cash';
-          await axios.post(`${API_BASE}/api/finance/transactions`, {
-            type: 'Income',
-            category: 'Room Rent',
-            amount: Number(walkInForm.financials.amountPaid),
-            description: `Walk-in Advance (${walkInForm.source}) - ${walkInForm.guestDetails.firstName} ${walkInForm.guestDetails.lastName}`,
-            paymentMode: selectedMode,
-            date: walkInForm.paymentDate ? new Date(walkInForm.paymentDate) : new Date(walkInForm.checkInDate),
-            recordedBy: isSuperAdmin ? 'SuperAdmin' : 'FrontDesk'
-          });
-      }
 
       setIsWalkInOpen(false);
       fetchData();
@@ -326,6 +308,8 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
       });
     } catch (err) {
       alert('Failed to register walk-in: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSubmittingWalkIn(false);
     }
   };
 
@@ -342,6 +326,39 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
       alert('Booking permanently removed.');
     } catch (err) {
       alert('Failed to delete booking: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  // Submit Amendment Request to Super Admin
+  const handleRequestAmendment = async (e) => {
+    e.preventDefault();
+    if (!amendBooking || !amendReason.trim()) {
+      alert('Please provide a reason or explanation for the amendment.');
+      return;
+    }
+
+    try {
+      setSubmittingAmend(true);
+      const token = localStorage.getItem('token') || (user && user.token);
+      const authHeader = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      
+      await axios.post(
+        `${API_BASE}/api/amendments/request`,
+        {
+          bookingId: amendBooking._id,
+          reason: amendReason.trim()
+        },
+        authHeader
+      );
+
+      alert(`Amendment request submitted to Super Admin for ${amendBooking.guestDetails?.firstName} ${amendBooking.guestDetails?.lastName}!\n\nSuper Admin will review your request in their portal. Once approved (✓), you will be able to edit or delete this entry in the Amendments section.`);
+      setIsAmendModalOpen(false);
+      setAmendBooking(null);
+      setAmendReason('');
+    } catch (err) {
+      alert('Failed to submit amendment request: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmittingAmend(false);
     }
   };
 
@@ -424,17 +441,6 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
         note: newPaymentForm.note,
         date: newPaymentForm.date ? new Date(newPaymentForm.date) : new Date(),
         staff: user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'FrontDesk'
-      });
-
-      // Record in Finance Transactions as well
-      await axios.post(`${API_BASE}/api/finance/transactions`, {
-        type: 'Income',
-        category: 'Room Rent',
-        amount: Number(newPaymentForm.amount),
-        description: `Payment Added (${newPaymentForm.mode}) - ${selectedBooking.guestDetails?.firstName} ${selectedBooking.guestDetails?.lastName}`,
-        paymentMode: newPaymentForm.mode,
-        date: newPaymentForm.date ? new Date(newPaymentForm.date) : new Date(),
-        recordedBy: isSuperAdmin ? 'SuperAdmin' : 'FrontDesk'
       });
 
       setSelectedBooking(res.data);
@@ -1234,7 +1240,23 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                     }
                   </td>
                   <td className="px-6 py-5 text-right">
-                    <button className="text-slate-300 group-hover:text-[#1A2B48] transition-colors"><ChevronRight size={20}/></button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAmendBooking(booking);
+                          setAmendReason('');
+                          setIsAmendModalOpen(true);
+                        }}
+                        className="px-2.5 py-1 bg-amber-500/10 text-amber-700 hover:bg-amber-600 hover:text-white border border-amber-300 rounded text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1 shadow-xs"
+                        title="Request amendment for this entry"
+                      >
+                        <FileEdit size={11} />
+                        <span>Amend</span>
+                      </button>
+                      <button className="text-slate-300 group-hover:text-[#1A2B48] transition-colors"><ChevronRight size={20}/></button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1458,6 +1480,16 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                             color="bg-rose-600" 
                             onClick={() => handleCheckOut(selectedBooking._id)}
                             disabled={selectedBooking.status !== 'Checked-In'}
+                        />
+                        <ActionButton 
+                            icon={<FileEdit size={18} />} 
+                            label="Amend / Request Super Admin Access" 
+                            color="bg-amber-600 hover:bg-amber-700" 
+                            onClick={() => {
+                                setAmendBooking(selectedBooking);
+                                setAmendReason('');
+                                setIsAmendModalOpen(true);
+                            }}
                         />
 
                         {/* Super Admin Exclusive Feature Suite (Hidden for Normal Admin) */}
@@ -2544,6 +2576,102 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                 </button>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Amendment Modal */}
+      {isAmendModalOpen && amendBooking && (
+        <div className="fixed inset-0 bg-black/80 z-[120] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-lg rounded-sm shadow-2xl overflow-hidden border-t-4 border-amber-500">
+            <div className="bg-[#1A2B48] p-5 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-base font-black uppercase tracking-wide flex items-center gap-2">
+                  <FileEdit size={18} className="text-amber-400" />
+                  <span>Request Entry Amendment</span>
+                </h3>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Submit request to Super Admin to unlock edit/delete access
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsAmendModalOpen(false)}
+                className="text-white/70 hover:text-white p-1 rounded-full"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleRequestAmendment} className="p-6 space-y-4 text-xs">
+              {/* Booking Summary Box */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-sm space-y-2">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Guest Name</span>
+                  <span className="font-black text-slate-800 text-sm">
+                    {amendBooking.guestDetails?.firstName} {amendBooking.guestDetails?.lastName}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Room</span>
+                  <span className="font-bold text-slate-700">
+                    {amendBooking.roomUnit?.roomNumber || '---'} ({amendBooking.roomCategory?.title || 'Standard'})
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Total Tariff</span>
+                  <span className="font-bold text-slate-800">
+                    ₹{(amendBooking.financials?.totalAmount || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Amount Paid</span>
+                  <span className="font-black text-emerald-700">
+                    ₹{(amendBooking.financials?.amountPaid || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center border-t pt-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Balance Due</span>
+                  <span className={`font-black ${amendBooking.financials?.balance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    ₹{(amendBooking.financials?.balance || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Reason Explanation */}
+              <div>
+                <label className="block text-[10px] font-black text-slate-700 uppercase mb-1.5">
+                  Explain the Mistake / Reason for Amendment <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={amendReason}
+                  onChange={(e) => setAmendReason(e.target.value)}
+                  placeholder="e.g. Wrong tariff entered: should be ₹2,500 instead of ₹2,000. Or wrong payment mode recorded. Please allow editing."
+                  className="w-full p-3 border border-slate-300 rounded-sm font-medium text-slate-800 focus:outline-none focus:border-amber-600 leading-relaxed"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  This message will appear directly in the Super Admin's review portal with Tick (✓) and Cross (✕) approval actions.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setIsAmendModalOpen(false)}
+                  className="px-4 py-2 font-bold text-slate-500 uppercase hover:text-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingAmend}
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-sm font-black text-xs uppercase tracking-wider shadow transition-all"
+                >
+                  {submittingAmend ? 'Submitting...' : 'Submit Request to Super Admin'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

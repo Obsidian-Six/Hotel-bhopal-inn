@@ -4,7 +4,8 @@ import config from '../../config';
 import { 
     IndianRupee, TrendingUp, TrendingDown, Wallet, Plus, 
     Download, ShieldAlert, CheckCircle, AlertCircle, List, ArrowLeft,
-    MessageSquare, Send, ShieldCheck, X, FileEdit, CheckCheck, RefreshCw, Globe, Tag, Trash2
+    MessageSquare, Send, ShieldCheck, X, FileEdit, CheckCheck, RefreshCw, Globe, Tag, Trash2,
+    MoreVertical
 } from 'lucide-react';
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/lib/AuthContext';
@@ -25,6 +26,18 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
 
+  // Ledger Three-Dots Action Modes ('edit' | 'delete' | 'amend' | null)
+  const [incomeMode, setIncomeMode] = useState(null);
+  const [expenseMode, setExpenseMode] = useState(null);
+  const [incomeMenuOpen, setIncomeMenuOpen] = useState(false);
+  const [expenseMenuOpen, setExpenseMenuOpen] = useState(false);
+
+  // Transaction Amendment Request Modal State
+  const [txForAmend, setTxForAmend] = useState(null);
+  const [isTxAmendModalOpen, setIsTxAmendModalOpen] = useState(false);
+  const [txAmendReason, setTxAmendReason] = useState('');
+  const [submittingTxAmend, setSubmittingTxAmend] = useState(false);
+
   // Super Admin Amendment States
   const [selectedDueForAmend, setSelectedDueForAmend] = useState(null);
   const [amendModalOpen, setAmendModalOpen] = useState(false);
@@ -32,6 +45,22 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
   const [amendThread, setAmendThread] = useState(null);
   const [amendReplyText, setAmendReplyText] = useState('');
   const [loadingAmend, setLoadingAmend] = useState(false);
+
+  // Super Admin: Edit Transaction State
+  const [editingTransaction, setEditingTransaction] = useState(null);
+  const [isEditTxModalOpen, setIsEditTxModalOpen] = useState(false);
+  const [editTxForm, setEditTxForm] = useState({
+    date: '',
+    time: '',
+    type: 'Income',
+    description: '',
+    category: '',
+    amount: '',
+    paymentMode: 'Cash',
+    recordedBy: '',
+    approvedBy: ''
+  });
+  const [submittingEditTx, setSubmittingEditTx] = useState(false);
   
   const [newIncome, setNewIncome] = useState({
       category: 'Room Rent', amount: '', description: '', paymentMode: 'Cash', recordedBy: ''
@@ -192,6 +221,124 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
           await axios.post(`${API_BASE}/api/finance/transactions/void/${id}`, { voidReason: reason });
           fetchData();
       } catch (err) { console.error(err); }
+  };
+
+  const handleIncomeRowClick = (tx) => {
+    if (!incomeMode) return;
+    if (incomeMode === 'edit') {
+      handleOpenEditTransaction(tx);
+    } else if (incomeMode === 'delete') {
+      handleVoidTransaction(tx._id);
+    } else if (incomeMode === 'amend') {
+      handleOpenTxAmend(tx);
+    }
+  };
+
+  const handleExpenseRowClick = (tx) => {
+    if (!expenseMode) return;
+    if (expenseMode === 'edit') {
+      handleOpenEditTransaction(tx);
+    } else if (expenseMode === 'delete') {
+      handleVoidTransaction(tx._id);
+    } else if (expenseMode === 'amend') {
+      handleOpenTxAmend(tx);
+    }
+  };
+
+  const handleOpenTxAmend = (tx) => {
+    setTxForAmend(tx);
+    setTxAmendReason('');
+    setIsTxAmendModalOpen(true);
+  };
+
+  const handleSubmitTxAmend = async (e) => {
+    e.preventDefault();
+    if (!txForAmend || !txAmendReason.trim()) return;
+    try {
+      setSubmittingTxAmend(true);
+      const token = localStorage.getItem('token') || (user && user.token);
+      const authHeader = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
+      await axios.post(
+        `${API_BASE}/api/amendments/request`,
+        {
+          transactionId: txForAmend._id,
+          bookingId: txForAmend.booking || undefined,
+          reason: txAmendReason.trim()
+        },
+        authHeader
+      );
+
+      setIsTxAmendModalOpen(false);
+      setTxForAmend(null);
+      setTxAmendReason('');
+      fetchData();
+      alert('Amendment request submitted to Super Admin! Once approved, you can edit or delete this entry.');
+    } catch (err) {
+      alert('Failed to request amendment: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmittingTxAmend(false);
+    }
+  };
+
+  // Super Admin: Open Edit Transaction Modal
+  const handleOpenEditTransaction = (tx) => {
+    setEditingTransaction(tx);
+    const txDate = tx.date ? new Date(tx.date) : new Date();
+    const dateStr = txDate.toISOString().split('T')[0];
+    const timeStr = txDate.toTimeString().slice(0, 5);
+    setEditTxForm({
+      date: dateStr,
+      time: timeStr,
+      type: tx.type || 'Income',
+      description: tx.description || '',
+      category: tx.category || '',
+      amount: tx.amount !== undefined ? tx.amount.toString() : '',
+      paymentMode: tx.paymentMode || 'Cash',
+      recordedBy: tx.recordedBy || '',
+      approvedBy: tx.approvedBy || ''
+    });
+    setIsEditTxModalOpen(true);
+  };
+
+  // Super Admin: Save Edited Transaction
+  const handleSaveEditTransaction = async (e) => {
+    e.preventDefault();
+    if (!editingTransaction) return;
+
+    try {
+      setSubmittingEditTx(true);
+      const token = localStorage.getItem('token') || (user && user.token);
+      const authHeader = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+
+      const combinedDateTime = editTxForm.date && editTxForm.time
+        ? new Date(`${editTxForm.date}T${editTxForm.time}:00`)
+        : new Date(editTxForm.date || Date.now());
+
+      await axios.put(
+        `${API_BASE}/api/finance/transactions/${editingTransaction._id}`,
+        {
+          date: combinedDateTime,
+          type: editTxForm.type,
+          description: editTxForm.description,
+          category: editTxForm.category,
+          amount: Number(editTxForm.amount),
+          paymentMode: editTxForm.paymentMode,
+          recordedBy: editTxForm.recordedBy,
+          approvedBy: editTxForm.approvedBy
+        },
+        authHeader
+      );
+
+      setIsEditTxModalOpen(false);
+      setEditingTransaction(null);
+      fetchData();
+      alert('Transaction updated successfully by Super Admin.');
+    } catch (err) {
+      alert('Failed to update transaction: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setSubmittingEditTx(false);
+    }
   };
   
   const submitHandover = async (e) => {
@@ -575,14 +722,166 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
             )}
 
             <div className="bg-white rounded-sm shadow-sm border border-slate-100 overflow-hidden">
-                <div className="bg-[#10B981] p-4 flex justify-between items-center text-white">
-                    <h3 className="text-xs font-bold uppercase tracking-widest">Income Ledger — {new Date(selectedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'})}</h3>
-                    {!isLocked && (
-                        <button onClick={() => setShowIncomeModal(true)} className="bg-white/20 hover:bg-white/30 p-1.5 rounded-sm transition-colors">
-                            <Plus size={16} />
-                        </button>
-                    )}
+                <div className="bg-[#10B981] p-4 flex justify-between items-center text-white relative">
+                    <div className="flex items-center gap-3">
+                        <h3 className="text-xs font-bold uppercase tracking-widest">
+                            Income Ledger — {new Date(selectedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'})}
+                        </h3>
+
+                        {/* Three Dots Header Action Menu */}
+                        <div className="relative">
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    setIncomeMenuOpen(!incomeMenuOpen);
+                                    setExpenseMenuOpen(false);
+                                }} 
+                                className={`p-1.5 rounded-sm transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer ${
+                                    incomeMode 
+                                        ? 'bg-white text-emerald-800 shadow-sm ring-2 ring-white/70 font-black' 
+                                        : 'bg-white/20 hover:bg-white/30 text-white'
+                                }`}
+                                title="Ledger Action Options: Edit, Delete, Amend"
+                            >
+                                <MoreVertical size={16} />
+                                {incomeMode && (
+                                    <span className="uppercase text-[9px] tracking-wider px-1.5 py-0.5 bg-emerald-100 text-emerald-900 rounded font-black">
+                                        {incomeMode} mode
+                                    </span>
+                                )}
+                            </button>
+
+                            {incomeMenuOpen && (
+                                <>
+                                    <div 
+                                        className="fixed inset-0 z-30 cursor-default" 
+                                        onClick={() => setIncomeMenuOpen(false)} 
+                                    />
+                                    <div className="absolute left-0 mt-2 w-64 bg-white rounded-md shadow-2xl border border-slate-200 py-1.5 z-40 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                                        <div className="px-3 py-1.5 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                            Choose Ledger Action Mode
+                                        </div>
+                                        
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIncomeMode('edit');
+                                                setIncomeMenuOpen(false);
+                                            }}
+                                            className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
+                                                incomeMode === 'edit' ? 'bg-amber-50 text-amber-900 font-bold' : 'hover:bg-slate-50 text-slate-700 font-medium'
+                                            }`}
+                                        >
+                                            <span className="w-6 h-6 rounded bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 font-bold">
+                                                <FileEdit size={13} />
+                                            </span>
+                                            <div>
+                                                <div className="font-bold">Edit Mode</div>
+                                                <div className="text-[10px] text-slate-400">Click any income entry to edit</div>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIncomeMode('delete');
+                                                setIncomeMenuOpen(false);
+                                            }}
+                                            className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
+                                                incomeMode === 'delete' ? 'bg-rose-50 text-rose-900 font-bold' : 'hover:bg-slate-50 text-slate-700 font-medium'
+                                            }`}
+                                        >
+                                            <span className="w-6 h-6 rounded bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 font-bold">
+                                                <Trash2 size={13} />
+                                            </span>
+                                            <div>
+                                                <div className="font-bold">Delete / Void Mode</div>
+                                                <div className="text-[10px] text-slate-400">Click any income entry to void</div>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIncomeMode('amend');
+                                                setIncomeMenuOpen(false);
+                                            }}
+                                            className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
+                                                incomeMode === 'amend' ? 'bg-purple-50 text-purple-900 font-bold' : 'hover:bg-slate-50 text-slate-700 font-medium'
+                                            }`}
+                                        >
+                                            <span className="w-6 h-6 rounded bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 font-bold">
+                                                <MessageSquare size={13} />
+                                            </span>
+                                            <div>
+                                                <div className="font-bold">Amend Mode</div>
+                                                <div className="text-[10px] text-slate-400">Request Super Admin amendment</div>
+                                            </div>
+                                        </button>
+
+                                        {incomeMode && (
+                                            <div className="pt-1.5 mt-1 border-t border-slate-100 px-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setIncomeMode(null);
+                                                        setIncomeMenuOpen(false);
+                                                    }}
+                                                    className="w-full py-1.5 text-center text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
+                                                >
+                                                    ✕ Exit Active Mode
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {!isLocked && (
+                            <button 
+                                onClick={() => setShowIncomeModal(true)} 
+                                className="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-sm transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                                title="Add New Income Entry"
+                            >
+                                <Plus size={16} />
+                                <span className="hidden sm:inline">Add Entry</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
+
+                {/* Income Active Mode Banner */}
+                {incomeMode && (
+                    <div className={`px-4 py-2.5 flex items-center justify-between border-b text-xs font-bold transition-all ${
+                        incomeMode === 'edit'
+                            ? 'bg-amber-50 border-amber-200 text-amber-900'
+                            : incomeMode === 'delete'
+                            ? 'bg-rose-50 border-rose-200 text-rose-900'
+                            : 'bg-purple-50 border-purple-200 text-purple-900'
+                    }`}>
+                        <div className="flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full ${
+                                incomeMode === 'edit' ? 'bg-amber-500 animate-pulse' : incomeMode === 'delete' ? 'bg-rose-500 animate-pulse' : 'bg-purple-500 animate-pulse'
+                            }`} />
+                            <span>
+                                {incomeMode === 'edit' && '✏️ EDIT MODE ACTIVE: Click on any entry row below to open the editor.'}
+                                {incomeMode === 'delete' && '🗑️ DELETE / VOID MODE ACTIVE: Click on any entry row below to void or remove it.'}
+                                {incomeMode === 'amend' && '📝 AMEND MODE ACTIVE: Click on any entry row below to submit an amendment request to Super Admin.'}
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setIncomeMode(null)}
+                            className="px-2.5 py-1 rounded text-[11px] font-black uppercase tracking-wider bg-white/90 hover:bg-white shadow-xs border transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                            <X size={12} /> Exit Mode
+                        </button>
+                    </div>
+                )}
+
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -594,7 +893,9 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest">Amount</th>
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest">Mode</th>
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest">Staff</th>
-                                {role === 'Admin' && <th className="p-3 text-[10px] font-bold uppercase tracking-widest text-right">Actions</th>}
+                                <th className="p-3 text-[10px] font-bold uppercase tracking-widest text-right">
+                                    {incomeMode ? `${incomeMode.toUpperCase()} ACTION` : 'Status'}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -602,7 +903,21 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                                 <tr><td colSpan="8" className="p-8 text-center text-slate-400 italic">No income entries for this date.</td></tr>
                             ) : (
                                 incomeTx.map((tx, idx) => (
-                                    <tr key={tx._id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <tr 
+                                        key={tx._id} 
+                                        onClick={() => handleIncomeRowClick(tx)}
+                                        className={`border-b border-slate-100 transition-colors ${
+                                            incomeMode ? 'cursor-pointer hover:shadow-sm' : ''
+                                        } ${
+                                            incomeMode === 'edit' 
+                                                ? 'hover:bg-amber-50/90 border-l-4 border-l-amber-500' 
+                                                : incomeMode === 'delete' 
+                                                ? 'hover:bg-rose-50/90 border-l-4 border-l-rose-500' 
+                                                : incomeMode === 'amend' 
+                                                ? 'hover:bg-purple-50/90 border-l-4 border-l-purple-500' 
+                                                : 'hover:bg-slate-50'
+                                        }`}
+                                    >
                                         <td className="p-3 text-xs text-slate-400 font-bold">{idx + 1}</td>
                                         <td className="p-3 text-xs text-slate-600">{new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                                         <td className="p-3 text-sm text-slate-800 font-medium">{tx.description}</td>
@@ -610,11 +925,23 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                                         <td className="p-3 text-sm font-black text-slate-800">₹{tx.amount.toLocaleString()}</td>
                                         <td className="p-3 text-xs text-slate-600">{tx.paymentMode}</td>
                                         <td className="p-3 text-xs text-slate-600 font-medium">{tx.recordedBy || '-'}</td>
-                                        {role === 'Admin' && (
-                                            <td className="p-3 text-right">
-                                                <button onClick={() => handleVoidTransaction(tx._id)} className="text-[10px] font-bold text-red-500 hover:text-red-700 uppercase tracking-widest">Void</button>
-                                            </td>
-                                        )}
+                                        <td className="p-3 text-right">
+                                            {incomeMode === 'edit' ? (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500 text-white rounded text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                                    <FileEdit size={11} /> Edit
+                                                </span>
+                                            ) : incomeMode === 'delete' ? (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-600 text-white rounded text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                                    <Trash2 size={11} /> Void
+                                                </span>
+                                            ) : incomeMode === 'amend' ? (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-600 text-white rounded text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                                    <MessageSquare size={11} /> Amend
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-300 text-xs select-none">—</span>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -624,14 +951,166 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
             </div>
 
             <div className="bg-white rounded-sm shadow-sm border border-slate-100 overflow-hidden">
-                <div className="bg-[#EF4444] p-4 flex justify-between items-center text-white">
-                    <h3 className="text-xs font-bold uppercase tracking-widest">Expense Ledger — {new Date(selectedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'})}</h3>
-                    {!isLocked && (
-                        <button onClick={() => setShowExpenseModal(true)} className="bg-white/20 hover:bg-white/30 p-1.5 rounded-sm transition-colors">
-                            <Plus size={16} />
-                        </button>
-                    )}
+                <div className="bg-[#EF4444] p-4 flex justify-between items-center text-white relative">
+                    <div className="flex items-center gap-3">
+                        <h3 className="text-xs font-bold uppercase tracking-widest">
+                            Expense Ledger — {new Date(selectedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric'})}
+                        </h3>
+
+                        {/* Three Dots Header Action Menu */}
+                        <div className="relative">
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    setExpenseMenuOpen(!expenseMenuOpen);
+                                    setIncomeMenuOpen(false);
+                                }} 
+                                className={`p-1.5 rounded-sm transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer ${
+                                    expenseMode 
+                                        ? 'bg-white text-rose-800 shadow-sm ring-2 ring-white/70 font-black' 
+                                        : 'bg-white/20 hover:bg-white/30 text-white'
+                                }`}
+                                title="Ledger Action Options: Edit, Delete, Amend"
+                            >
+                                <MoreVertical size={16} />
+                                {expenseMode && (
+                                    <span className="uppercase text-[9px] tracking-wider px-1.5 py-0.5 bg-rose-100 text-rose-900 rounded font-black">
+                                        {expenseMode} mode
+                                    </span>
+                                )}
+                            </button>
+
+                            {expenseMenuOpen && (
+                                <>
+                                    <div 
+                                        className="fixed inset-0 z-30 cursor-default" 
+                                        onClick={() => setExpenseMenuOpen(false)} 
+                                    />
+                                    <div className="absolute left-0 mt-2 w-64 bg-white rounded-md shadow-2xl border border-slate-200 py-1.5 z-40 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                                        <div className="px-3 py-1.5 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                            Choose Ledger Action Mode
+                                        </div>
+                                        
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setExpenseMode('edit');
+                                                setExpenseMenuOpen(false);
+                                            }}
+                                            className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
+                                                expenseMode === 'edit' ? 'bg-amber-50 text-amber-900 font-bold' : 'hover:bg-slate-50 text-slate-700 font-medium'
+                                            }`}
+                                        >
+                                            <span className="w-6 h-6 rounded bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 font-bold">
+                                                <FileEdit size={13} />
+                                            </span>
+                                            <div>
+                                                <div className="font-bold">Edit Mode</div>
+                                                <div className="text-[10px] text-slate-400">Click any expense entry to edit</div>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setExpenseMode('delete');
+                                                setExpenseMenuOpen(false);
+                                            }}
+                                            className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
+                                                expenseMode === 'delete' ? 'bg-rose-50 text-rose-900 font-bold' : 'hover:bg-slate-50 text-slate-700 font-medium'
+                                            }`}
+                                        >
+                                            <span className="w-6 h-6 rounded bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 font-bold">
+                                                <Trash2 size={13} />
+                                            </span>
+                                            <div>
+                                                <div className="font-bold">Delete / Void Mode</div>
+                                                <div className="text-[10px] text-slate-400">Click any expense entry to void</div>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setExpenseMode('amend');
+                                                setExpenseMenuOpen(false);
+                                            }}
+                                            className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2.5 transition-colors cursor-pointer ${
+                                                expenseMode === 'amend' ? 'bg-purple-50 text-purple-900 font-bold' : 'hover:bg-slate-50 text-slate-700 font-medium'
+                                            }`}
+                                        >
+                                            <span className="w-6 h-6 rounded bg-purple-100 text-purple-700 flex items-center justify-center shrink-0 font-bold">
+                                                <MessageSquare size={13} />
+                                            </span>
+                                            <div>
+                                                <div className="font-bold">Amend Mode</div>
+                                                <div className="text-[10px] text-slate-400">Request Super Admin amendment</div>
+                                            </div>
+                                        </button>
+
+                                        {expenseMode && (
+                                            <div className="pt-1.5 mt-1 border-t border-slate-100 px-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setExpenseMode(null);
+                                                        setExpenseMenuOpen(false);
+                                                    }}
+                                                    className="w-full py-1.5 text-center text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded transition-colors cursor-pointer"
+                                                >
+                                                    ✕ Exit Active Mode
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {!isLocked && (
+                            <button 
+                                onClick={() => setShowExpenseModal(true)} 
+                                className="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-sm transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
+                                title="Add New Expense Entry"
+                            >
+                                <Plus size={16} />
+                                <span className="hidden sm:inline">Add Entry</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
+
+                {/* Expense Active Mode Banner */}
+                {expenseMode && (
+                    <div className={`px-4 py-2.5 flex items-center justify-between border-b text-xs font-bold transition-all ${
+                        expenseMode === 'edit'
+                            ? 'bg-amber-50 border-amber-200 text-amber-900'
+                            : expenseMode === 'delete'
+                            ? 'bg-rose-50 border-rose-200 text-rose-900'
+                            : 'bg-purple-50 border-purple-200 text-purple-900'
+                    }`}>
+                        <div className="flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full ${
+                                expenseMode === 'edit' ? 'bg-amber-500 animate-pulse' : expenseMode === 'delete' ? 'bg-rose-500 animate-pulse' : 'bg-purple-500 animate-pulse'
+                            }`} />
+                            <span>
+                                {expenseMode === 'edit' && '✏️ EDIT MODE ACTIVE: Click on any entry row below to open the editor.'}
+                                {expenseMode === 'delete' && '🗑️ DELETE / VOID MODE ACTIVE: Click on any entry row below to void or remove it.'}
+                                {expenseMode === 'amend' && '📝 AMEND MODE ACTIVE: Click on any entry row below to submit an amendment request to Super Admin.'}
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setExpenseMode(null)}
+                            className="px-2.5 py-1 rounded text-[11px] font-black uppercase tracking-wider bg-white/90 hover:bg-white shadow-xs border transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                            <X size={12} /> Exit Mode
+                        </button>
+                    </div>
+                )}
+
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -643,7 +1122,9 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest">Amount</th>
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest">Mode</th>
                                 <th className="p-3 text-[10px] font-bold uppercase tracking-widest">Approved By</th>
-                                {role === 'Admin' && <th className="p-3 text-[10px] font-bold uppercase tracking-widest text-right">Actions</th>}
+                                <th className="p-3 text-[10px] font-bold uppercase tracking-widest text-right">
+                                    {expenseMode ? `${expenseMode.toUpperCase()} ACTION` : 'Status'}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -651,7 +1132,21 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                                 <tr><td colSpan="8" className="p-8 text-center text-slate-400 italic">No expense entries for this date.</td></tr>
                             ) : (
                                 expenseTx.map((tx, idx) => (
-                                    <tr key={tx._id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <tr 
+                                        key={tx._id} 
+                                        onClick={() => handleExpenseRowClick(tx)}
+                                        className={`border-b border-slate-100 transition-colors ${
+                                            expenseMode ? 'cursor-pointer hover:shadow-sm' : ''
+                                        } ${
+                                            expenseMode === 'edit' 
+                                                ? 'hover:bg-amber-50/90 border-l-4 border-l-amber-500' 
+                                                : expenseMode === 'delete' 
+                                                ? 'hover:bg-rose-50/90 border-l-4 border-l-rose-500' 
+                                                : expenseMode === 'amend' 
+                                                ? 'hover:bg-purple-50/90 border-l-4 border-l-purple-500' 
+                                                : 'hover:bg-slate-50'
+                                        }`}
+                                    >
                                         <td className="p-3 text-xs text-slate-400 font-bold">{idx + 1}</td>
                                         <td className="p-3 text-xs text-slate-600">{new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                                         <td className="p-3 text-sm text-slate-800 font-medium">{tx.description}</td>
@@ -659,11 +1154,23 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                                         <td className="p-3 text-sm font-black text-slate-800">₹{tx.amount.toLocaleString()}</td>
                                         <td className="p-3 text-xs text-slate-600">{tx.paymentMode}</td>
                                         <td className="p-3 text-xs text-slate-600 font-medium">{tx.approvedBy || '-'}</td>
-                                        {role === 'Admin' && (
-                                            <td className="p-3 text-right">
-                                                <button onClick={() => handleVoidTransaction(tx._id)} className="text-[10px] font-bold text-red-500 hover:text-red-700 uppercase tracking-widest">Void</button>
-                                            </td>
-                                        )}
+                                        <td className="p-3 text-right">
+                                            {expenseMode === 'edit' ? (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-500 text-white rounded text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                                    <FileEdit size={11} /> Edit
+                                                </span>
+                                            ) : expenseMode === 'delete' ? (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-600 text-white rounded text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                                    <Trash2 size={11} /> Void
+                                                </span>
+                                            ) : expenseMode === 'amend' ? (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-600 text-white rounded text-[10px] font-black uppercase tracking-wider shadow-xs">
+                                                    <MessageSquare size={11} /> Amend
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-300 text-xs select-none">—</span>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -1101,11 +1608,219 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                                       <Send size={14} /> Issue Amendment to Admin Panel
                                   </button>
                               </div>
-                          </form>
-                      )}
-                  </div>
+                            </form>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
+
+      {/* Super Admin Edit Transaction Modal */}
+      {isEditTxModalOpen && editingTransaction && (
+        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-sm shadow-2xl w-full max-w-lg overflow-hidden border-t-4 border-amber-500">
+            <div className="bg-[#1A2B48] p-4 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-wide flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-amber-400" />
+                  <span>Super Admin: Edit {editTxForm.type} Transaction</span>
+                </h3>
+                <p className="text-[10px] text-slate-300 font-mono mt-0.5">
+                  ID: #{editingTransaction._id?.slice(-8)}
+                </p>
               </div>
+              <button onClick={() => setIsEditTxModalOpen(false)} className="text-white/70 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleSaveEditTransaction} className="p-6 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Date</label>
+                  <input 
+                    type="date" 
+                    required 
+                    value={editTxForm.date} 
+                    onChange={e => setEditTxForm({...editTxForm, date: e.target.value})} 
+                    className="w-full border border-slate-300 p-2.5 rounded-sm font-medium focus:outline-none focus:border-[#1A2B48]" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Time</label>
+                  <input 
+                    type="time" 
+                    value={editTxForm.time} 
+                    onChange={e => setEditTxForm({...editTxForm, time: e.target.value})} 
+                    className="w-full border border-slate-300 p-2.5 rounded-sm font-medium focus:outline-none focus:border-[#1A2B48]" 
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Description</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={editTxForm.description} 
+                  onChange={e => setEditTxForm({...editTxForm, description: e.target.value})} 
+                  placeholder="e.g. Room Rent / F&B / Cleaning Supplies" 
+                  className="w-full border border-slate-300 p-2.5 rounded-sm font-medium focus:outline-none focus:border-[#1A2B48]" 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Category</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={editTxForm.category} 
+                    onChange={e => setEditTxForm({...editTxForm, category: e.target.value})} 
+                    placeholder="Room Rent, Kitchen, Maintenance, etc." 
+                    className="w-full border border-slate-300 p-2.5 rounded-sm font-medium focus:outline-none focus:border-[#1A2B48]" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Amount (₹)</label>
+                  <input 
+                    type="number" 
+                    required 
+                    min="0"
+                    step="any"
+                    value={editTxForm.amount} 
+                    onChange={e => setEditTxForm({...editTxForm, amount: e.target.value})} 
+                    className="w-full border border-slate-300 p-2.5 rounded-sm font-black text-slate-900 focus:outline-none focus:border-[#1A2B48]" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Payment Mode</label>
+                  <select 
+                    value={editTxForm.paymentMode} 
+                    onChange={e => setEditTxForm({...editTxForm, paymentMode: e.target.value})} 
+                    className="w-full border border-slate-300 p-2.5 rounded-sm font-semibold focus:outline-none focus:border-[#1A2B48]"
+                  >
+                    {['Cash', 'Online', 'OTA', 'UPI', 'Card', 'Bank Transfer'].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">
+                    {editTxForm.type === 'Income' ? 'Staff / Recorded By' : 'Approved By'}
+                  </label>
+                  <input 
+                    type="text" 
+                    value={editTxForm.type === 'Income' ? editTxForm.recordedBy : editTxForm.approvedBy} 
+                    onChange={e => {
+                      if (editTxForm.type === 'Income') {
+                        setEditTxForm({...editTxForm, recordedBy: e.target.value});
+                      } else {
+                        setEditTxForm({...editTxForm, approvedBy: e.target.value});
+                      }
+                    }} 
+                    placeholder="Name" 
+                    className="w-full border border-slate-300 p-2.5 rounded-sm font-medium focus:outline-none focus:border-[#1A2B48]" 
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t">
+                <button 
+                  type="button" 
+                  onClick={() => setIsEditTxModalOpen(false)} 
+                  className="px-4 py-2 font-bold text-slate-500 uppercase"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={submittingEditTx}
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-sm font-black text-xs uppercase tracking-wider shadow"
+                >
+                  {submittingEditTx ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
+        </div>
+      )}
+
+      {/* Request Transaction Amendment Modal */}
+      {isTxAmendModalOpen && txForAmend && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-lg overflow-hidden border border-purple-200">
+            <div className="bg-gradient-to-r from-purple-900 to-indigo-900 p-4 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-wider flex items-center gap-2">
+                  <MessageSquare size={16} className="text-amber-400" />
+                  <span>Request {txForAmend.type} Entry Amendment</span>
+                </h3>
+                <p className="text-[11px] text-purple-200 mt-0.5 font-mono">
+                  ID: #{txForAmend._id?.slice(-8)} • {txForAmend.category}
+                </p>
+              </div>
+              <button 
+                onClick={() => { setIsTxAmendModalOpen(false); setTxForAmend(null); }}
+                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Entry summary card */}
+            <div className="bg-purple-50/60 p-4 border-b border-purple-100 text-xs grid grid-cols-3 gap-3">
+              <div>
+                <span className="text-[10px] text-purple-800 font-bold uppercase tracking-wider block">Description</span>
+                <span className="font-bold text-slate-800 block truncate">{txForAmend.description || '-'}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-purple-800 font-bold uppercase tracking-wider block">Amount & Mode</span>
+                <span className="font-black text-slate-900">₹{(txForAmend.amount || 0).toLocaleString()}</span>
+                <span className="text-slate-500 text-[10px] ml-1">({txForAmend.paymentMode || 'Cash'})</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-purple-800 font-bold uppercase tracking-wider block">Recorded / Approved</span>
+                <span className="font-bold text-slate-700 block truncate">{txForAmend.recordedBy || txForAmend.approvedBy || 'Staff'}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitTxAmend} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Explain What Was Entered Wrong & What Needs Correction: <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={txAmendReason}
+                  onChange={e => setTxAmendReason(e.target.value)}
+                  placeholder="e.g. Amount was entered as ₹1,200 instead of ₹1,500, or payment mode was entered as Cash instead of UPI, please grant edit access."
+                  className="w-full border border-slate-300 rounded p-3 text-xs focus:outline-none focus:border-purple-600 leading-relaxed font-sans"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button
+                  type="button"
+                  onClick={() => { setIsTxAmendModalOpen(false); setTxForAmend(null); }}
+                  className="px-4 py-2 rounded text-xs font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingTxAmend || !txAmendReason.trim()}
+                  className="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white rounded text-xs font-black uppercase tracking-wider shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Send size={13} />
+                  {submittingTxAmend ? 'Submitting...' : 'Submit Request to Super Admin'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

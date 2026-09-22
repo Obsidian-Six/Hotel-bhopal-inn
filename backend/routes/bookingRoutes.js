@@ -185,31 +185,34 @@ router.post('/walk-in', async (req, res) => {
         }
 
         if (paidAmt > 0) {
+            const effectiveMode = paymentMode || 'Cash';
+            const staffName = req.user ? `${req.user.firstName} ${req.user.lastName}`.trim() : 'FrontDesk';
             booking.financials.paymentHistory.push({
                 amount: paidAmt,
-                mode: paymentMode || 'Cash',
-                staff: req.user ? `${req.user.firstName} ${req.user.lastName}` : 'FrontDesk',
+                mode: effectiveMode,
+                staff: staffName,
                 note: 'Advance payment at registration',
                 timestamp: paymentDate ? new Date(paymentDate) : new Date()
             });
 
-            if (paymentMode === 'OTA') {
-                const encryptedAmount = encrypt(paidAmt.toString());
-                const desc = `OTA Advance (${otaPlatform || source || 'OTA'}) - ${guestDetails.firstName} ${guestDetails.lastName} - Ref #${booking._id.toString().slice(-8)}`;
-                const encryptedDesc = encrypt(desc);
+            // Single source of truth for transaction creation
+            const isOta = effectiveMode === 'OTA';
+            const desc = isOta 
+                ? `OTA Advance (${otaPlatform || source || 'OTA'}) - ${guestDetails.firstName} ${guestDetails.lastName} - Ref #${booking._id.toString().slice(-8)}`
+                : `Walk-in Advance (${source || 'Walk-in'}) - ${guestDetails.firstName} ${guestDetails.lastName} - Ref #${booking._id.toString().slice(-8)}`;
 
-                const otaTx = new Transaction({
-                    type: 'Income',
-                    category: 'Room Rent',
-                    amount: encryptedAmount,
-                    description: encryptedDesc,
-                    paymentMode: 'OTA',
-                    recordedBy: req.user ? `${req.user.firstName} ${req.user.lastName}` : 'FrontDesk',
-                    approved: false,
-                    date: paymentDate ? new Date(paymentDate) : new Date()
-                });
-                await otaTx.save();
-            }
+            const advanceTx = new Transaction({
+                type: 'Income',
+                category: 'Room Rent',
+                amount: encrypt(paidAmt.toString()),
+                description: encrypt(desc),
+                paymentMode: effectiveMode,
+                recordedBy: staffName,
+                approved: !isOta,
+                date: paymentDate ? new Date(paymentDate) : new Date(),
+                booking: booking._id
+            });
+            await advanceTx.save();
         }
 
         if (initialStatus === 'Checked-In') {
@@ -396,7 +399,8 @@ router.post('/:id/collect-payment', async (req, res) => {
             paymentMode: mode,
             recordedBy: staff || 'FrontDesk',
             approved: !isOtaMode, // OTA requires approval
-            date: new Date()
+            date: new Date(),
+            booking: booking._id
         });
         await newTx.save();
 
@@ -696,6 +700,21 @@ router.post('/:id/payment', protect, superAdmin, async (req, res) => {
 
         await booking.save();
 
+        const isOtaMode = (mode || 'Cash') === 'OTA';
+        const staffName = staff || (req.user ? `${req.user.firstName} ${req.user.lastName}`.trim() : 'SuperAdmin');
+        const paymentTx = new Transaction({
+            type: 'Income',
+            category: 'Room Rent',
+            amount: encrypt(paymentAmount.toString()),
+            description: encrypt(`Payment Added (${mode || 'Cash'}) - ${booking.guestDetails?.firstName || ''} ${booking.guestDetails?.lastName || ''} - Ref #${booking._id.toString().slice(-8)}`.trim()),
+            paymentMode: mode || 'Cash',
+            recordedBy: staffName,
+            approved: !isOtaMode,
+            date: date ? new Date(date) : new Date(),
+            booking: booking._id
+        });
+        await paymentTx.save();
+
         const updatedBooking = await Booking.findById(booking._id)
             .populate('roomCategory')
             .populate('roomUnit');
@@ -703,6 +722,7 @@ router.post('/:id/payment', protect, superAdmin, async (req, res) => {
         const io = req.app.get('socketio');
         if (io) {
             io.emit('booking_updated', updatedBooking);
+            io.emit('finance_updated', paymentTx);
         }
 
         res.json(updatedBooking);

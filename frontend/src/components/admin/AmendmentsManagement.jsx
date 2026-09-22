@@ -4,10 +4,10 @@ import config from '@/config';
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/lib/AuthContext';
 import { 
-    FileEdit, MessageSquare, Send, CheckCircle, Clock, 
-    AlertTriangle, ShieldAlert, IndianRupee, CreditCard, 
-    Smartphone, Globe, Check, RefreshCw, X, Calendar, User, 
-    Bed, ArrowRight, CheckCheck, Info, Tag, Trash2
+    FileEdit, Check, X, Eye, ShieldCheck, User, Calendar, 
+    Bed, ArrowRight, Trash2, Edit3, Lock, CheckCircle2, 
+    AlertCircle, Search, RefreshCw, MessageSquare, IndianRupee,
+    Phone, Mail, Tag, ShieldAlert
 } from 'lucide-react';
 
 const API_BASE = config.API_URL;
@@ -15,65 +15,62 @@ const API_BASE = config.API_URL;
 const AmendmentsManagement = ({ isSuperAdmin: propIsSuperAdmin } = {}) => {
     const { user, isSuperAdmin: authIsSuperAdmin } = useAuth();
     const isSuperAdmin = propIsSuperAdmin !== undefined ? propIsSuperAdmin : authIsSuperAdmin;
+
     const [amendments, setAmendments] = useState([]);
-    const [filterStatus, setFilterStatus] = useState('active'); // 'active', 'all', 'Resolved'
     const [loading, setLoading] = useState(true);
-    const [activeAmendment, setActiveAmendment] = useState(null);
+    const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'approved', 'completed', 'rejected'
+    const [searchQuery, setSearchQuery] = useState('');
 
-    // Chat / Message state
-    const [replyText, setReplyText] = useState('');
-    const [sendingMsg, setSendingMsg] = useState(false);
+    // View Entry Modal (Super Admin & Staff)
+    const [viewingAmendment, setViewingAmendment] = useState(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
-    // Collect Payment Modal state
-    const [collectModalOpen, setCollectModalOpen] = useState(false);
-    const [paymentForm, setPaymentForm] = useState({
-        amount: '',
-        mode: 'Cash',
-        note: ''
-    });
-    const [submittingPayment, setSubmittingPayment] = useState(false);
-
-    // Edit Booking Details Modal state
-    const [editModalOpen, setEditModalOpen] = useState(false);
-    const [roomCategories, setRoomCategories] = useState([]);
-    const [availableUnits, setAvailableUnits] = useState([]);
+    // Edit Entry Modal (Staff Admin after approval)
+    const [editingAmendment, setEditingAmendment] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editForm, setEditForm] = useState({
         firstName: '',
         lastName: '',
-        email: '',
         phone: '',
+        email: '',
         roomCategory: '',
         roomUnit: '',
-        roomTariff: '',
         checkInDate: '',
         checkOutDate: '',
-        updateNote: ''
+        roomPlan: 'EP',
+        totalAmount: '',
+        amountPaid: '',
+        paymentMode: 'Cash',
+        note: ''
     });
+    const [roomCategories, setRoomCategories] = useState([]);
+    const [availableUnits, setAvailableUnits] = useState([]);
     const [submittingEdit, setSubmittingEdit] = useState(false);
 
-    // Success notification banner
+    // Reject Modal state (Super Admin)
+    const [rejectingAmendment, setRejectingAmendment] = useState(null);
+    const [rejectReason, setRejectReason] = useState('');
+    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+
+    // Toast alert banner
     const [alertBanner, setAlertBanner] = useState(null);
+
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem('token') || (user && user.token);
+        return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+    };
 
     const showNotification = (msg, type = 'success') => {
         setAlertBanner({ msg, type });
-        setTimeout(() => setAlertBanner(null), 4000);
+        setTimeout(() => setAlertBanner(null), 4500);
     };
 
     const fetchAmendments = async () => {
         try {
             setLoading(true);
-            const statusParam = filterStatus === 'active' ? '?status=active' : (filterStatus === 'all' ? '' : `?status=${filterStatus}`);
-            const res = await axios.get(`${API_BASE}/api/amendments${statusParam}`);
-            setAmendments(res.data);
-            
-            if (activeAmendment) {
-                const updated = res.data.find(a => a._id === activeAmendment._id);
-                if (updated) setActiveAmendment(updated);
-            } else if (res.data.length > 0) {
-                setActiveAmendment(res.data[0]);
-            } else {
-                setActiveAmendment(null);
-            }
+            const statusQuery = filterStatus === 'all' ? '' : `?status=${filterStatus}`;
+            const res = await axios.get(`${API_BASE}/api/amendments${statusQuery}`, getAuthHeaders());
+            setAmendments(res.data || []);
         } catch (err) {
             console.error('Error fetching amendments:', err);
         } finally {
@@ -84,8 +81,8 @@ const AmendmentsManagement = ({ isSuperAdmin: propIsSuperAdmin } = {}) => {
     const fetchSupportData = async () => {
         try {
             const [roomsRes, unitsRes] = await Promise.all([
-                axios.get(`${API_BASE}/api/rooms`),
-                axios.get(`${API_BASE}/api/inventory/units`)
+                axios.get(`${API_BASE}/api/rooms`, getAuthHeaders()),
+                axios.get(`${API_BASE}/api/inventory/units`, getAuthHeaders())
             ]);
             setRoomCategories(roomsRes.data || []);
             setAvailableUnits(unitsRes.data || []);
@@ -98,657 +95,813 @@ const AmendmentsManagement = ({ isSuperAdmin: propIsSuperAdmin } = {}) => {
         fetchAmendments();
         fetchSupportData();
 
-        const handleUpdate = () => {
+        const handleRealtimeUpdate = () => {
             fetchAmendments();
         };
 
-        socket.on('amendment_created', handleUpdate);
-        socket.on('amendment_updated', handleUpdate);
-        socket.on('amendment_deleted', handleUpdate);
-        socket.on('booking_deleted', handleUpdate);
-        socket.on('finance_updated', handleUpdate);
+        socket.on('amendment_requested', handleRealtimeUpdate);
+        socket.on('amendment_created', handleRealtimeUpdate);
+        socket.on('amendment_approved', handleRealtimeUpdate);
+        socket.on('amendment_rejected', handleRealtimeUpdate);
+        socket.on('amendment_updated', handleRealtimeUpdate);
+        socket.on('amendment_deleted', handleRealtimeUpdate);
+        socket.on('booking_updated', handleRealtimeUpdate);
+        socket.on('booking_deleted', handleRealtimeUpdate);
 
         return () => {
-            socket.off('amendment_created', handleUpdate);
-            socket.off('amendment_updated', handleUpdate);
-            socket.off('amendment_deleted', handleUpdate);
-            socket.off('booking_deleted', handleUpdate);
-            socket.off('finance_updated', handleUpdate);
+            socket.off('amendment_requested', handleRealtimeUpdate);
+            socket.off('amendment_created', handleRealtimeUpdate);
+            socket.off('amendment_approved', handleRealtimeUpdate);
+            socket.off('amendment_rejected', handleRealtimeUpdate);
+            socket.off('amendment_updated', handleRealtimeUpdate);
+            socket.off('amendment_deleted', handleRealtimeUpdate);
+            socket.off('booking_updated', handleRealtimeUpdate);
+            socket.off('booking_deleted', handleRealtimeUpdate);
         };
     }, [filterStatus]);
 
-    // Send chat reply to Super Admin
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (!replyText.trim() || !activeAmendment) return;
-
-        try {
-            setSendingMsg(true);
-            const res = await axios.post(`${API_BASE}/api/amendments/${activeAmendment._id}/messages`, {
-                text: replyText.trim()
-            });
-            setActiveAmendment(res.data);
-            setReplyText('');
-            showNotification('Message sent to Super Admin.');
-            fetchAmendments();
-        } catch (err) {
-            alert('Failed to send message: ' + (err.response?.data?.message || err.message));
-        } finally {
-            setSendingMsg(false);
-        }
-    };
-
-    // Open Collect Payment Modal
-    const handleOpenCollect = (amendment) => {
-        setActiveAmendment(amendment);
-        setPaymentForm({
-            amount: amendment.balanceDue > 0 ? amendment.balanceDue.toString() : '',
-            mode: 'Cash',
-            note: ''
-        });
-        setCollectModalOpen(true);
-    };
-
-    // Submit Collect Payment
-    const handleSubmitPayment = async (e) => {
-        e.preventDefault();
-        if (!paymentForm.amount || Number(paymentForm.amount) <= 0) {
-            alert('Please enter a valid payment amount.');
+    // Super Admin: Approve Request (Tick Mark)
+    const handleApprove = async (amendment) => {
+        if (!window.confirm(`Grant edit & delete access to staff admin for ${amendment.guestName || 'this entry'}?`)) {
             return;
         }
 
         try {
-            setSubmittingPayment(true);
-            const res = await axios.post(`${API_BASE}/api/amendments/${activeAmendment._id}/collect-payment`, {
-                amount: Number(paymentForm.amount),
-                mode: paymentForm.mode,
-                note: paymentForm.note
-            });
-
-            setActiveAmendment(res.data.amendment);
-            setCollectModalOpen(false);
-
-            if (paymentForm.mode === 'OTA') {
-                showNotification(`OTA payment of ₹${Number(paymentForm.amount).toLocaleString('en-IN')} recorded (Pending manager approval in Front Desk Analytics).`);
-            } else {
-                showNotification(`Payment of ₹${Number(paymentForm.amount).toLocaleString('en-IN')} collected via ${paymentForm.mode} and added to Total Sales!`);
-            }
+            const res = await axios.put(
+                `${API_BASE}/api/amendments/${amendment._id}/approve`,
+                { note: 'Approved by Super Admin' },
+                getAuthHeaders()
+            );
+            showNotification(`Access granted for ${amendment.guestName}. Staff admin can now edit or delete this entry.`);
+            if (isViewModalOpen) setIsViewModalOpen(false);
             fetchAmendments();
         } catch (err) {
-            alert('Failed to collect payment: ' + (err.response?.data?.message || err.message));
-        } finally {
-            setSubmittingPayment(false);
+            alert('Failed to approve: ' + (err.response?.data?.message || err.message));
         }
     };
 
-    // Open Edit Booking Modal
-    const handleOpenEditBooking = (amendment) => {
-        setActiveAmendment(amendment);
-        const b = amendment.booking;
-        if (!b) {
-            alert('Booking record is not available.');
+    // Super Admin: Open Reject Modal (Wrong Mark)
+    const handleOpenReject = (amendment) => {
+        setRejectingAmendment(amendment);
+        setRejectReason('');
+        setIsRejectModalOpen(true);
+    };
+
+    // Super Admin: Submit Rejection
+    const handleConfirmReject = async (e) => {
+        e.preventDefault();
+        if (!rejectingAmendment) return;
+
+        try {
+            await axios.put(
+                `${API_BASE}/api/amendments/${rejectingAmendment._id}/reject`,
+                { note: rejectReason.trim() || 'Declined by Super Admin' },
+                getAuthHeaders()
+            );
+            showNotification(`Amendment request for ${rejectingAmendment.guestName} has been declined.`, 'error');
+            setIsRejectModalOpen(false);
+            setRejectingAmendment(null);
+            if (isViewModalOpen) setIsViewModalOpen(false);
+            fetchAmendments();
+        } catch (err) {
+            alert('Failed to reject: ' + (err.response?.data?.message || err.message));
+        }
+    };
+
+    // View Entire Entry (Super Admin or Staff)
+    const handleOpenView = (amendment) => {
+        setViewingAmendment(amendment);
+        setIsViewModalOpen(true);
+    };
+
+    // Staff Admin: Open Edit Modal (after Super Admin approved)
+    const handleOpenEdit = (amendment) => {
+        setEditingAmendment(amendment);
+
+        if (amendment.entryType === 'Transaction') {
+            setEditForm({
+                firstName: amendment.entrySnapshot?.description || amendment.guestName || '',
+                lastName: '',
+                phone: '',
+                email: '',
+                roomCategory: '',
+                roomUnit: '',
+                checkInDate: amendment.entrySnapshot?.checkInDate ? new Date(amendment.entrySnapshot.checkInDate).toISOString().split('T')[0] : '',
+                checkOutDate: '',
+                roomPlan: 'EP',
+                totalAmount: amendment.entrySnapshot?.totalAmount !== undefined ? amendment.entrySnapshot.totalAmount : '',
+                amountPaid: amendment.entrySnapshot?.amountPaid !== undefined ? amendment.entrySnapshot.amountPaid : '',
+                paymentMode: amendment.entrySnapshot?.paymentMode || 'Cash',
+                note: ''
+            });
+            setIsEditModalOpen(true);
             return;
         }
+
+        const guest = amendment.booking?.guestDetails || amendment.entrySnapshot?.guestDetails || {};
+        const fin = amendment.booking?.financials || {};
 
         setEditForm({
-            firstName: b.guestDetails?.firstName || '',
-            lastName: b.guestDetails?.lastName || '',
-            email: b.guestDetails?.email || '',
-            phone: b.guestDetails?.phone || '',
-            roomCategory: b.roomCategory?._id || b.roomCategory || '',
-            roomUnit: b.roomUnit?._id || b.roomUnit || '',
-            roomTariff: b.financials?.roomTariff || '',
-            checkInDate: b.checkInDate ? new Date(b.checkInDate).toISOString().split('T')[0] : '',
-            checkOutDate: b.checkOutDate ? new Date(b.checkOutDate).toISOString().split('T')[0] : '',
-            updateNote: ''
+            firstName: guest.firstName || '',
+            lastName: guest.lastName || '',
+            phone: guest.phone || '',
+            email: guest.email || '',
+            roomCategory: amendment.booking?.roomCategory?._id || amendment.booking?.roomCategory || '',
+            roomUnit: amendment.booking?.roomUnit?._id || amendment.booking?.roomUnit || '',
+            checkInDate: (amendment.booking?.checkInDate || amendment.entrySnapshot?.checkInDate) ? new Date(amendment.booking?.checkInDate || amendment.entrySnapshot?.checkInDate).toISOString().split('T')[0] : '',
+            checkOutDate: (amendment.booking?.checkOutDate || amendment.entrySnapshot?.checkOutDate) ? new Date(amendment.booking?.checkOutDate || amendment.entrySnapshot?.checkOutDate).toISOString().split('T')[0] : '',
+            roomPlan: amendment.booking?.roomPlan || 'EP',
+            totalAmount: fin.totalAmount !== undefined ? fin.totalAmount : (amendment.entrySnapshot?.totalAmount || ''),
+            amountPaid: fin.amountPaid !== undefined ? fin.amountPaid : (amendment.entrySnapshot?.amountPaid || ''),
+            paymentMode: fin.paymentMode || amendment.entrySnapshot?.paymentMode || 'Cash',
+            note: ''
         });
-        setEditModalOpen(true);
+        setIsEditModalOpen(true);
     };
 
-    // Submit Booking Edits
-    const handleSubmitEditBooking = async (e) => {
+    // Staff Admin: Submit Edit
+    const handleSubmitEdit = async (e) => {
         e.preventDefault();
+        if (!editingAmendment) return;
+
         try {
             setSubmittingEdit(true);
-            const res = await axios.put(`${API_BASE}/api/amendments/${activeAmendment._id}/booking-details`, {
-                guestDetails: {
-                    firstName: editForm.firstName,
-                    lastName: editForm.lastName,
-                    email: editForm.email,
-                    phone: editForm.phone
-                },
-                roomCategory: editForm.roomCategory || undefined,
-                roomUnit: editForm.roomUnit || undefined,
-                roomTariff: editForm.roomTariff ? Number(editForm.roomTariff) : undefined,
-                checkInDate: editForm.checkInDate,
-                checkOutDate: editForm.checkOutDate,
-                updateNote: editForm.updateNote
-            });
 
-            setActiveAmendment(res.data.amendment);
-            setEditModalOpen(false);
-            showNotification('Booking details updated successfully under amendment authority.');
+            const payload = editingAmendment.entryType === 'Transaction'
+                ? {
+                    description: editForm.firstName ? editForm.firstName.trim() : (editingAmendment.entrySnapshot?.description || 'Ledger Entry'),
+                    amount: editForm.totalAmount !== '' ? Number(editForm.totalAmount) : undefined,
+                    paymentMode: editForm.paymentMode,
+                    date: editForm.checkInDate || undefined
+                }
+                : {
+                    guestDetails: {
+                        firstName: editForm.firstName,
+                        lastName: editForm.lastName,
+                        phone: editForm.phone,
+                        email: editForm.email
+                    },
+                    roomCategory: editForm.roomCategory || undefined,
+                    roomUnit: editForm.roomUnit || undefined,
+                    checkInDate: editForm.checkInDate,
+                    checkOutDate: editForm.checkOutDate,
+                    roomPlan: editForm.roomPlan,
+                    totalAmount: editForm.totalAmount !== '' ? Number(editForm.totalAmount) : undefined,
+                    amountPaid: editForm.amountPaid !== '' ? Number(editForm.amountPaid) : undefined,
+                    paymentMode: editForm.paymentMode,
+                    note: editForm.note
+                };
+
+            const res = await axios.put(
+                `${API_BASE}/api/amendments/${editingAmendment._id}/execute-edit`,
+                payload,
+                getAuthHeaders()
+            );
+
+            showNotification('Entry updated successfully! Balances and sales collections have been recalculated.');
+            setIsEditModalOpen(false);
+            setEditingAmendment(null);
             fetchAmendments();
         } catch (err) {
-            alert('Failed to update booking: ' + (err.response?.data?.message || err.message));
+            alert('Failed to update entry: ' + (err.response?.data?.message || err.message));
         } finally {
             setSubmittingEdit(false);
         }
     };
 
-    // Mark Resolved
-    const handleResolve = async (amendment) => {
-        const reason = window.prompt('Add a completion note for Super Admin (optional):', 'Requested balance collected & audit verified.');
-        if (reason === null) return;
-
-        try {
-            const res = await axios.post(`${API_BASE}/api/amendments/${amendment._id}/resolve`, {
-                note: reason
-            });
-            setActiveAmendment(res.data);
-            showNotification('Amendment marked as Resolved.');
-            fetchAmendments();
-        } catch (err) {
-            alert('Failed to resolve amendment: ' + (err.response?.data?.message || err.message));
-        }
-    };
-
-    const handleDeleteAmendment = async (amendment, e) => {
-        if (e) e.stopPropagation();
-        const guest = amendment.guestName || 'this reservation';
-        if (!window.confirm(`⚠️ PERMANENT FRONT DESK DELETION\n\nDelete this amendment and permanently remove the booking for "${guest}" from Front Desk?\n\n- The booking will be completely deleted from Front Desk.\n- Any assigned room will be freed immediately.\n- Any amendment collections will be deducted from daily sales.`)) {
+    // Staff Admin: Permanently Delete Entry (after Super Admin approved)
+    const handleDeleteEntry = async (amendment) => {
+        const title = amendment.entryType === 'Transaction' ? `this financial transaction (${amendment.guestName})` : `the booking for "${amendment.guestName || 'this booking'}"`;
+        if (!window.confirm(
+            `⚠️ PERMANENT ENTRY DELETION\n\nAre you sure you want to permanently delete/void ${title}?\n\n- The entry will be permanently removed.\n- Associated collections will be recalculated.`
+        )) {
             return;
         }
 
         try {
-            const res = await axios.delete(`${API_BASE}/api/amendments/${amendment._id}`);
-            showNotification(res.data?.message || 'Booking permanently deleted from Front Desk.');
-            if (activeAmendment?._id === amendment._id) {
-                setActiveAmendment(null);
-            }
+            const res = await axios.delete(
+                `${API_BASE}/api/amendments/${amendment._id}/execute-delete`,
+                getAuthHeaders()
+            );
+            showNotification(res.data?.message || 'Entry permanently deleted.');
             fetchAmendments();
         } catch (err) {
-            alert('Failed to delete: ' + (err.response?.data?.message || err.message));
+            alert('Failed to delete entry: ' + (err.response?.data?.message || err.message));
         }
     };
 
+    // Super Admin: Clear amendment history record
+    const handleClearRecord = async (id) => {
+        if (!window.confirm('Remove this amendment record from history?')) return;
+        try {
+            await axios.delete(`${API_BASE}/api/amendments/${id}`, getAuthHeaders());
+            showNotification('Record removed.');
+            fetchAmendments();
+        } catch (err) {
+            alert('Failed to remove record: ' + (err.response?.data?.message || err.message));
+        }
+    };
+
+    // Filter by search query
+    const filteredAmendments = amendments.filter(a => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            (a.guestName || '').toLowerCase().includes(q) ||
+            (a.roomInfo || '').toLowerCase().includes(q) ||
+            (a.requestReason || '').toLowerCase().includes(q) ||
+            (a.requestedByName || '').toLowerCase().includes(q)
+        );
+    });
+
+    const pendingCount = amendments.filter(a => a.status === 'Pending').length;
+    const approvedCount = amendments.filter(a => a.status === 'Approved').length;
+
     return (
-        <div className="space-y-5">
-            {/* Top Bar / Header */}
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-6">
+            {/* Notification Banner */}
+            {alertBanner && (
+                <div className={`p-4 rounded-sm border shadow-md flex items-center gap-3 transition-all animate-in fade-in slide-in-from-top-2 ${
+                    alertBanner.type === 'error' 
+                        ? 'bg-rose-50 border-rose-200 text-rose-900' 
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                }`}>
+                    {alertBanner.type === 'error' ? <AlertCircle size={20} className="shrink-0 text-rose-600" /> : <CheckCircle2 size={20} className="shrink-0 text-emerald-600" />}
+                    <span className="text-xs font-bold">{alertBanner.msg}</span>
+                </div>
+            )}
+
+            {/* Header */}
+            <div className="bg-white p-6 rounded-sm border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold shrink-0">
-                        <FileEdit size={20} />
+                    <div className={`w-12 h-12 rounded-sm flex items-center justify-center font-bold shrink-0 ${
+                        isSuperAdmin ? 'bg-purple-100 text-purple-700' : 'bg-[#BFA37E]/20 text-[#BFA37E]'
+                    }`}>
+                        {isSuperAdmin ? <ShieldCheck size={24} /> : <FileEdit size={24} />}
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold tracking-tight text-slate-900">Audit Amendments & Delegated Actions</h2>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            Super Admin financial audit delegation. Settle pending dues, reply to instructions, and edit authorized bookings.
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl font-black tracking-tight text-[#1A2B48] uppercase">
+                                {isSuperAdmin ? 'Super Admin Amendment Control Portal' : 'Front Desk Amendment Requests'}
+                            </h2>
+                            {isSuperAdmin ? (
+                                <span className="bg-purple-900 text-purple-200 text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-widest">
+                                    Super Admin Only
+                                </span>
+                            ) : (
+                                <span className="bg-slate-100 text-slate-700 text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-widest">
+                                    Staff Desk
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1 font-medium">
+                            {isSuperAdmin 
+                                ? 'Review staff amendment requests. Approve access (✓) to authorize editing or deletion of wrong entries, or reject (✕).' 
+                                : 'Track requests submitted to Super Admin. When access is granted (✓), you can edit or delete that entry only.'}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                    {/* Filter Tabs */}
-                    <div className="bg-slate-100 p-1 rounded-lg flex text-xs font-bold uppercase tracking-wider">
-                        <button
-                            onClick={() => setFilterStatus('active')}
-                            className={`px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
-                                filterStatus === 'active' ? 'bg-white text-purple-900 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                        >
-                            Active Tasks
-                        </button>
-                        <button
-                            onClick={() => setFilterStatus('all')}
-                            className={`px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
-                                filterStatus === 'all' ? 'bg-white text-slate-900 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                        >
-                            All
-                        </button>
-                        <button
-                            onClick={() => setFilterStatus('Resolved')}
-                            className={`px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
-                                filterStatus === 'Resolved' ? 'bg-white text-emerald-800 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                        >
-                            Resolved
-                        </button>
-                    </div>
-
-                    <button
-                        onClick={fetchAmendments}
-                        className="p-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-600 transition-colors"
-                        title="Refresh"
+                    <button 
+                        onClick={fetchAmendments} 
+                        className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-sm text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+                        title="Refresh list"
                     >
-                        <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+                        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                        <span>Refresh</span>
                     </button>
                 </div>
             </div>
 
-            {/* Notification Banner */}
-            {alertBanner && (
-                <div className={`px-4 py-3 rounded-lg text-xs font-bold flex items-center justify-between border animate-in fade-in ${
-                    alertBanner.type === 'success' 
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
-                        : 'bg-rose-50 border-rose-200 text-rose-900'
-                }`}>
-                    <div className="flex items-center gap-2">
-                        <CheckCircle size={15} className="text-emerald-600 shrink-0" />
-                        <span>{alertBanner.msg}</span>
-                    </div>
-                    <button onClick={() => setAlertBanner(null)} className="text-slate-400 hover:text-slate-700">✕</button>
+            {/* Filters and Search Bar */}
+            <div className="bg-white p-4 rounded-sm border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+                {/* Status Tabs */}
+                <div className="flex flex-wrap items-center gap-1 text-xs font-bold uppercase tracking-wider">
+                    <button
+                        onClick={() => setFilterStatus('all')}
+                        className={`px-3 py-1.5 rounded-sm transition-all ${
+                            filterStatus === 'all' ? 'bg-[#1A2B48] text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                    >
+                        All ({amendments.length})
+                    </button>
+                    <button
+                        onClick={() => setFilterStatus('pending')}
+                        className={`px-3 py-1.5 rounded-sm transition-all flex items-center gap-1.5 ${
+                            filterStatus === 'pending' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                    >
+                        <span>Pending</span>
+                        {pendingCount > 0 && (
+                            <span className="bg-rose-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-black">
+                                {pendingCount}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setFilterStatus('approved')}
+                        className={`px-3 py-1.5 rounded-sm transition-all flex items-center gap-1.5 ${
+                            filterStatus === 'approved' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                    >
+                        <span>Access Granted</span>
+                        {approvedCount > 0 && (
+                            <span className="bg-emerald-800 text-emerald-100 text-[9px] px-1.5 py-0.2 rounded-full font-black">
+                                {approvedCount}
+                            </span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setFilterStatus('completed')}
+                        className={`px-3 py-1.5 rounded-sm transition-all ${
+                            filterStatus === 'completed' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                    >
+                        Completed
+                    </button>
+                    <button
+                        onClick={() => setFilterStatus('rejected')}
+                        className={`px-3 py-1.5 rounded-sm transition-all ${
+                            filterStatus === 'rejected' ? 'bg-rose-700 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                    >
+                        Declined
+                    </button>
+                </div>
+
+                {/* Search Input */}
+                <div className="relative w-full md:w-72">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Search guest, room, reason..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-sm text-xs font-medium focus:outline-none focus:border-[#1A2B48]"
+                    />
+                </div>
+            </div>
+
+            {/* Content List */}
+            {loading ? (
+                <div className="bg-white p-12 text-center text-slate-400 uppercase font-bold tracking-widest text-xs border rounded-sm">
+                    Loading Amendment Records...
+                </div>
+            ) : filteredAmendments.length === 0 ? (
+                <div className="bg-white p-12 text-center border rounded-sm space-y-3">
+                    <FileEdit size={36} className="mx-auto text-slate-300" />
+                    <p className="text-sm font-bold text-slate-700 uppercase tracking-wider">No Amendment Requests Found</p>
+                    <p className="text-xs text-slate-400">
+                        {isSuperAdmin 
+                            ? 'No staff amendment requests currently match this filter.' 
+                            : 'When you spot an incorrect entry in Front Desk, click "Amend" to request Super Admin approval.'}
+                    </p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 gap-4">
+                    {filteredAmendments.map((amendment) => {
+                        const isPending = amendment.status === 'Pending';
+                        const isApproved = amendment.status === 'Approved';
+                        const isRejected = amendment.status === 'Rejected';
+                        const isCompleted = amendment.status === 'Completed';
+
+                        return (
+                            <div 
+                                key={amendment._id}
+                                className={`bg-white rounded-sm border transition-all p-5 shadow-xs ${
+                                    isApproved 
+                                        ? 'border-emerald-300 ring-1 ring-emerald-200 bg-emerald-50/20' 
+                                        : isPending 
+                                            ? 'border-amber-300 bg-amber-50/10' 
+                                            : 'border-slate-200'
+                                }`}
+                            >
+                                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                    {/* Left: Customer & Room Info */}
+                                    <div className="space-y-2 flex-grow min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-base font-black text-[#1A2B48] flex items-center gap-1.5">
+                                                <User size={16} className="text-[#BFA37E]" />
+                                                {amendment.guestName || 'Unnamed Guest'}
+                                            </span>
+                                            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                                {amendment.roomInfo || 'Room Unassigned'}
+                                            </span>
+                                            <span className="text-[10px] text-slate-400 font-mono">
+                                                Ref #{amendment._id.slice(-6).toUpperCase()}
+                                            </span>
+                                        </div>
+
+                                        {/* Admin Message Box */}
+                                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-sm">
+                                            <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">
+                                                <MessageSquare size={12} className="text-amber-600" />
+                                                <span>Reason Entered by Admin:</span>
+                                            </div>
+                                            <p className="text-xs font-semibold text-slate-800 italic">
+                                                "{amendment.requestReason}"
+                                            </p>
+                                        </div>
+
+                                        {/* Metadata */}
+                                        <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500 font-medium">
+                                            <span>Requested by: <strong className="text-slate-800">{amendment.requestedByName || 'Staff Admin'}</strong></span>
+                                            <span>•</span>
+                                            <span>Date: <strong className="text-slate-800">{new Date(amendment.createdAt).toLocaleString()}</strong></span>
+                                            {amendment.entrySnapshot?.totalAmount !== undefined && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span>Entry Total: <strong>₹{amendment.entrySnapshot.totalAmount.toLocaleString()}</strong></span>
+                                                    <span>•</span>
+                                                    <span>Paid: <strong>₹{amendment.entrySnapshot.amountPaid.toLocaleString()}</strong></span>
+                                                    <span>•</span>
+                                                    <span>Balance: <strong className={amendment.entrySnapshot.balance > 0 ? 'text-rose-600' : 'text-emerald-600'}>₹{amendment.entrySnapshot.balance.toLocaleString()}</strong></span>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Rejection / Action Note */}
+                                        {amendment.superAdminAction?.note && (
+                                            <div className="text-xs text-slate-600 bg-white border border-slate-200 p-2 rounded-sm inline-block">
+                                                <span className="font-bold text-slate-700">Super Admin Note: </span>
+                                                <span>{amendment.superAdminAction.note}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Middle: Status Badge */}
+                                    <div className="shrink-0 flex items-center">
+                                        {isPending && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-sm text-xs font-black uppercase tracking-wider">
+                                                <Lock size={14} className="text-amber-700" />
+                                                <span>Pending Super Admin Approval</span>
+                                            </div>
+                                        )}
+                                        {isApproved && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-sm text-xs font-black uppercase tracking-wider animate-pulse">
+                                                <CheckCircle2 size={14} className="text-emerald-700" />
+                                                <span>Access Granted (Can Edit/Delete)</span>
+                                            </div>
+                                        )}
+                                        {isRejected && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-100 text-rose-900 border border-rose-300 rounded-sm text-xs font-black uppercase tracking-wider">
+                                                <X size={14} className="text-rose-700" />
+                                                <span>Declined by Super Admin</span>
+                                            </div>
+                                        )}
+                                        {isCompleted && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-900 border border-blue-300 rounded-sm text-xs font-black uppercase tracking-wider">
+                                                <Check size={14} className="text-blue-700" />
+                                                <span>Completed ({amendment.completedAction || 'Executed'})</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Right: Actions */}
+                                    <div className="shrink-0 flex flex-wrap items-center gap-2">
+                                        {/* Super Admin Actions */}
+                                        {isSuperAdmin ? (
+                                            <>
+                                                {/* Tick Mark (Approve) */}
+                                                <button
+                                                    onClick={() => handleApprove(amendment)}
+                                                    disabled={isApproved || isCompleted}
+                                                    className="p-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-sm font-black text-xs uppercase shadow transition-all flex items-center gap-1"
+                                                    title="Approve & Grant Access (Tick Mark)"
+                                                >
+                                                    <Check size={18} strokeWidth={3} />
+                                                    <span className="hidden sm:inline">Approve</span>
+                                                </button>
+
+                                                {/* Wrong Mark (Reject) */}
+                                                <button
+                                                    onClick={() => handleOpenReject(amendment)}
+                                                    disabled={isRejected || isCompleted}
+                                                    className="p-2.5 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-sm font-black text-xs uppercase shadow transition-all flex items-center gap-1"
+                                                    title="Reject Request (Wrong Mark)"
+                                                >
+                                                    <X size={18} strokeWidth={3} />
+                                                    <span className="hidden sm:inline">Reject</span>
+                                                </button>
+
+                                                {/* View Button */}
+                                                <button
+                                                    onClick={() => handleOpenView(amendment)}
+                                                    className="px-3 py-2.5 bg-[#1A2B48] hover:bg-[#263c63] text-white rounded-sm font-black text-xs uppercase shadow transition-all flex items-center gap-1.5"
+                                                    title="View Entire Entry"
+                                                >
+                                                    <Eye size={16} />
+                                                    <span>View</span>
+                                                </button>
+
+                                                {/* Clear Record */}
+                                                {(isCompleted || isRejected) && (
+                                                    <button
+                                                        onClick={() => handleClearRecord(amendment._id)}
+                                                        className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-sm transition-colors"
+                                                        title="Remove from history"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </>
+                                        ) : (
+                                            /* Staff Admin Actions */
+                                            <>
+                                                {/* View Button */}
+                                                <button
+                                                    onClick={() => handleOpenView(amendment)}
+                                                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-sm font-bold text-xs uppercase transition-all flex items-center gap-1.5"
+                                                >
+                                                    <Eye size={15} />
+                                                    <span>View Details</span>
+                                                </button>
+
+                                                {/* When Super Admin Approved Access: Edit & Delete unlock for this entry only */}
+                                                {isApproved && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleOpenEdit(amendment)}
+                                                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-sm font-black text-xs uppercase shadow transition-all flex items-center gap-1.5"
+                                                        >
+                                                            <Edit3 size={15} />
+                                                            <span>Edit Entry</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteEntry(amendment)}
+                                                            className="px-3.5 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-sm font-black text-xs uppercase shadow transition-all flex items-center gap-1.5"
+                                                        >
+                                                            <Trash2 size={15} />
+                                                            <span>Delete Entry</span>
+                                                        </button>
+                                                    </>
+                                                )}
+
+                                                {isPending && (
+                                                    <span className="text-[11px] text-amber-700 font-bold italic">
+                                                        Awaiting Super Admin access...
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 
-            {/* Main Content Grid: Left List (40%) / Right Workspace (60%) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-                
-                {/* Left Column: List of Amendments */}
-                <div className="lg:col-span-5 space-y-2.5">
-                    <div className="flex items-center justify-between px-1">
-                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                            Orders ({amendments.length})
-                        </span>
-                        {filterStatus === 'active' && (
-                            <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                Delegated Access Active
-                            </span>
-                        )}
-                    </div>
-
-                    {loading && amendments.length === 0 ? (
-                        <div className="bg-white rounded-xl p-10 text-center border border-slate-200">
-                            <RefreshCw size={20} className="animate-spin text-amber-500 mx-auto mb-2" />
-                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Loading amendments...</p>
-                        </div>
-                    ) : amendments.length === 0 ? (
-                        <div className="bg-white rounded-xl p-10 text-center border border-dashed border-slate-200">
-                            <CheckCheck size={28} className="text-emerald-500 mx-auto mb-2" />
-                            <h4 className="text-sm font-bold text-slate-700">No Pending Amendments</h4>
-                            <p className="text-xs text-slate-400 mt-1">
-                                {filterStatus === 'active' ? 'All financial audit amendments have been resolved!' : 'No amendment records found.'}
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-2.5 max-h-[calc(100vh-250px)] overflow-y-auto pr-1">
-                            {amendments.map((amend) => {
-                                const isSelected = activeAmendment && activeAmendment._id === amend._id;
-                                const isActionReq = amend.status === 'Pending Admin Action';
-
-                                return (
-                                    <div
-                                        key={amend._id}
-                                        onClick={() => setActiveAmendment(amend)}
-                                        className={`p-4 rounded-xl border transition-all cursor-pointer text-left ${
-                                            isSelected 
-                                                ? 'bg-purple-50/60 border-purple-500 shadow-sm ring-1 ring-purple-500' 
-                                                : 'bg-white border-slate-200 hover:border-purple-300 hover:shadow-xs'
-                                        }`}
-                                    >
-                                        {/* Status Tag & Date */}
-                                        <div className="flex items-center justify-between gap-2 mb-2">
-                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${
-                                                isActionReq ? 'bg-amber-100 text-amber-900 border border-amber-300' :
-                                                amend.status === 'Admin Responded' ? 'bg-indigo-100 text-indigo-900 border border-indigo-300' :
-                                                amend.status === 'Resolved' ? 'bg-emerald-100 text-emerald-900' :
-                                                'bg-slate-100 text-slate-700'
-                                            }`}>
-                                                {isActionReq && <AlertTriangle size={10} />}
-                                                {amend.status}
-                                            </span>
-                                            <span className="text-[10px] text-slate-400 font-semibold whitespace-nowrap">
-                                                {new Date(amend.updatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-                                            </span>
-                                        </div>
-
-                                        {/* Guest & Balance Due */}
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="min-w-0 flex-1">
-                                                <h4 className="text-sm font-bold text-slate-900 truncate">{amend.guestName}</h4>
-                                                <p className="text-xs text-slate-500 font-medium truncate mt-0.5">{amend.roomInfo || 'Room'}</p>
-                                            </div>
-                                            <div className="text-right shrink-0">
-                                                <span className="text-[9px] uppercase font-bold text-slate-400 block whitespace-nowrap">Balance Due</span>
-                                                <span className={`text-sm font-black whitespace-nowrap ${amend.balanceDue > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                                                    ₹{(amend.balanceDue || 0).toLocaleString('en-IN')}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Super Admin Message Snippet */}
-                                        <div className="mt-2.5 p-2 bg-amber-50/80 rounded-lg border border-amber-200 text-xs text-amber-950 font-medium flex items-start gap-1.5">
-                                            <ShieldAlert size={13} className="text-amber-700 shrink-0 mt-0.5" />
-                                            <p className="truncate text-[11px] font-sans">"{amend.superAdminNote}"</p>
-                                        </div>
-
-                                        {/* Messages Count Badge & Delete */}
-                                        <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-                                            <span className="flex items-center gap-1 font-semibold text-[10px]">
-                                                <MessageSquare size={11} className="text-slate-400" />
-                                                {amend.messages?.length || 0} messages
-                                            </span>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={(e) => handleDeleteAmendment(amend, e)}
-                                                    className="text-slate-400 hover:text-red-600 p-1 rounded transition-colors"
-                                                    title="Delete this amendment"
-                                                >
-                                                    <Trash2 size={12} />
-                                                </button>
-                                                <span className="text-purple-700 font-bold flex items-center gap-1 text-[10px] uppercase tracking-wider">
-                                                    Open <ArrowRight size={10} />
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-
-                {/* Right Column: Active Amendment Detailed Workspace (60%) */}
-                <div className="lg:col-span-7">
-                    {activeAmendment ? (
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col h-[calc(100vh-230px)] overflow-hidden">
-                            
-                            {/* Workspace Header - Redesigned into 2 clean lines, perfectly aligned */}
-                            <div className="bg-slate-900 text-white p-4 shrink-0 border-b border-slate-800 space-y-3">
-                                {/* Line 1: Reference Info & Delete Action */}
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest whitespace-nowrap">
-                                            Ref #{activeAmendment._id.slice(-8)}
-                                        </span>
-                                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider whitespace-nowrap ${
-                                            activeAmendment.status === 'Closed' ? 'bg-slate-700 text-slate-300' :
-                                            activeAmendment.status === 'Resolved' ? 'bg-emerald-600 text-white' :
-                                            activeAmendment.status === 'Admin Responded' ? 'bg-indigo-600 text-white' :
-                                            'bg-amber-500 text-white'
-                                        }`}>
-                                            {activeAmendment.status}
-                                        </span>
-                                    </div>
-
-                                    <button
-                                        onClick={() => handleDeleteAmendment(activeAmendment)}
-                                        className="px-2.5 py-1 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white rounded text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1 whitespace-nowrap"
-                                        title="Permanently delete this booking record from Front Desk and remove amendment"
-                                    >
-                                        <Trash2 size={12} /> Delete Record (Front Desk)
-                                    </button>
-                                </div>
-
-                                {/* Line 2: Full Guest Name & Room Info */}
-                                <div>
-                                    <h3 className="text-lg font-bold text-white tracking-wide">
-                                        {activeAmendment.guestName}
-                                    </h3>
-                                    <p className="text-xs text-slate-400 font-medium mt-0.5">
-                                        {activeAmendment.roomInfo || 'Room Details'}
-                                    </p>
-                                </div>
-
-                                {/* Line 3: Delegated Action Toolbar - Exactly the 3 requested buttons */}
-                                {activeAmendment.status !== 'Closed' && (
-                                    <div className="flex items-center gap-2 pt-2 border-t border-slate-800/80 flex-wrap">
-                                        <button
-                                            onClick={() => handleOpenCollect(activeAmendment)}
-                                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap active:scale-95"
-                                        >
-                                            <IndianRupee size={13} /> Collect Balance
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleOpenEditBooking(activeAmendment)}
-                                            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap active:scale-95"
-                                        >
-                                            <FileEdit size={13} /> Edit Booking
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleResolve(activeAmendment)}
-                                            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap active:scale-95 border border-slate-700"
-                                            title="Mark Resolved"
-                                        >
-                                            <CheckCheck size={13} /> Resolve
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Super Admin Instruction Alert Banner */}
-                            <div className="bg-amber-50/90 border-b border-amber-200 p-3.5 shrink-0">
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5 whitespace-nowrap">
-                                        <ShieldAlert size={13} className="text-amber-700 shrink-0" />
-                                        Super Admin Instructions:
-                                    </span>
-                                    <span className="text-[10px] text-amber-700 font-semibold whitespace-nowrap">
-                                        By {activeAmendment.createdBy || 'Super Admin'}
-                                    </span>
-                                </div>
-                                <p className="text-xs font-medium text-amber-950 whitespace-pre-wrap leading-relaxed">
-                                    {activeAmendment.superAdminNote}
-                                </p>
-                            </div>
-
-                            {/* Booking Financial Snapshot Strip */}
-                            <div className="bg-purple-50/60 border-b border-purple-100 px-4 py-2.5 grid grid-cols-3 gap-3 text-xs shrink-0">
-                                <div>
-                                    <span className="text-[9px] uppercase font-bold text-slate-500 block whitespace-nowrap">Total Bill</span>
-                                    <span className="font-bold text-slate-900 whitespace-nowrap text-sm">
-                                        ₹{(activeAmendment.booking?.financials?.totalAmount || 0).toLocaleString('en-IN')}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-[9px] uppercase font-bold text-emerald-700 block whitespace-nowrap">Paid So Far</span>
-                                    <span className="font-bold text-emerald-700 whitespace-nowrap text-sm">
-                                        ₹{(activeAmendment.booking?.financials?.amountPaid || 0).toLocaleString('en-IN')}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-[9px] uppercase font-bold text-rose-600 block whitespace-nowrap">Balance Due</span>
-                                    <span className="font-black text-rose-600 whitespace-nowrap text-sm">
-                                        ₹{(activeAmendment.balanceDue || 0).toLocaleString('en-IN')}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Conversation Thread */}
-                            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 text-center pb-1">
-                                    Conversation & Receipts
-                                </div>
-
-                                {activeAmendment.messages?.map((msg, idx) => {
-                                    const isSuper = msg.sender === 'SuperAdmin';
-                                    const isSys = msg.sender === 'System';
-
-                                    if (isSys) {
-                                        return (
-                                            <div key={idx} className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-950 mx-2 font-medium">
-                                                <div className="font-bold flex items-center gap-1.5 text-emerald-800 text-[11px] mb-0.5">
-                                                    <CheckCircle size={13} className="shrink-0" />
-                                                    <span>{msg.senderName}</span>
-                                                </div>
-                                                <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
-                                                <span className="text-[9px] text-emerald-600 mt-1 block">
-                                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                        );
-                                    }
-
-                                    return (
-                                        <div
-                                            key={idx}
-                                            className={`p-3 rounded-xl text-xs max-w-[85%] ${
-                                                isSuper 
-                                                    ? 'bg-purple-50 border border-purple-200 text-purple-950 mr-auto' 
-                                                    : 'bg-indigo-600 text-white ml-auto shadow-xs'
-                                            }`}
-                                        >
-                                            <div className="flex items-center justify-between gap-3 mb-1 text-[10px] font-bold opacity-90">
-                                                <span className="whitespace-nowrap">
-                                                    {isSuper ? '👑 Super Admin' : '👤 You (Staff Admin)'}
-                                                </span>
-                                                <span className={`whitespace-nowrap font-normal ${isSuper ? 'text-purple-600' : 'text-indigo-200'}`}>
-                                                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                            <p className="whitespace-pre-wrap leading-relaxed font-sans">{msg.text}</p>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Chat Reply Input Bar */}
-                            {activeAmendment.status !== 'Closed' ? (
-                                <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-slate-200 flex gap-2 shrink-0">
-                                    <input
-                                        type="text"
-                                        value={replyText}
-                                        onChange={(e) => setReplyText(e.target.value)}
-                                        placeholder="Type an update or response to Super Admin..."
-                                        className="flex-1 border border-slate-300 rounded-lg px-3.5 py-2 text-xs focus:outline-none focus:border-indigo-600"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={!replyText.trim() || sendingMsg}
-                                        className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
-                                    >
-                                        <Send size={13} /> Send
-                                    </button>
-                                </form>
-                            ) : (
-                                <div className="p-3 bg-slate-100 text-center text-xs font-bold text-slate-500 uppercase tracking-wider shrink-0">
-                                    Amendment Closed — Delegated Access Terminated
-                                </div>
-                            )}
-
-                        </div>
-                    ) : (
-                        <div className="bg-white rounded-xl border border-dashed border-slate-200 h-96 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
-                            <Info size={32} className="mb-2 text-slate-300" />
-                            <p className="text-xs font-bold uppercase tracking-wider">Select an amendment from the list to view instructions and take action.</p>
-                        </div>
-                    )}
-                </div>
-
-            </div>
-
-            {/* MODAL 1: Collect Pending Balance */}
-            {collectModalOpen && activeAmendment && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-150">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+            {/* VIEW ENTIRE ENTRY MODAL */}
+            {isViewModalOpen && viewingAmendment && (
+                <div className="fixed inset-0 bg-black/80 z-[120] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-3xl rounded-sm shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                         {/* Header */}
-                        <div className="bg-gradient-to-r from-emerald-800 to-teal-800 p-4 text-white flex justify-between items-center">
+                        <div className="bg-[#1A2B48] p-5 text-white flex justify-between items-center">
                             <div>
-                                <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                                    <IndianRupee size={15} /> Collect Pending Balance
+                                <h3 className="text-lg font-black uppercase tracking-wide flex items-center gap-2">
+                                    <Eye size={20} className="text-[#BFA37E]" />
+                                    <span>Entire Entry Details — {viewingAmendment.guestName}</span>
                                 </h3>
-                                <p className="text-xs text-emerald-200 mt-0.5 truncate max-w-xs">
-                                    {activeAmendment.guestName} ({activeAmendment.roomInfo})
+                                <p className="text-xs text-slate-300 font-medium mt-0.5">
+                                    Amendment Ref: #{viewingAmendment._id.slice(-6).toUpperCase()} • Requested by {viewingAmendment.requestedByName}
                                 </p>
                             </div>
-                            <button onClick={() => setCollectModalOpen(false)} className="text-white/80 hover:text-white p-1">✕</button>
+                            <button 
+                                onClick={() => setIsViewModalOpen(false)}
+                                className="text-white/70 hover:text-white p-1.5 rounded-full hover:bg-white/10 transition-colors"
+                            >
+                                <X size={22} />
+                            </button>
                         </div>
 
-                        {/* Form */}
-                        <form onSubmit={handleSubmitPayment} className="p-5 space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                                    Collection Amount (₹)
-                                </label>
-                                <input
-                                    type="number"
-                                    required
-                                    min="1"
-                                    value={paymentForm.amount}
-                                    onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                                    className="w-full border border-slate-300 rounded-lg p-2.5 text-base font-bold text-slate-900 focus:outline-none focus:border-emerald-600"
-                                />
-                                <div className="text-[11px] text-slate-500 mt-1 flex justify-between items-center">
-                                    <span>Remaining: ₹{(activeAmendment.balanceDue || 0).toLocaleString('en-IN')}</span>
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto space-y-6">
+                            {/* Request Message Callout */}
+                            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-sm">
+                                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-900 mb-1">
+                                    <MessageSquare size={14} className="text-amber-700" />
+                                    <span>Admin's Explanation / Reason for Amendment:</span>
+                                </div>
+                                <p className="text-sm font-semibold text-slate-800">
+                                    "{viewingAmendment.requestReason}"
+                                </p>
+                            </div>
+
+                            {viewingAmendment.entryType === 'Transaction' ? (
+                                <div className="space-y-4">
+                                    <h4 className="text-xs font-black text-[#1A2B48] uppercase tracking-wider border-b pb-1">
+                                        Financial Ledger Entry Snapshot
+                                    </h4>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                                        <div className="p-3 bg-slate-50 border rounded-sm">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Ledger Type</span>
+                                            <p className="font-black text-slate-800 text-sm mt-0.5">{viewingAmendment.entrySnapshot?.type || 'Finance'} Ledger</p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 border rounded-sm">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Category</span>
+                                            <p className="font-bold text-slate-800 mt-0.5">{viewingAmendment.entrySnapshot?.category || '-'}</p>
+                                        </div>
+                                        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-sm">
+                                            <span className="text-[10px] font-bold text-emerald-700 uppercase block">Amount</span>
+                                            <p className="font-black text-emerald-800 text-base mt-0.5">₹{(viewingAmendment.entrySnapshot?.totalAmount || 0).toLocaleString()}</p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 border rounded-sm">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Payment Mode</span>
+                                            <p className="font-bold text-slate-800 mt-0.5">{viewingAmendment.entrySnapshot?.paymentMode || 'Cash'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                        <div className="p-3 bg-slate-50 border rounded-sm">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Description</span>
+                                            <p className="font-medium text-slate-800 mt-0.5">{viewingAmendment.entrySnapshot?.description || viewingAmendment.guestName}</p>
+                                        </div>
+                                        <div className="p-3 bg-slate-50 border rounded-sm">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Recorded / Approved By</span>
+                                            <p className="font-bold text-slate-800 mt-0.5">{viewingAmendment.entrySnapshot?.recordedBy || viewingAmendment.entrySnapshot?.approvedBy || '-'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Guest Details */}
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-black text-[#1A2B48] uppercase tracking-wider border-b pb-1">
+                                            1. Guest Information
+                                        </h4>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                                            <div className="p-3 bg-slate-50 border rounded-sm">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Guest Name</span>
+                                                <p className="font-black text-slate-800 text-sm mt-0.5">{viewingAmendment.guestName}</p>
+                                            </div>
+                                            <div className="p-3 bg-slate-50 border rounded-sm">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Phone</span>
+                                                <p className="font-bold text-slate-800 mt-0.5">
+                                                    {viewingAmendment.booking?.guestDetails?.phone || viewingAmendment.entrySnapshot?.guestDetails?.phone || 'N/A'}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-slate-50 border rounded-sm">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Email</span>
+                                                <p className="font-bold text-slate-800 truncate mt-0.5">
+                                                    {viewingAmendment.booking?.guestDetails?.email || viewingAmendment.entrySnapshot?.guestDetails?.email || 'N/A'}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-slate-50 border rounded-sm">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">ID Proof</span>
+                                                <p className="font-bold text-slate-800 mt-0.5">
+                                                    {viewingAmendment.booking?.guestDetails?.idProof || 'Not Provided'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Room & Stay Details */}
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-black text-[#1A2B48] uppercase tracking-wider border-b pb-1">
+                                            2. Room & Stay Details
+                                        </h4>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                                            <div className="p-3 bg-slate-50 border rounded-sm">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Room Category</span>
+                                                <p className="font-black text-slate-800 mt-0.5">
+                                                    {viewingAmendment.booking?.roomCategory?.title || viewingAmendment.entrySnapshot?.roomCategory || 'Standard'}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-slate-50 border rounded-sm">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Assigned Unit</span>
+                                                <p className="font-black text-[#1A2B48] text-base mt-0.5">
+                                                    {viewingAmendment.booking?.roomUnit?.roomNumber || viewingAmendment.entrySnapshot?.roomNumber || 'None'}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-slate-50 border rounded-sm">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Check-In Date</span>
+                                                <p className="font-bold text-slate-800 mt-0.5">
+                                                    {new Date(viewingAmendment.booking?.checkInDate || viewingAmendment.entrySnapshot?.checkInDate).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <div className="p-3 bg-slate-50 border rounded-sm">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Check-Out Date</span>
+                                                <p className="font-bold text-slate-800 mt-0.5">
+                                                    {new Date(viewingAmendment.booking?.checkOutDate || viewingAmendment.entrySnapshot?.checkOutDate).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Financials & Balances */}
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-black text-[#1A2B48] uppercase tracking-wider border-b pb-1">
+                                            3. Financial Snapshot & Balances
+                                        </h4>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                                            <div className="p-4 bg-slate-50 border rounded-sm">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Gross Total Tariff</span>
+                                                <p className="text-lg font-black text-slate-800 mt-1">
+                                                    ₹{(viewingAmendment.booking?.financials?.totalAmount ?? viewingAmendment.entrySnapshot?.totalAmount ?? 0).toLocaleString()}
+                                                </p>
+                                            </div>
+                                            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-sm">
+                                                <span className="text-[10px] font-bold text-emerald-700 uppercase block">Amount Paid</span>
+                                                <p className="text-lg font-black text-emerald-800 mt-1">
+                                                    ₹{(viewingAmendment.booking?.financials?.amountPaid ?? viewingAmendment.entrySnapshot?.amountPaid ?? 0).toLocaleString()}
+                                                </p>
+                                            </div>
+                                            <div className="p-4 bg-rose-50 border border-rose-200 rounded-sm">
+                                                <span className="text-[10px] font-bold text-rose-700 uppercase block">Balance Due</span>
+                                                <p className="text-lg font-black text-rose-700 mt-1">
+                                                    ₹{(viewingAmendment.booking?.financials?.balance ?? viewingAmendment.entrySnapshot?.balance ?? 0).toLocaleString()}
+                                                </p>
+                                            </div>
+                                            <div className="p-4 bg-slate-50 border rounded-sm">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Payment Mode</span>
+                                                <p className="text-sm font-black text-slate-800 mt-1">
+                                                    {viewingAmendment.booking?.financials?.paymentMode || viewingAmendment.entrySnapshot?.paymentMode || 'Cash'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-4 bg-slate-50 border-t flex items-center justify-between">
+                            <button
+                                onClick={() => setIsViewModalOpen(false)}
+                                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 uppercase"
+                            >
+                                Close
+                            </button>
+
+                            {/* Super Admin Quick Actions inside View Modal */}
+                            {isSuperAdmin && (
+                                <div className="flex items-center gap-2">
                                     <button
-                                        type="button"
-                                        onClick={() => setPaymentForm({ ...paymentForm, amount: activeAmendment.balanceDue.toString() })}
-                                        className="text-emerald-700 font-bold hover:underline"
+                                        onClick={() => handleApprove(viewingAmendment)}
+                                        disabled={viewingAmendment.status === 'Approved' || viewingAmendment.status === 'Completed'}
+                                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-sm font-black text-xs uppercase shadow flex items-center gap-1.5"
                                     >
-                                        Pay Full
+                                        <Check size={16} strokeWidth={3} />
+                                        <span>Grant Access (Tick)</span>
+                                    </button>
+                                    <button
+                                        onClick={() => handleOpenReject(viewingAmendment)}
+                                        disabled={viewingAmendment.status === 'Rejected' || viewingAmendment.status === 'Completed'}
+                                        className="px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-sm font-black text-xs uppercase shadow flex items-center gap-1.5"
+                                    >
+                                        <X size={16} strokeWidth={3} />
+                                        <span>Decline Request (Cross)</span>
                                     </button>
                                 </div>
-                            </div>
-
-                            {/* Payment Mode Selector */}
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                                    Payment Mode
-                                </label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {[
-                                        { id: 'Cash', label: 'Cash', icon: IndianRupee },
-                                        { id: 'Online', label: 'Online / UPI', icon: Smartphone },
-                                        { id: 'OTA', label: 'OTA Portal', icon: Globe }
-                                    ].map((m) => {
-                                        const Icon = m.icon;
-                                        const isSel = paymentForm.mode === m.id;
-                                        return (
-                                            <button
-                                                key={m.id}
-                                                type="button"
-                                                onClick={() => setPaymentForm({ ...paymentForm, mode: m.id })}
-                                                className={`p-2.5 rounded-lg border text-xs font-bold flex flex-col items-center gap-1 transition-all ${
-                                                    isSel 
-                                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' 
-                                                        : 'bg-white text-slate-700 border-slate-200 hover:border-emerald-300'
-                                                }`}
-                                            >
-                                                <Icon size={15} />
-                                                <span className="whitespace-nowrap">{m.label}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {paymentForm.mode === 'OTA' && (
-                                <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-lg text-xs text-amber-900 flex items-start gap-2">
-                                    <Info size={14} className="text-amber-700 shrink-0 mt-0.5" />
-                                    <span>OTA collection will be queued for approval in Front Desk Analytics before adding to Total Sales.</span>
-                                </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
 
+            {/* REJECT MODAL (SUPER ADMIN) */}
+            {isRejectModalOpen && (
+                <div className="fixed inset-0 bg-black/80 z-[130] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-sm shadow-2xl overflow-hidden p-6 border-t-4 border-rose-600">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-base font-black text-slate-900 uppercase flex items-center gap-2">
+                                <X size={20} className="text-rose-600" />
+                                <span>Decline Amendment Request</span>
+                            </h3>
+                            <button onClick={() => setIsRejectModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleConfirmReject} className="space-y-4">
+                            <p className="text-xs text-slate-600">
+                                Declining this amendment request for <strong className="text-slate-900">{rejectingAmendment?.guestName}</strong> will deny edit/delete access to the staff admin.
+                            </p>
                             <div>
-                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                                    Reference / Note
+                                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">
+                                    Reason for Declining (Optional note for staff admin):
                                 </label>
-                                <input
-                                    type="text"
-                                    value={paymentForm.note}
-                                    onChange={(e) => setPaymentForm({ ...paymentForm, note: e.target.value })}
-                                    placeholder="e.g. MMT Ref # / UPI Tx ID / Counter cash"
-                                    className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-600"
+                                <textarea
+                                    rows={3}
+                                    value={rejectReason}
+                                    onChange={(e) => setRejectReason(e.target.value)}
+                                    placeholder="e.g. Booking is already audited; collect difference as extra charge instead."
+                                    className="w-full p-2.5 border border-slate-300 rounded-sm text-xs focus:outline-none focus:border-rose-500"
                                 />
                             </div>
-
-                            <div className="pt-2 flex justify-end gap-2">
+                            <div className="flex justify-end gap-2 pt-2">
                                 <button
                                     type="button"
-                                    onClick={() => setCollectModalOpen(false)}
-                                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors whitespace-nowrap"
+                                    onClick={() => setIsRejectModalOpen(false)}
+                                    className="px-4 py-2 text-xs font-bold text-slate-500 uppercase"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={submittingPayment}
-                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap"
+                                    className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-sm text-xs font-black uppercase tracking-wider shadow"
                                 >
-                                    <Check size={13} /> Record Payment
+                                    Confirm Decline
                                 </button>
                             </div>
                         </form>
@@ -756,159 +909,277 @@ const AmendmentsManagement = ({ isSuperAdmin: propIsSuperAdmin } = {}) => {
                 </div>
             )}
 
-            {/* MODAL 2: Edit Booking Details */}
-            {editModalOpen && activeAmendment && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-in fade-in duration-150">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 max-h-[90vh] flex flex-col">
+            {/* EDIT ENTRY MODAL (STAFF ADMIN AFTER SUPER ADMIN APPROVES ACCESS) */}
+            {isEditModalOpen && editingAmendment && (
+                <div className="fixed inset-0 bg-black/85 z-[130] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-2xl rounded-sm shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
                         {/* Header */}
-                        <div className="bg-gradient-to-r from-indigo-900 to-purple-900 p-4 text-white flex justify-between items-center shrink-0">
+                        <div className="bg-blue-900 p-5 text-white flex justify-between items-center">
                             <div>
-                                <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-                                    <FileEdit size={15} /> Delegated Booking Modification
-                                </h3>
-                                <p className="text-xs text-indigo-200 mt-0.5">
-                                    Authorized under Ref #{activeAmendment._id.slice(-8)}
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-base font-black uppercase tracking-wide">
+                                        Edit Entry under Authorized Amendment
+                                    </h3>
+                                    <span className="bg-emerald-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded">
+                                        Access Granted
+                                    </span>
+                                </div>
+                                <p className="text-xs text-blue-200 mt-0.5">
+                                    Guest: {editingAmendment.guestName} • Ref #{editingAmendment._id.slice(-6).toUpperCase()}
                                 </p>
                             </div>
-                            <button onClick={() => setEditModalOpen(false)} className="text-white/80 hover:text-white p-1">✕</button>
+                            <button 
+                                onClick={() => setIsEditModalOpen(false)}
+                                className="text-white/70 hover:text-white p-1 rounded-full"
+                            >
+                                <X size={22} />
+                            </button>
                         </div>
 
-                        {/* Form */}
-                        <form onSubmit={handleSubmitEditBooking} className="p-5 space-y-3.5 overflow-y-auto flex-1">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">First Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={editForm.firstName}
-                                        onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
-                                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-indigo-600"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Last Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={editForm.lastName}
-                                        onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
-                                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-indigo-600"
-                                    />
-                                </div>
+                        {/* Edit Form */}
+                        <form onSubmit={handleSubmitEdit} className="p-6 overflow-y-auto space-y-4 flex-grow text-xs">
+                            <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-sm flex items-center gap-2 text-emerald-900">
+                                <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                                <span className="font-bold">
+                                    Any changes made here will automatically adjust the booking, recalculate the balance, and sync daily sales & finance.
+                                </span>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Phone</label>
-                                    <input
-                                        type="text"
-                                        value={editForm.phone}
-                                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-indigo-600"
-                                    />
+                            {editingAmendment?.entryType === 'Transaction' ? (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Description / Title</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={editForm.firstName}
+                                            onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Amount (₹)</label>
+                                            <input
+                                                type="number"
+                                                required
+                                                min="0"
+                                                step="any"
+                                                value={editForm.totalAmount}
+                                                onChange={(e) => setEditForm({ ...editForm, totalAmount: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-300 rounded-sm font-black text-slate-900 focus:outline-none focus:border-blue-600 text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Payment Mode</label>
+                                            <select
+                                                value={editForm.paymentMode}
+                                                onChange={(e) => setEditForm({ ...editForm, paymentMode: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                            >
+                                                {['Cash', 'Online', 'OTA', 'UPI', 'Card', 'Bank Transfer'].map((m) => (
+                                                    <option key={m} value={m}>{m}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Transaction Date</label>
+                                        <input
+                                            type="date"
+                                            value={editForm.checkInDate}
+                                            onChange={(e) => setEditForm({ ...editForm, checkInDate: e.target.value })}
+                                            className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Email</label>
-                                    <input
-                                        type="email"
-                                        value={editForm.email}
-                                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-indigo-600"
-                                    />
-                                </div>
+                            ) : (
+                                <>
+                                    {/* Guest Names */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">First Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={editForm.firstName}
+                                                onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Last Name</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.lastName}
+                                                onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Contact Info */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Phone</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.phone}
+                                                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Email</label>
+                                            <input
+                                                type="email"
+                                                value={editForm.email}
+                                                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Room Category & Room Unit */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Room Category</label>
+                                            <select
+                                                value={editForm.roomCategory}
+                                                onChange={(e) => setEditForm({ ...editForm, roomCategory: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                            >
+                                                <option value="">Select Category</option>
+                                                {roomCategories.map((c) => (
+                                                    <option key={c._id} value={c._id}>{c.title}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Room Unit / Number</label>
+                                            <select
+                                                value={editForm.roomUnit}
+                                                onChange={(e) => setEditForm({ ...editForm, roomUnit: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                            >
+                                                <option value="">Keep current / Unassigned</option>
+                                                {availableUnits.map((u) => (
+                                                    <option key={u._id} value={u._id}>Room {u.roomNumber} ({u.status})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Dates */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Check-In Date</label>
+                                            <input
+                                                type="date"
+                                                value={editForm.checkInDate}
+                                                onChange={(e) => setEditForm({ ...editForm, checkInDate: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Check-Out Date</label>
+                                            <input
+                                                type="date"
+                                                value={editForm.checkOutDate}
+                                                onChange={(e) => setEditForm({ ...editForm, checkOutDate: e.target.value })}
+                                                className="w-full p-2.5 border border-slate-300 rounded-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-600"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Financials: Tariff, Amount Paid, Mode */}
+                                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-sm space-y-3">
+                                        <h5 className="text-[11px] font-black text-slate-700 uppercase tracking-wider">
+                                            Financials & Dynamic Balance Recalculation
+                                        </h5>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Total Tariff (₹)</label>
+                                                <input
+                                                    type="number"
+                                                    required
+                                                    min="0"
+                                                    value={editForm.totalAmount}
+                                                    onChange={(e) => setEditForm({ ...editForm, totalAmount: e.target.value })}
+                                                    className="w-full p-2.5 border border-slate-300 rounded-sm font-black text-slate-900 focus:outline-none focus:border-blue-600"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Amount Paid (₹)</label>
+                                                <input
+                                                    type="number"
+                                                    required
+                                                    min="0"
+                                                    value={editForm.amountPaid}
+                                                    onChange={(e) => setEditForm({ ...editForm, amountPaid: e.target.value })}
+                                                    className="w-full p-2.5 border border-slate-300 rounded-sm font-black text-emerald-700 focus:outline-none focus:border-blue-600"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">Payment Mode</label>
+                                                <select
+                                                    value={editForm.paymentMode}
+                                                    onChange={(e) => setEditForm({ ...editForm, paymentMode: e.target.value })}
+                                                    className="w-full p-2.5 border border-slate-300 rounded-sm font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                                                >
+                                                    <option value="Cash">Cash</option>
+                                                    <option value="UPI">UPI</option>
+                                                    <option value="Card">Card</option>
+                                                    <option value="Bank Transfer">Bank Transfer</option>
+                                                    <option value="OTA">OTA</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Dynamic Balance Preview */}
+                                        <div className="pt-2 flex justify-between items-center text-xs font-bold border-t">
+                                            <span className="text-slate-600 uppercase tracking-wider">Recalculated Balance Due:</span>
+                                            <span className={`text-base font-black ${
+                                                (Number(editForm.totalAmount || 0) - Number(editForm.amountPaid || 0)) > 0 
+                                                    ? 'text-rose-600' 
+                                                    : 'text-emerald-600'
+                                            }`}>
+                                                ₹{Math.max(0, Number(editForm.totalAmount || 0) - Number(editForm.amountPaid || 0)).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Note */}
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1">
+                                    Amendment Note (Summary of correction made)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editForm.note}
+                                    onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                                    placeholder="e.g. Corrected room tariff and added collected cash balance"
+                                    className="w-full p-2.5 border border-slate-300 rounded-sm text-slate-800 focus:outline-none focus:border-blue-600"
+                                />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Room Category</label>
-                                    <select
-                                        value={editForm.roomCategory}
-                                        onChange={(e) => setEditForm({ ...editForm, roomCategory: e.target.value })}
-                                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-indigo-600"
-                                    >
-                                        <option value="">Select Category</option>
-                                        {roomCategories.map((c) => (
-                                            <option key={c._id} value={c._id}>
-                                                {c.title || c.category}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Assign Room Unit</label>
-                                    <select
-                                        value={editForm.roomUnit}
-                                        onChange={(e) => setEditForm({ ...editForm, roomUnit: e.target.value })}
-                                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-indigo-600"
-                                    >
-                                        <option value="">None / Unassigned</option>
-                                        {availableUnits.map((u) => (
-                                            <option key={u._id} value={u._id}>
-                                                Room {u.roomNumber} ({u.status})
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Total Room Tariff (₹)</label>
-                                    <input
-                                        type="number"
-                                        value={editForm.roomTariff}
-                                        onChange={(e) => setEditForm({ ...editForm, roomTariff: e.target.value })}
-                                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-indigo-600 font-bold"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Reason / Note</label>
-                                    <input
-                                        type="text"
-                                        value={editForm.updateNote}
-                                        onChange={(e) => setEditForm({ ...editForm, updateNote: e.target.value })}
-                                        placeholder="Reason for change"
-                                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-indigo-600"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Check-in Date</label>
-                                    <input
-                                        type="date"
-                                        value={editForm.checkInDate}
-                                        onChange={(e) => setEditForm({ ...editForm, checkInDate: e.target.value })}
-                                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-indigo-600"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Check-out Date</label>
-                                    <input
-                                        type="date"
-                                        value={editForm.checkOutDate}
-                                        onChange={(e) => setEditForm({ ...editForm, checkOutDate: e.target.value })}
-                                        className="w-full border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:border-indigo-600"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2 shrink-0">
+                            {/* Footer Submit Buttons */}
+                            <div className="flex justify-end gap-3 pt-3 border-t">
                                 <button
                                     type="button"
-                                    onClick={() => setEditModalOpen(false)}
-                                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors whitespace-nowrap"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="px-4 py-2 text-xs font-bold text-slate-500 uppercase"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={submittingEdit}
-                                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap"
+                                    className="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white rounded-sm font-black text-xs uppercase tracking-wider shadow"
                                 >
-                                    <Check size={13} /> Update Details
+                                    {submittingEdit ? 'Saving Changes...' : 'Save & Update All Balances'}
                                 </button>
                             </div>
                         </form>

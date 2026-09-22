@@ -4,7 +4,17 @@ const AmendmentSchema = new mongoose.Schema({
     booking: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Booking',
-        required: true
+        required: false
+    },
+    transaction: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Transaction',
+        required: false
+    },
+    entryType: {
+        type: String,
+        enum: ['Booking', 'Transaction'],
+        default: 'Booking'
     },
     guestName: {
         type: String,
@@ -14,48 +24,69 @@ const AmendmentSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    balanceDue: {
-        type: Number,
-        required: true
+    requestReason: {
+        type: String,
+        required: true // Message entered by admin explaining what was entered wrong
+    },
+    requestedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    requestedByName: {
+        type: String,
+        default: 'Staff Admin'
+    },
+    requestedRole: {
+        type: String,
+        default: 'admin'
+    },
+    entrySnapshot: {
+        guestDetails: {
+            firstName: String,
+            lastName: String,
+            email: String,
+            phone: String
+        },
+        roomCategory: String,
+        roomNumber: String,
+        checkInDate: Date,
+        checkOutDate: Date,
+        totalAmount: Number,
+        amountPaid: Number,
+        balance: Number,
+        paymentMode: String,
+        status: String,
+        // Transaction snapshot fields
+        description: String,
+        category: String,
+        type: String,
+        recordedBy: String,
+        approvedBy: String
     },
     status: {
         type: String,
-        enum: ['Pending Admin Action', 'Admin Responded', 'Resolved', 'Closed'],
-        default: 'Pending Admin Action'
+        enum: ['Pending', 'Approved', 'Rejected', 'Completed'],
+        default: 'Pending'
     },
-    superAdminNote: {
-        type: String,
-        required: true
+    canEdit: {
+        type: Boolean,
+        default: false
     },
-    messages: [{
-        sender: {
-            type: String,
-            enum: ['SuperAdmin', 'StaffAdmin', 'System'],
-            required: true
-        },
-        senderName: {
-            type: String,
-            required: true
-        },
-        text: {
-            type: String,
-            required: true
-        },
-        createdAt: {
-            type: Date,
-            default: Date.now
-        }
-    }],
-    createdBy: {
-        type: String,
-        default: 'Super Admin'
+    canDelete: {
+        type: Boolean,
+        default: false
     },
-    resolvedBy: {
-        type: String,
+    superAdminAction: {
+        actionBy: { type: String, default: null },
+        actionAt: { type: Date, default: null },
+        note: { type: String, default: '' }
+    },
+    completedAt: {
+        type: Date,
         default: null
     },
-    resolvedAt: {
-        type: Date,
+    completedAction: {
+        type: String, // 'Edited' or 'Deleted'
         default: null
     }
 }, { timestamps: true });

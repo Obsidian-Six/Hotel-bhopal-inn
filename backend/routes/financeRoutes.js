@@ -8,6 +8,7 @@ const RoomUnit = require('../models/RoomUnit');
 const ElectricityReading = require('../models/ElectricityReading');
 const Amendment = require('../models/Amendment');
 const { encrypt, decrypt } = require('../utils/crypto');
+const { protect, superAdmin } = require('../middleware/auth');
 
 // Add a transaction
 router.post('/transactions', async (req, res) => {
@@ -80,19 +81,30 @@ router.get('/transactions', async (req, res) => {
         const bookings = await Booking.find(bookingQuery);
         let bookingTx = [];
         bookings.forEach(b => {
-            b.financials.paymentHistory.forEach(p => {
+            b.financials?.paymentHistory?.forEach(p => {
                 if (!date || (p.timestamp >= startOfDay && p.timestamp <= endOfDay)) {
                     if (p.mode === 'Online' || p.mode === 'Card' || p.mode === 'UPI' || p.mode === 'Bank Transfer') {
-                        // Check if a matching Transaction already exists in0decryptedTx to prevent double counting
+                        // Check if a matching Transaction already exists in decryptedTx to prevent double counting
                         const isDuplicate = decryptedTx.some(tx => {
+                            // 1. Direct booking reference match
+                            if (tx.booking && tx.booking.toString() === b._id.toString()) return true;
+
+                            // 2. Ref ID in description match
+                            const bRef = b._id.toString().slice(-8).toLowerCase();
+                            const txDesc = (tx.description || '').toLowerCase();
+                            if (txDesc.includes(bRef)) return true;
+
+                            // 3. Name and amount match
                             const sameAmount = Math.abs(Number(tx.amount) - Number(p.amount)) < 0.01;
+                            const fName = (b.guestDetails?.firstName || '').toLowerCase().trim();
+                            const lName = (b.guestDetails?.lastName || '').toLowerCase().trim();
+                            const nameMatch = (fName && txDesc.includes(fName)) || (lName && txDesc.includes(lName));
+
                             const pTime = new Date(p.timestamp).getTime();
                             const txTime = new Date(tx.date || tx.createdAt).getTime();
                             const timeDiff = Math.abs(txTime - pTime);
-                            const lastName = (b.guestDetails?.lastName || '').toLowerCase();
-                            const txDesc = (tx.description || '').toLowerCase();
-                            const nameMatch = lastName.length > 1 && txDesc.includes(lastName);
-                            return sameAmount && (timeDiff < 10 * 60 * 1000 || nameMatch);
+
+                            return sameAmount && (nameMatch || timeDiff < 60 * 60 * 1000);
                         });
 
                         if (!isDuplicate) {
@@ -101,12 +113,13 @@ router.get('/transactions', async (req, res) => {
                                 type: 'Income',
                                 category: 'Room Rent',
                                 amount: p.amount,
-                                description: `${b.guestDetails.firstName} ${b.guestDetails.lastName} - Booking #${b._id.toString().slice(-8)}`,
+                                description: `${b.guestDetails?.firstName || ''} ${b.guestDetails?.lastName || ''} - Booking #${b._id.toString().slice(-8)}`.trim(),
                                 paymentMode: p.mode,
                                 recordedBy: p.staff || 'System',
                                 approved: true,
                                 createdAt: p.timestamp,
-                                date: p.timestamp
+                                date: p.timestamp,
+                                booking: b._id
                             });
                         }
                     }
@@ -118,6 +131,96 @@ router.get('/transactions', async (req, res) => {
         
         res.json(allTx);
     } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// PUT: Edit Transaction (Super Admin or staff with approved amendment)
+router.put('/transactions/:id', protect, async (req, res) => {
+    try {
+        const tx = await Transaction.findById(req.params.id);
+        if (!tx) return res.status(404).json({ message: 'Transaction not found' });
+
+        const isSuper = req.user && req.user.role === 'superadmin';
+        if (!isSuper) {
+            const approvedAmend = await Amendment.findOne({
+                $or: [
+                    { transaction: tx._id },
+                    ...(tx.booking ? [{ booking: tx.booking }] : [])
+                ],
+                status: 'Approved',
+                canEdit: true
+            });
+            if (!approvedAmend) {
+                return res.status(403).json({ message: 'Permission denied. Please request an amendment from Super Admin first.' });
+            }
+        }
+
+        const {
+            date,
+            type,
+            category,
+            amount,
+            description,
+            paymentMode,
+            recordedBy,
+            approved,
+            approvedBy
+        } = req.body;
+
+        const oldAmount = Number(decrypt(tx.amount)) || 0;
+
+        if (date) tx.date = new Date(date);
+        if (type) tx.type = type;
+        if (category) tx.category = category;
+        if (amount !== undefined && amount !== null) {
+            tx.amount = encrypt(amount.toString());
+        }
+        if (description !== undefined) {
+            tx.description = encrypt(description || '');
+        }
+        if (paymentMode) tx.paymentMode = paymentMode;
+        if (recordedBy !== undefined) tx.recordedBy = recordedBy;
+        if (approved !== undefined) tx.approved = approved;
+        if (approvedBy !== undefined) tx.approvedBy = approvedBy;
+
+        await tx.save();
+
+        const decryptedTx = tx.toObject();
+        decryptedTx.amount = amount !== undefined ? Number(amount) : oldAmount;
+        decryptedTx.description = description !== undefined ? description : decrypt(tx.description);
+
+        // If linked to a booking and amount changed, keep booking balance synchronized
+        if (tx.booking && amount !== undefined && tx.type === 'Income') {
+            try {
+                const booking = await Booking.findById(tx.booking);
+                if (booking) {
+                    const newAmount = Number(amount);
+                    const diff = newAmount - oldAmount;
+                    if (diff !== 0) {
+                        booking.financials.amountPaid = Math.max(0, (booking.financials.amountPaid || 0) + diff);
+                        booking.financials.balance = Math.max(0, (booking.financials.totalAmount || 0) - booking.financials.amountPaid);
+                        await booking.save();
+                        const io = req.app.get('socketio');
+                        if (io) io.emit('booking_updated', booking);
+                    }
+                }
+            } catch (bErr) {
+                console.error('Error synchronizing booking financials:', bErr);
+            }
+        }
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('finance_updated', decryptedTx);
+        }
+
+        res.json({
+            message: 'Transaction successfully updated by Super Admin.',
+            transaction: decryptedTx
+        });
+    } catch (err) {
+        console.error('Error editing transaction:', err);
         res.status(500).json({ message: err.message });
     }
 });
