@@ -63,10 +63,10 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
   const [submittingEditTx, setSubmittingEditTx] = useState(false);
   
   const [newIncome, setNewIncome] = useState({
-      category: 'Room Rent', amount: '', description: '', paymentMode: 'Cash', recordedBy: ''
+      category: 'Room Rent', amount: '', description: '', paymentMode: 'Cash', recordedBy: '', date: ''
   });
   const [newExpense, setNewExpense] = useState({
-      category: 'Kitchen', amount: '', description: '', paymentMode: 'Cash', approvedBy: ''
+      category: 'Kitchen', amount: '', description: '', paymentMode: 'Cash', approvedBy: '', date: ''
   });
   
   const [handoverForm, setHandoverForm] = useState({
@@ -193,11 +193,12 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
   const handleAddIncome = async (e) => {
       e.preventDefault();
       try {
+          const entryDate = newIncome.date || selectedDate;
           await axios.post(`${API_BASE}/api/finance/transactions`, {
-              ...newIncome, type: 'Income', amount: Number(newIncome.amount), date: new Date(selectedDate)
+              ...newIncome, type: 'Income', amount: Number(newIncome.amount), date: entryDate
           });
           setShowIncomeModal(false);
-          setNewIncome({ ...newIncome, amount: '', description: '' });
+          setNewIncome({ ...newIncome, amount: '', description: '', date: '' });
           fetchData();
       } catch (err) { console.error(err); }
   };
@@ -205,11 +206,12 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
   const handleAddExpense = async (e) => {
       e.preventDefault();
       try {
+          const entryDate = newExpense.date || selectedDate;
           await axios.post(`${API_BASE}/api/finance/transactions`, {
-              ...newExpense, type: 'Expense', amount: Number(newExpense.amount), date: new Date(selectedDate), approved: true // Assume approved if Manager signs off
+              ...newExpense, type: 'Expense', amount: Number(newExpense.amount), date: entryDate, approved: true
           });
           setShowExpenseModal(false);
-          setNewExpense({ ...newExpense, amount: '', description: '' });
+          setNewExpense({ ...newExpense, amount: '', description: '', date: '' });
           fetchData();
       } catch (err) { console.error(err); }
   };
@@ -708,8 +710,20 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                         <p className="text-2xl font-serif font-bold flex items-center gap-1">₹{summary.totalExpense.toLocaleString()}</p>
                     </div>
                     <div className="bg-[#0ea5e9] text-white p-6 border-r border-white/10 cursor-pointer hover:bg-[#0ea5e9]/90 transition-colors">
-                        <p className="text-[10px] text-white/80 uppercase tracking-widest font-bold mb-1">Net Cash</p>
+                        <div className="flex justify-between items-center mb-1">
+                            <p className="text-[10px] text-white/80 uppercase tracking-widest font-bold">Net Cash</p>
+                            {summary.openingBalance > 0 && (
+                                <span className="text-[9px] bg-white/20 text-white px-1.5 py-0.5 rounded font-black uppercase tracking-wider">
+                                    Includes Opening
+                                </span>
+                            )}
+                        </div>
                         <p className="text-2xl font-serif font-bold flex items-center gap-1">₹{summary.netCashHandover.toLocaleString()}</p>
+                        {summary.openingBalance !== undefined && (
+                            <p className="text-[10px] text-white/80 font-semibold mt-1">
+                                Opening: ₹{(summary.openingBalance || 0).toLocaleString()} {((summary.todayCashIncome || 0) - (summary.todayCashExpense || 0)) >= 0 ? '+' : ''}₹{((summary.todayCashIncome || 0) - (summary.todayCashExpense || 0)).toLocaleString()} today
+                            </p>
+                        )}
                     </div>
                     <div 
                       onClick={() => setViewingList('pending')}
@@ -842,7 +856,17 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                     <div className="flex items-center gap-2">
                         {!isLocked && (
                             <button 
-                                onClick={() => setShowIncomeModal(true)} 
+                                onClick={() => {
+                                    setNewIncome({
+                                        category: 'Room Rent', 
+                                        amount: '', 
+                                        description: '', 
+                                        paymentMode: 'Cash', 
+                                        recordedBy: localStorage.getItem('staffName') || 'Staff', 
+                                        date: selectedDate
+                                    });
+                                    setShowIncomeModal(true);
+                                }} 
                                 className="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-sm transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
                                 title="Add New Income Entry"
                             >
@@ -1071,7 +1095,17 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                     <div className="flex items-center gap-2">
                         {!isLocked && (
                             <button 
-                                onClick={() => setShowExpenseModal(true)} 
+                                onClick={() => {
+                                    setNewExpense({
+                                        category: 'Kitchen',
+                                        amount: '',
+                                        description: '',
+                                        paymentMode: 'Cash',
+                                        approvedBy: '',
+                                        date: selectedDate
+                                    });
+                                    setShowExpenseModal(true);
+                                }} 
                                 className="bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-sm transition-colors flex items-center gap-1.5 text-xs font-bold cursor-pointer"
                                 title="Add New Expense Entry"
                             >
@@ -1246,21 +1280,13 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                         <div className="grid grid-cols-2 text-sm">
                             <div className="p-4 border-r border-b border-white/5 flex justify-between items-center">
                                 <span className="text-white/60">Opening Cash Balance:</span>
-                                <span className="font-bold">₹{summary.openingBalance || 0}</span>
+                                <span className="font-bold">₹{(summary.openingBalance || 0).toLocaleString()}</span>
                             </div>
                             <div className="p-4 border-b border-white/5 flex justify-between items-center">
-                                <span className="text-white/60">Total Cash Income:</span>
+                                <span className="text-white/60">Today Cash Income:</span>
                                 <span className="font-bold text-[#10B981]">₹{(summary.incomeByMode?.['Cash'] || 0).toLocaleString()}</span>
                             </div>
                             <div className="p-4 border-r border-b border-white/5 flex justify-between items-center">
-                                <span className="text-white/60">Total Cash Expense:</span>
-                                <span className="font-bold text-[#EF4444]">₹{(summary.totalExpense || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/5">
-                                <span className="text-white/80 font-bold">Closing Cash Balance:</span>
-                                <span className="font-bold text-white">₹{((summary.openingBalance || 0) + (summary.incomeByMode?.['Cash'] || 0) - (summary.totalExpense || 0)).toLocaleString()}</span>
-                            </div>
-                            <div className="p-4 border-r border-white/5 flex justify-between items-center">
                                 <span className="text-white/60">Online Income:</span>
                                 <span className="font-bold text-blue-400">₹{((summary.incomeByMode?.['Online'] || 0) + (summary.incomeByMode?.['UPI'] || 0) + (summary.incomeByMode?.['Card'] || 0) + (summary.incomeByMode?.['Bank Transfer'] || 0)).toLocaleString()}</span>
                             </div>
@@ -1268,9 +1294,26 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                                 <span className="text-white/60">OTA Income:</span>
                                 <span className="font-bold text-amber-400">₹{(summary.incomeByMode?.['OTA'] || 0).toLocaleString()}</span>
                             </div>
-                            <div className="p-4 col-span-2 flex justify-between items-center bg-[#BFA37E]/20">
-                                <span className="text-[#BFA37E] font-bold">Net Day Total:</span>
-                                <span className="font-bold text-[#BFA37E]">₹{((summary.totalIncome || 0) - (summary.totalExpense || 0)).toLocaleString()}</span>
+                            <div className="p-4 border-r border-b border-white/5 flex justify-between items-center bg-white/[0.03]">
+                                <span className="text-white/80 font-bold">Today Total Income:</span>
+                                <span className="font-black text-emerald-400 text-base">₹{(summary.totalIncome || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.03]">
+                                <span className="text-white/80 font-bold">Total Expenditures:</span>
+                                <span className="font-black text-[#EF4444] text-base">₹{(summary.totalExpense || 0).toLocaleString()}</span>
+                            </div>
+                            <div className="p-4 col-span-2 border-b border-white/5 flex justify-between items-center bg-white/5">
+                                <span className="text-white/80 font-bold">Closing Cash Balance (Physical Cash):</span>
+                                <span className="font-bold text-white">₹{((summary.openingBalance || 0) + (summary.incomeByMode?.['Cash'] || 0) - (summary.totalExpense || 0)).toLocaleString()}</span>
+                            </div>
+                            <div className="p-4 col-span-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-[#BFA37E]/20">
+                                <div>
+                                    <span className="text-[#BFA37E] font-black text-sm uppercase tracking-wide block">Net Income / Balance:</span>
+                                    <span className="text-[10px] text-white/60 font-medium">Opening Balance + Today Income - Expenditure</span>
+                                </div>
+                                <span className="font-black text-xl text-[#BFA37E]">
+                                    ₹{((summary.openingBalance || 0) + (summary.totalIncome || 0) - (summary.totalExpense || 0)).toLocaleString()}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -1337,6 +1380,16 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                   </div>
                   <form onSubmit={handleAddIncome} className="p-6 space-y-4">
                       <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Entry Date</label>
+                          <input 
+                              type="date" 
+                              required 
+                              value={newIncome.date || selectedDate} 
+                              onChange={e => setNewIncome({...newIncome, date: e.target.value})} 
+                              className="w-full border border-slate-200 p-2.5 text-xs focus:border-[#10B981] focus:outline-none bg-slate-50 font-bold text-slate-800" 
+                          />
+                      </div>
+                      <div>
                           <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Description</label>
                           <input type="text" required value={newIncome.description} onChange={e => setNewIncome({...newIncome, description: e.target.value})} placeholder="e.g. Extra Mattress / F&B" className="w-full border border-slate-200 p-2.5 text-xs focus:border-[#10B981] focus:outline-none" />
                       </div>
@@ -1380,6 +1433,16 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                       <button onClick={() => setShowExpenseModal(false)} className="hover:text-white/70">✕</button>
                   </div>
                   <form onSubmit={handleAddExpense} className="p-6 space-y-4">
+                      <div>
+                          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Entry Date</label>
+                          <input 
+                              type="date" 
+                              required 
+                              value={newExpense.date || selectedDate} 
+                              onChange={e => setNewExpense({...newExpense, date: e.target.value})} 
+                              className="w-full border border-slate-200 p-2.5 text-xs focus:border-[#EF4444] focus:outline-none bg-slate-50 font-bold text-slate-800" 
+                          />
+                      </div>
                       <div>
                           <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Description</label>
                           <input type="text" required value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} placeholder="e.g. Vegetables & Grocery" className="w-full border border-slate-200 p-2.5 text-xs focus:border-[#EF4444] focus:outline-none" />

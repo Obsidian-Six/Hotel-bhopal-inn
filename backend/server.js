@@ -141,3 +141,4 @@ if (fs.existsSync(frontendDistPath)) {
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+

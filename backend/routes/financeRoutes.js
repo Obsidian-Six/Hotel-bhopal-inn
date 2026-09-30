@@ -13,13 +13,26 @@ const { protect, superAdmin } = require('../middleware/auth');
 // Add a transaction
 router.post('/transactions', async (req, res) => {
     try {
-        const { type, category, amount, description, paymentMode, recordedBy, approved, approvedBy } = req.body;
+        const { type, category, amount, description, paymentMode, recordedBy, approved, approvedBy, date } = req.body;
         
         // Encrypt sensitive fields
         const encryptedAmount = encrypt(amount.toString());
         const encryptedDesc = description ? encrypt(description) : encrypt('');
 
+        let txDate = new Date();
+        if (date) {
+            if (typeof date === 'string' && date.includes('-')) {
+                const datePart = date.split('T')[0];
+                const [y, m, d] = datePart.split('-').map(Number);
+                const now = new Date();
+                txDate = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds());
+            } else {
+                txDate = new Date(date);
+            }
+        }
+
         const newTx = new Transaction({ 
+            date: txDate,
             type, 
             category, 
             amount: encryptedAmount, 
@@ -52,11 +65,16 @@ router.get('/transactions', async (req, res) => {
         let startOfDay, endOfDay;
         
         if (date) {
-            startOfDay = new Date(date);
-            startOfDay.setHours(0, 0, 0, 0);
-            
-            endOfDay = new Date(date);
-            endOfDay.setHours(23, 59, 59, 999);
+            if (typeof date === 'string' && date.includes('-')) {
+                const [y, m, d] = date.split('-').map(Number);
+                startOfDay = new Date(y, m - 1, d, 0, 0, 0, 0);
+                endOfDay = new Date(y, m - 1, d, 23, 59, 59, 999);
+            } else {
+                startOfDay = new Date(date);
+                startOfDay.setHours(0, 0, 0, 0);
+                endOfDay = new Date(date);
+                endOfDay.setHours(23, 59, 59, 999);
+            }
             
             query.date = { $gte: startOfDay, $lte: endOfDay };
         }
@@ -242,101 +260,247 @@ router.post('/transactions/void/:id', async (req, res) => {
     }
 });
 
+// Helper: Calculate financials for a specific date range (prevents double-counting and captures walk-in registration sales)
+const calculateFinancialsForRange = async (sDate, eDate) => {
+    const txs = await Transaction.find({
+        date: { $gte: sDate, $lte: eDate },
+        isVoided: false
+    });
+
+    let cash = 0;
+    let online = 0;
+    let otaTotal = 0;
+    let otaApproved = 0;
+    let otaApprovedCount = 0;
+    let otaPendingCount = 0;
+    let expenses = 0;
+
+    txs.forEach(tx => {
+        const amount = Number(decrypt(tx.amount)) || 0;
+        if (tx.type === 'Income') {
+            if (tx.paymentMode === 'OTA') {
+                otaTotal += amount;
+                if (tx.approved) {
+                    otaApproved += amount;
+                    otaApprovedCount++;
+                } else {
+                    otaPendingCount++;
+                }
+            } else {
+                // If it's a standalone transaction (no tx.booking), always count it.
+                // If it's linked to a booking and category is Room Rent, booking.financials handles it below.
+                if (!tx.booking || tx.category !== 'Room Rent') {
+                    if (tx.paymentMode === 'Cash') {
+                        cash += amount;
+                    } else {
+                        online += amount;
+                    }
+                }
+            }
+        } else if (tx.type === 'Expense' && tx.approved) {
+            if (tx.paymentMode === 'Cash' || !tx.paymentMode) {
+                expenses += amount;
+            }
+        }
+    });
+
+    const bookings = await Booking.find({
+        status: { $ne: 'Cancelled' },
+        $or: [
+            { 'financials.paymentHistory.timestamp': { $gte: sDate, $lte: eDate } },
+            { createdAt: { $gte: sDate, $lte: eDate } }
+        ]
+    });
+
+    bookings.forEach(b => {
+        const historyOnDate = (b.financials?.paymentHistory || []).filter(
+            p => p.timestamp >= sDate && p.timestamp <= eDate
+        );
+
+        let historySumOnDate = 0;
+        historyOnDate.forEach(p => {
+            const amt = Number(p.amount) || 0;
+            historySumOnDate += amt;
+            if (p.mode === 'OTA') {
+                const hasTx = txs.some(t => {
+                    const tAmt = Number(decrypt(t.amount)) || 0;
+                    return t.paymentMode === 'OTA' && Math.abs(tAmt - amt) < 0.01;
+                });
+                if (!hasTx) {
+                    otaTotal += amt;
+                    otaPendingCount++;
+                }
+            } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(p.mode)) {
+                online += amt;
+            } else {
+                cash += amt;
+            }
+        });
+
+        // For bookings / walk-in registrations created on this date
+        if (b.createdAt >= sDate && b.createdAt <= eDate) {
+            const fin = b.financials || {};
+            const bookingTotal = Number(fin.totalAmount || fin.paidAmount || fin.advancePayment) || 0;
+            const remainingUnrecorded = Math.max(0, bookingTotal - historySumOnDate);
+
+            if (remainingUnrecorded > 0) {
+                const pMode = fin.paymentMode || 'Cash';
+                if (pMode === 'OTA' || ['Booking.com', 'MakeMyTrip', 'Goibibo', 'Agoda', 'Expedia', 'Airbnb', 'OTA'].includes(b.source)) {
+                    const hasTx = txs.some(t => {
+                        const tAmt = Number(decrypt(t.amount)) || 0;
+                        return t.paymentMode === 'OTA' && Math.abs(tAmt - remainingUnrecorded) < 0.01;
+                    });
+                    if (!hasTx) {
+                        otaTotal += remainingUnrecorded;
+                        otaPendingCount++;
+                    }
+                } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(pMode)) {
+                    online += remainingUnrecorded;
+                } else {
+                    cash += remainingUnrecorded;
+                }
+            }
+        }
+    });
+
+    // CRITICAL: Only approved OTA is added to total
+    const otaPending = Math.max(0, otaTotal - otaApproved);
+    return { 
+        cash, 
+        online, 
+        otaTotal, 
+        otaApproved, 
+        otaPending,
+        otaApprovedCount,
+        otaPendingCount,
+        ota: otaApproved, 
+        total: cash + online + otaApproved, 
+        expenses 
+    };
+};
+
+// Calculate opening cash balance for a given day (carried forward from previous days)
+const getOpeningCashBalance = async (startOfDay) => {
+    // 1. Check if an explicit CashHandover was submitted on the previous day
+    const yesterdayStart = new Date(startOfDay);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    yesterdayStart.setHours(0, 0, 0, 0);
+    const yesterdayEnd = new Date(yesterdayStart);
+    yesterdayEnd.setHours(23, 59, 59, 999);
+
+    const prevHandover = await CashHandover.findOne({
+        date: { $gte: yesterdayStart, $lte: yesterdayEnd }
+    });
+
+    if (prevHandover) {
+        return Number(decrypt(prevHandover.closingBalance)) || 0;
+    }
+
+    // 2. Check the most recent CashHandover prior to this date
+    const mostRecentHandover = await CashHandover.findOne({
+        date: { $lt: startOfDay }
+    }).sort({ date: -1 });
+
+    let baseDate = new Date(2026, 7, 10, 0, 0, 0, 0); // 10th Aug 2026 default baseline
+    let baseBalance = 0;
+
+    if (mostRecentHandover) {
+        baseDate = new Date(mostRecentHandover.date);
+        baseDate.setDate(baseDate.getDate() + 1);
+        baseDate.setHours(0, 0, 0, 0);
+        baseBalance = Number(decrypt(mostRecentHandover.closingBalance)) || 0;
+    }
+
+    if (startOfDay <= baseDate) {
+        return baseBalance;
+    }
+
+    // Calculate cash income and cash expenses between baseDate and startOfDay
+    const priorFin = await calculateFinancialsForRange(baseDate, new Date(startOfDay.getTime() - 1));
+    const accumulatedCash = (priorFin.cash || 0) - (priorFin.expenses || 0);
+
+    return Math.max(0, baseBalance + accumulatedCash);
+};
+
 // Get daily report summary
 router.get('/daily-report', async (req, res) => {
     try {
         const { date } = req.query;
-        let queryDate = date ? new Date(date) : new Date();
-        
-        const startOfDay = new Date(queryDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        const endOfDay = new Date(queryDate);
-        endOfDay.setHours(23, 59, 59, 999);
+        let startOfDay, endOfDay, queryDate;
 
+        if (date && typeof date === 'string' && date.includes('-')) {
+            const [y, m, d] = date.split('-').map(Number);
+            queryDate = new Date(y, m - 1, d, 12, 0, 0);
+            startOfDay = new Date(y, m - 1, d, 0, 0, 0, 0);
+            endOfDay = new Date(y, m - 1, d, 23, 59, 59, 999);
+        } else {
+            queryDate = date ? new Date(date) : new Date();
+            const y = queryDate.getFullYear();
+            const m = queryDate.getMonth();
+            const d = queryDate.getDate();
+            startOfDay = new Date(y, m, d, 0, 0, 0, 0);
+            endOfDay = new Date(y, m, d, 23, 59, 59, 999);
+        }
+
+        // 1. Calculate financials for selected date
+        const todayFin = await calculateFinancialsForRange(startOfDay, endOfDay);
+
+        // 2. Fetch transactions for mode breakdown
         const transactions = await Transaction.find({
             date: { $gte: startOfDay, $lte: endOfDay },
             isVoided: false
         });
 
-        let summary = {
-            totalIncome: 0,
-            totalExpense: 0,
-            netCashHandover: 0,
-            incomeByMode: {
-                Cash: 0,
-                UPI: 0,
-                Card: 0,
-                'Bank Transfer': 0,
-                Online: 0,
-                OTA: 0 // Approved OTA
-            },
-            otaTotal: 0,
-            otaApproved: 0,
-            otaPending: 0
+        let incomeByMode = {
+            Cash: todayFin.cash,
+            Online: todayFin.online,
+            UPI: 0,
+            Card: 0,
+            'Bank Transfer': 0,
+            OTA: todayFin.otaApproved
         };
 
         transactions.forEach(tx => {
             const amount = Number(decrypt(tx.amount)) || 0;
-            if (tx.type === 'Income') {
-                if (tx.paymentMode === 'OTA') {
-                    summary.otaTotal += amount;
-                    if (tx.approved) {
-                        summary.otaApproved += amount;
-                        summary.totalIncome += amount;
-                        summary.incomeByMode['OTA'] += amount;
-                    }
-                } else {
-                    summary.totalIncome += amount;
-                    if (summary.incomeByMode[tx.paymentMode] !== undefined) {
-                        summary.incomeByMode[tx.paymentMode] += amount;
-                    }
-                }
-            } else if (tx.type === 'Expense' && tx.approved) {
-                summary.totalExpense += amount;
+            if (tx.type === 'Income' && ['UPI', 'Card', 'Bank Transfer'].includes(tx.paymentMode)) {
+                incomeByMode[tx.paymentMode] = (incomeByMode[tx.paymentMode] || 0) + amount;
             }
         });
-        
-        // Include booking payments (online and OTA) only if not already in transactions
+
         const bookings = await Booking.find({
             'financials.paymentHistory.timestamp': { $gte: startOfDay, $lte: endOfDay }
         });
         bookings.forEach(b => {
-            b.financials.paymentHistory.forEach(p => {
+            (b.financials?.paymentHistory || []).forEach(p => {
                 if (p.timestamp >= startOfDay && p.timestamp <= endOfDay) {
-                    if (p.mode === 'Online' || p.mode === 'Card' || p.mode === 'UPI' || p.mode === 'Bank Transfer' || p.mode === 'OTA') {
-                        const isDuplicate = transactions.some(tx => {
-                            const txAmount = Number(decrypt(tx.amount)) || 0;
-                            const sameAmount = Math.abs(txAmount - Number(p.amount)) < 0.01;
-                            const pTime = new Date(p.timestamp).getTime();
-                            const txTime = new Date(tx.date || tx.createdAt).getTime();
-                            const timeDiff = Math.abs(txTime - pTime);
-                            const lastName = (b.guestDetails?.lastName || '').toLowerCase();
-                            const txDesc = (decrypt(tx.description) || '').toLowerCase();
-                            const nameMatch = lastName.length > 1 && txDesc.includes(lastName);
-                            return sameAmount && (timeDiff < 10 * 60 * 1000 || nameMatch);
-                        });
-
-                        if (!isDuplicate) {
-                            if (p.mode === 'OTA') {
-                                summary.otaTotal += p.amount;
-                                // OTA from booking without approved transaction is unapproved by default
-                            } else {
-                                summary.totalIncome += p.amount;
-                                if (summary.incomeByMode[p.mode] !== undefined) {
-                                    summary.incomeByMode[p.mode] += p.amount;
-                                } else {
-                                    summary.incomeByMode['Online'] += p.amount;
-                                }
-                            }
-                        }
+                    if (['UPI', 'Card', 'Bank Transfer'].includes(p.mode)) {
+                        incomeByMode[p.mode] = (incomeByMode[p.mode] || 0) + (Number(p.amount) || 0);
                     }
                 }
             });
         });
 
-        summary.otaPending = Math.max(0, summary.otaTotal - summary.otaApproved);
-        summary.netCashHandover = summary.incomeByMode['Cash'] - summary.totalExpense;
+        // 3. Opening Cash Balance carried forward from previous day
+        const openingBalance = await getOpeningCashBalance(startOfDay);
+
+        const totalCashIncome = todayFin.cash;
+        const totalCashExpense = todayFin.expenses;
+        const closingCashBalance = openingBalance + totalCashIncome - totalCashExpense;
+
+        let summary = {
+            totalIncome: todayFin.total,
+            totalExpense: todayFin.expenses,
+            openingBalance: openingBalance,
+            closingBalance: closingCashBalance,
+            netCashHandover: closingCashBalance, // Closing cash balance carried forward to Net Cash
+            todayCashIncome: totalCashIncome,
+            todayCashExpense: totalCashExpense,
+            netCashDay: totalCashIncome - totalCashExpense,
+            incomeByMode,
+            otaTotal: todayFin.otaTotal,
+            otaApproved: todayFin.otaApproved,
+            otaPending: todayFin.otaPending
+        };
 
         res.json(summary);
     } catch (err) {
@@ -441,121 +605,6 @@ router.get('/analytics-date', async (req, res) => {
             totalRoomsCount += totalInCat;
             totalVacant += vacantInCat;
         });
-
-        // Helper: Calculate financials for a specific date range (prevents double-counting and captures walk-in registration sales)
-        const calculateFinancialsForRange = async (sDate, eDate) => {
-            const txs = await Transaction.find({
-                date: { $gte: sDate, $lte: eDate },
-                isVoided: false
-            });
-
-            let cash = 0;
-            let online = 0;
-            let otaTotal = 0;
-            let otaApproved = 0;
-            let otaApprovedCount = 0;
-            let otaPendingCount = 0;
-            let expenses = 0;
-
-            txs.forEach(tx => {
-                const amount = Number(decrypt(tx.amount)) || 0;
-                if (tx.type === 'Income') {
-                    if (tx.paymentMode === 'OTA') {
-                        otaTotal += amount;
-                        if (tx.approved) {
-                            otaApproved += amount;
-                            otaApprovedCount++;
-                        } else {
-                            otaPendingCount++;
-                        }
-                    } else if (tx.category !== 'Room Rent') {
-                        if (tx.paymentMode === 'Cash') {
-                            cash += amount;
-                        } else {
-                            online += amount;
-                        }
-                    }
-                } else if (tx.type === 'Expense' && tx.approved) {
-                    if (tx.paymentMode === 'Cash' || !tx.paymentMode) {
-                        expenses += amount;
-                    }
-                }
-            });
-
-            const bookings = await Booking.find({
-                status: { $ne: 'Cancelled' },
-                $or: [
-                    { 'financials.paymentHistory.timestamp': { $gte: sDate, $lte: eDate } },
-                    { createdAt: { $gte: sDate, $lte: eDate } }
-                ]
-            });
-
-            bookings.forEach(b => {
-                const historyOnDate = (b.financials?.paymentHistory || []).filter(
-                    p => p.timestamp >= sDate && p.timestamp <= eDate
-                );
-
-                let historySumOnDate = 0;
-                historyOnDate.forEach(p => {
-                    const amt = Number(p.amount) || 0;
-                    historySumOnDate += amt;
-                    if (p.mode === 'OTA') {
-                        const hasTx = txs.some(t => {
-                            const tAmt = Number(decrypt(t.amount)) || 0;
-                            return t.paymentMode === 'OTA' && Math.abs(tAmt - amt) < 0.01;
-                        });
-                        if (!hasTx) {
-                            otaTotal += amt;
-                            otaPendingCount++;
-                        }
-                    } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(p.mode)) {
-                        online += amt;
-                    } else {
-                        cash += amt;
-                    }
-                });
-
-                // For bookings / walk-in registrations created on this date
-                if (b.createdAt >= sDate && b.createdAt <= eDate) {
-                    const fin = b.financials || {};
-                    const bookingTotal = Number(fin.totalAmount || fin.paidAmount || fin.advancePayment) || 0;
-                    const remainingUnrecorded = Math.max(0, bookingTotal - historySumOnDate);
-
-                    if (remainingUnrecorded > 0) {
-                        const pMode = fin.paymentMode || 'Cash';
-                        if (pMode === 'OTA' || ['Booking.com', 'MakeMyTrip', 'Goibibo', 'Agoda', 'Expedia', 'Airbnb', 'OTA'].includes(b.source)) {
-                            const hasTx = txs.some(t => {
-                                const tAmt = Number(decrypt(t.amount)) || 0;
-                                return t.paymentMode === 'OTA' && Math.abs(tAmt - remainingUnrecorded) < 0.01;
-                            });
-                            if (!hasTx) {
-                                otaTotal += remainingUnrecorded;
-                                otaPendingCount++;
-                            }
-                        } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(pMode)) {
-                            online += remainingUnrecorded;
-                        } else {
-                            cash += remainingUnrecorded;
-                        }
-                    }
-                }
-            });
-
-            // CRITICAL: Only approved OTA is added to total
-            const otaPending = Math.max(0, otaTotal - otaApproved);
-            return { 
-                cash, 
-                online, 
-                otaTotal, 
-                otaApproved, 
-                otaPending,
-                otaApprovedCount,
-                otaPendingCount,
-                ota: otaApproved, 
-                total: cash + online + otaApproved, 
-                expenses 
-            };
-        };
 
         // 2. Today's Financials
         const todayFin = await calculateFinancialsForRange(startOfDay, endOfDay);
@@ -687,6 +736,128 @@ router.get('/analytics-date', async (req, res) => {
     }
 });
 
+// GET: F&B Food Orders & Restaurant Bills for Front Desk Analytics
+router.get('/food-orders', async (req, res) => {
+    try {
+        const { date } = req.query; // date in YYYY-MM-DD format
+        let startOfDay, endOfDay;
+
+        if (date && typeof date === 'string' && date.includes('-')) {
+            const [y, m, d] = date.split('-').map(Number);
+            startOfDay = new Date(y, m - 1, d, 0, 0, 0, 0);
+            endOfDay = new Date(y, m - 1, d, 23, 59, 59, 999);
+        } else if (date) {
+            const qDate = new Date(date);
+            startOfDay = new Date(qDate.getFullYear(), qDate.getMonth(), qDate.getDate(), 0, 0, 0, 0);
+            endOfDay = new Date(qDate.getFullYear(), qDate.getMonth(), qDate.getDate(), 23, 59, 59, 999);
+        }
+
+        const dateQuery = startOfDay && endOfDay ? { $gte: startOfDay, $lte: endOfDay } : null;
+
+        // 1. Fetch extraCharges from Bookings with source = 'F&B' or food description
+        const bookingQuery = dateQuery ? {
+            'financials.extraCharges': {
+                $elemMatch: {
+                    date: dateQuery
+                }
+            }
+        } : {
+            'financials.extraCharges.0': { $exists: true }
+        };
+
+        const bookings = await Booking.find(bookingQuery)
+            .populate('roomUnit')
+            .populate('roomCategory')
+            .lean();
+
+        const orders = [];
+
+        bookings.forEach(b => {
+            const guestName = `${b.guestDetails?.firstName || ''} ${b.guestDetails?.lastName || ''}`.trim() || 'Guest';
+            const roomNum = b.roomUnit?.roomNumber ? `Room ${b.roomUnit.roomNumber}` : (b.roomCategory?.title ? `${b.roomCategory.title}` : 'In-House');
+            const phone = b.guestDetails?.phone || '';
+
+            (b.financials?.extraCharges || []).forEach((ch, idx) => {
+                const isFood = (ch.source === 'F&B') || (ch.description && /food|f&b|kitchen|restaurant|dining|meal|breakfast|lunch|dinner/i.test(ch.description));
+                if (!isFood) return;
+
+                const chargeDate = ch.date ? new Date(ch.date) : (b.createdAt ? new Date(b.createdAt) : new Date());
+                if (dateQuery && (chargeDate < startOfDay || chargeDate > endOfDay)) return;
+
+                orders.push({
+                    _id: `${b._id}_fb_${idx}`,
+                    bookingId: b._id,
+                    guestName,
+                    phone,
+                    room: roomNum,
+                    type: 'Room Folio',
+                    description: ch.description || 'Food & Beverage Order',
+                    amount: Number(ch.amount) || 0,
+                    paymentMode: 'Charged to Room',
+                    status: b.status === 'Checked-Out' ? 'Settled on Checkout' : 'Active on Folio',
+                    date: chargeDate,
+                    time: chargeDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+                    createdAt: chargeDate
+                });
+            });
+        });
+
+        // 2. Fetch standalone F&B Transactions from Transaction collection
+        const txQuery = {
+            isVoided: false,
+            $or: [
+                { category: 'F&B' },
+                { description: { $regex: /food|f&b|restaurant|kitchen|dining|meal/i } }
+            ]
+        };
+        if (dateQuery) {
+            txQuery.date = dateQuery;
+        }
+
+        const fbTransactions = await Transaction.find(txQuery).lean();
+        fbTransactions.forEach(tx => {
+            if (tx.booking && orders.some(o => o.bookingId && o.bookingId.toString() === tx.booking.toString())) {
+                return;
+            }
+
+            const amt = Number(decrypt(tx.amount)) || 0;
+            const desc = decrypt(tx.description) || 'Restaurant F&B Order';
+            const txDate = tx.date ? new Date(tx.date) : new Date(tx.createdAt);
+
+            orders.push({
+                _id: tx._id,
+                bookingId: tx.booking || null,
+                guestName: tx.recordedBy ? `Guest (Staff: ${tx.recordedBy})` : 'Walk-in Dining Guest',
+                phone: '',
+                room: 'Restaurant / Counter',
+                type: 'Direct Sale',
+                description: desc,
+                amount: amt,
+                paymentMode: tx.paymentMode || 'Cash',
+                status: 'Paid Direct',
+                date: txDate,
+                time: txDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+                createdAt: txDate
+            });
+        });
+
+        // Sort descending by order date/time
+        orders.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const totalAmount = orders.reduce((sum, o) => sum + o.amount, 0);
+
+        res.json({
+            date: date || 'All',
+            totalOrders: orders.length,
+            totalAmount,
+            orders
+        });
+    } catch (err) {
+        console.error('Error fetching F&B orders:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // Get pending dues from bookings with amendment status
 router.get('/pending-dues', async (req, res) => {
     try {
@@ -787,28 +958,51 @@ router.get('/cash-handover', async (req, res) => {
     }
 });
 
-// Save or Update Electricity Meter Reading
+// Save or Update Electricity Meter Reading (Support both create and edit by ID/date)
 router.post('/meter-reading', async (req, res) => {
     try {
-        const { date, reading, notes, recordedBy } = req.body;
+        const { _id, date, reading, notes, recordedBy } = req.body;
         if (!date || reading === undefined || reading === null || reading === '') {
             return res.status(400).json({ message: 'Date and meter reading value are required' });
         }
         
-        const dateObj = new Date(date);
-        const dateStr = dateObj.toISOString().split('T')[0];
+        let dateStr = '';
+        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+            dateStr = date.substring(0, 10);
+        } else {
+            const d = new Date(date);
+            dateStr = d.toISOString().split('T')[0];
+        }
+        const dateObj = new Date(dateStr + 'T00:00:00.000Z');
 
-        const updated = await ElectricityReading.findOneAndUpdate(
-            { dateStr },
-            {
-                date: dateObj,
-                dateStr,
-                reading: Number(reading),
-                notes: notes || '',
-                recordedBy: recordedBy || 'Front Desk'
-            },
-            { upsert: true, new: true }
-        );
+        let updated;
+        if (_id) {
+            // Edit existing reading by MongoDB _id
+            updated = await ElectricityReading.findByIdAndUpdate(
+                _id,
+                {
+                    date: dateObj,
+                    dateStr,
+                    reading: Number(reading),
+                    notes: notes || '',
+                    recordedBy: recordedBy || 'Front Desk'
+                },
+                { new: true }
+            );
+        } else {
+            // Find or create by dateStr
+            updated = await ElectricityReading.findOneAndUpdate(
+                { dateStr },
+                {
+                    date: dateObj,
+                    dateStr,
+                    reading: Number(reading),
+                    notes: notes || '',
+                    recordedBy: recordedBy || 'Front Desk'
+                },
+                { upsert: true, new: true }
+            );
+        }
 
         const io = req.app.get('socketio');
         if (io) {
@@ -818,6 +1012,69 @@ router.post('/meter-reading', async (req, res) => {
         res.status(200).json(updated);
     } catch (err) {
         console.error('Meter reading save error:', err);
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Update specific Meter Reading by ID
+router.put('/meter-reading/:id', async (req, res) => {
+    try {
+        const { date, reading, notes, recordedBy } = req.body;
+        if (!date || reading === undefined || reading === null || reading === '') {
+            return res.status(400).json({ message: 'Date and meter reading value are required' });
+        }
+
+        let dateStr = '';
+        if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+            dateStr = date.substring(0, 10);
+        } else {
+            const d = new Date(date);
+            dateStr = d.toISOString().split('T')[0];
+        }
+        const dateObj = new Date(dateStr + 'T00:00:00.000Z');
+
+        const updated = await ElectricityReading.findByIdAndUpdate(
+            req.params.id,
+            {
+                date: dateObj,
+                dateStr,
+                reading: Number(reading),
+                notes: notes || '',
+                recordedBy: recordedBy || 'Front Desk'
+            },
+            { new: true }
+        );
+
+        if (!updated) {
+            return res.status(404).json({ message: 'Meter reading not found' });
+        }
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('meter_reading_updated', updated);
+        }
+
+        res.json(updated);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Delete specific Meter Reading by ID
+router.delete('/meter-reading/:id', async (req, res) => {
+    try {
+        const deleted = await ElectricityReading.findByIdAndDelete(req.params.id);
+        if (!deleted) {
+            return res.status(404).json({ message: 'Meter reading not found' });
+        }
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('meter_reading_deleted', { id: req.params.id });
+        }
+
+        res.json({ message: 'Meter reading deleted successfully', id: req.params.id });
+    } catch (err) {
         res.status(400).json({ message: err.message });
     }
 });

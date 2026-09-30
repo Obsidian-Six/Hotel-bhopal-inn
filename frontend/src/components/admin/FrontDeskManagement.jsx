@@ -1,16 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import config from '../../config';
 import { 
   X, CheckCircle2, IndianRupee, Printer, LogOut, 
   Plus, Info, ArrowRight, User, Calendar, CreditCard, AlertTriangle, History, FastForward, Coffee, TrendingUp, BarChart3, CalendarPlus, Zap, Activity, Bed,
-  Trash2, Edit3, ShieldCheck, DollarSign, CalendarCheck, Tag, FileEdit
+  Trash2, Edit3, ShieldCheck, DollarSign, CalendarCheck, Tag, FileEdit,
+  MessageCircle, Share2, Download, Copy, Check, ExternalLink,
+  Utensils, Search, Minus, CheckSquare, ClipboardCheck, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { socket } from '@/lib/socket';
 import FrontDeskAnalytics from './FrontDeskAnalytics';
 
 const API_BASE = config.API_URL;
+
+const WhatsAppIcon = ({ size = 16, className = "" }) => (
+  <svg 
+    viewBox="0 0 448 512" 
+    width={size} 
+    height={size} 
+    className={className} 
+    fill="currentColor"
+  >
+    <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3 18.7-68.1-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.2-8.5-44.2-27.1-16.4-14.6-27.4-32.7-30.6-38.2-3.2-5.6-.3-8.6 2.5-11.3 2.5-2.5 5.6-6.5 8.3-9.7 2.8-3.3 3.7-5.6 5.6-9.3 1.9-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.3 5.7 23.7 9.1 31.7 11.7 13.3 4.2 25.4 3.6 35 2.2 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+  </svg>
+);
 
 const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } = {}) => {
   const { user, isSuperAdmin: authIsSuperAdmin } = useAuth();
@@ -21,10 +35,17 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [isBookingTypeSelectOpen, setIsBookingTypeSelectOpen] = useState(false);
   const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isExtendStayOpen, setIsExtendStayOpen] = useState(false);
   const [extendForm, setExtendForm] = useState({ newCheckOutDate: '', additionalTariff: '' });
+
+  // WhatsApp Confirmation Modal State
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const [whatsAppData, setWhatsAppData] = useState(null);
+  const [whatsAppCustomMsg, setWhatsAppCustomMsg] = useState('');
+  const [copiedWhatsAppText, setCopiedWhatsAppText] = useState(false);
 
   const [isCollectPaymentOpen, setIsCollectPaymentOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ amount: '', mode: 'Cash' });
@@ -71,12 +92,40 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
   });
 
   const [isMeterModalOpen, setIsMeterModalOpen] = useState(false);
+  const [editingMeterId, setEditingMeterId] = useState(null);
   const [meterForm, setMeterForm] = useState({
     date: new Date().toISOString().split('T')[0],
     reading: '',
     notes: ''
   });
   const [meterReadings, setMeterReadings] = useState([]);
+
+  // Food Bill & Restaurant Ordering State (Requirement 2)
+  const [isFoodBillOpen, setIsFoodBillOpen] = useState(false);
+  const [foodTargetBookingId, setFoodTargetBookingId] = useState('');
+  const [menuCategories, setMenuCategories] = useState([]);
+  const [menuItems, setMenuItems] = useState([]);
+  const [foodSearchQuery, setFoodSearchQuery] = useState('');
+  const [foodActiveCategory, setFoodActiveCategory] = useState('All');
+  const [foodOrderCart, setFoodOrderCart] = useState([]);
+  const [foodOrderNotes, setFoodOrderNotes] = useState('');
+  const [isSubmittingFoodBill, setIsSubmittingFoodBill] = useState(false);
+
+  // Mandatory Room Inspection Workflow State (Requirement 3)
+  const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
+  const [inspectionBooking, setInspectionBooking] = useState(null);
+  const [inspectionForm, setInspectionForm] = useState({
+    inspected: 'Yes',
+    inspectedBy: 'Vishal Singh',
+    customInspectorName: '',
+    issueFound: 'No',
+    issueDescription: '',
+    damageCharge: '',
+    addDamageToBill: true,
+    remarks: '',
+    override: false
+  });
+  const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
 
   const [roomCategories, setRoomCategories] = useState([]);
   const [availableUnits, setAvailableUnits] = useState([]);
@@ -105,7 +154,7 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
   const [isFBModalOpen, setIsFBModalOpen] = useState(false);
   const [fbForm, setFbForm] = useState({ description: '', amount: '', paymentMode: 'Cash' });
 
-  // Walk-in form state
+  // Walk-in / Advance form state
   const [walkInForm, setWalkInForm] = useState({
     guestDetails: { firstName: '', lastName: '', phone: '', email: '', idProof: '', adults: 2, children: 0 },
     roomCategory: '',
@@ -121,17 +170,207 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
     immediateCheckIn: false,
     isHistorical: false,
     customStatus: 'Confirmed',
-    paymentDate: ''
+    paymentDate: '',
+    bookingType: 'Immediate',
+    numberOfRooms: 1,
+    voucherUrl: ''
   });
 
-  // Calculate Walk-in Financials dynamically based on stay duration
+  // Past guests for autofill (Requirement 4)
+  const [showGuestSuggestions, setShowGuestSuggestions] = useState(false);
+
+  const pastGuests = useMemo(() => {
+    const map = new Map();
+    (bookings || []).forEach(b => {
+      const g = b.guestDetails;
+      if (g && g.firstName && g.firstName.trim()) {
+        const key = `${(g.firstName || '').trim().toLowerCase()}_${(g.lastName || '').trim().toLowerCase()}_${(g.phone || '').trim()}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            firstName: g.firstName.trim(),
+            lastName: (g.lastName || '').trim(),
+            phone: (g.phone || '').trim(),
+            email: (g.email || '').trim(),
+            idProof: (g.idProof || '').trim()
+          });
+        }
+      }
+    });
+    return Array.from(map.values());
+  }, [bookings]);
+
+  const guestSuggestions = useMemo(() => {
+    const query = (walkInForm.guestDetails?.firstName || '').trim().toLowerCase();
+    if (!query || query.length < 1) return [];
+    return pastGuests.filter(g => 
+      g.firstName.toLowerCase().includes(query) ||
+      g.lastName.toLowerCase().includes(query) ||
+      (g.phone && g.phone.includes(query))
+    ).slice(0, 6);
+  }, [pastGuests, walkInForm.guestDetails?.firstName]);
+
+  const handleSelectPastGuest = (guest) => {
+    setWalkInForm(prev => ({
+      ...prev,
+      guestDetails: {
+        ...prev.guestDetails,
+        firstName: guest.firstName,
+        lastName: guest.lastName,
+        phone: guest.phone || prev.guestDetails.phone,
+        email: guest.email || prev.guestDetails.email,
+        idProof: guest.idProof || prev.guestDetails.idProof
+      }
+    }));
+    setShowGuestSuggestions(false);
+  };
+
+  // Helper: Format date for WhatsApp message (e.g. 14Sep2026, 16Sep2026)
+  const formatWhatsAppDate = (dateVal) => {
+    if (!dateVal) return '';
+    if (typeof dateVal === 'string' && dateVal.includes('-')) {
+      const parts = dateVal.split('T')[0].split('-');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const d = parseInt(parts[2], 10);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${String(d).padStart(2, '0')}${months[m]}${y}`;
+      }
+    }
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return String(dateVal);
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${day}${months[d.getMonth()]}${d.getFullYear()}`;
+  };
+
+  // Helper: Generate structured WhatsApp confirmation text (Requirement 6)
+  const generateWhatsAppMessage = (data, customVoucher) => {
+    if (!data) return '';
+    const firstName = data.guestDetails?.firstName || '';
+    const lastName = data.guestDetails?.lastName || '';
+    const guestName = `${firstName} ${lastName}`.trim() || data.guestName || 'Guest';
+
+    const bookingDateStr = formatWhatsAppDate(data.bookingDate || data.createdAt || new Date());
+    const checkInDateStr = formatWhatsAppDate(data.checkInDate);
+    const checkOutDateStr = formatWhatsAppDate(data.checkOutDate);
+
+    let roomName = 'Double Deluxe Room';
+    if (data.roomCategory) {
+      if (typeof data.roomCategory === 'object' && (data.roomCategory.title || data.roomCategory.category)) {
+        roomName = data.roomCategory.title || data.roomCategory.category;
+      } else {
+        const foundCat = (roomCategories || []).find(c => c._id === data.roomCategory);
+        if (foundCat) roomName = foundCat.title || foundCat.category;
+      }
+    }
+
+    const noOfRooms = data.numberOfRooms || 1;
+    const advancePaid = Number(data.financials?.amountPaid ?? (data.amountPaid ?? 0));
+    const totalAmount = Number(data.financials?.totalAmount ?? (data.totalAmount ?? (data.financials?.roomTariff ?? 0)));
+    const paymentDue = Math.max(0, totalAmount - advancePaid);
+
+    const voucherUrl = customVoucher || data.voucherUrl || (data.otaReferenceId ? `https://ingoibibo.app.link/${data.otaReferenceId}` : (typeof window !== 'undefined' ? `${window.location.origin}/my-bookings?id=${data._id || ''}` : 'https://hotelbhopalinn.com'));
+
+    return `Congratulation Your Booking is Confirmed !! 
+Hotel Bhopal Inn by Ten On Ten Stays, Bhopal
+
+Booking Details:
+
+Guest Name: ${guestName}
+Booking Date: ${bookingDateStr}
+Check-In Date: ${checkInDateStr} 
+Check-Out Date: ${checkOutDateStr}
+Room Type:  ${roomName} 
+No of Rooms: ${noOfRooms}
+Payment Advance: ${advancePaid}
+Payment Due: ${paymentDue}
+Total Amount: ${totalAmount}
+
+
+View Voucher: ${voucherUrl}
+
+Payment Policy: 
+${advancePaid > 0 ? `₹${advancePaid}` : '₹0'} received, remaining ${paymentDue > 0 ? `₹${paymentDue}` : '₹0'} need to pay at check-in time.
+
+
+Cancellation Policy:
+No refund or amendment within 30 days of check-in.
+100% refund if canceled before 30 days.
+
+Terms:
+•⁠  ⁠Decoration and Extra bed charges separetly
+•⁠  ⁠Anything which is not mentioned will be additional charged 
+•⁠  ⁠Outside food not allowed
+•⁠  ⁠Check-in: 11:00 AM | Check-out: 10:00 AM
+•⁠  ⁠Early check-in / Late check-out with extra charges and depends on previous day occupancy
+Please honor this confirmed booking – rejecting it will attract penalty and may impact your future business
+
+ Hotel Location: https://maps.google.com/?q=2/213,+Danish+Nagar,+BBagmugaliya,+Bhopal,+Madhya+Pradesh+462026 (D2-214, Danish Nagar, HoshangabadRoad, Bhopal)`;
+  };
+
+  const openWhatsAppModalForBooking = (booking) => {
+    if (!booking) return;
+    setWhatsAppData(booking);
+    setWhatsAppCustomMsg(generateWhatsAppMessage(booking));
+    setCopiedWhatsAppText(false);
+    setIsWhatsAppModalOpen(true);
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!whatsAppData) return;
+    const phone = whatsAppData.guestDetails?.phone || whatsAppData.phone || '';
+    let cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+    else if (cleanPhone.startsWith('0') && cleanPhone.length === 11) cleanPhone = '91' + cleanPhone.slice(1);
+
+    const waUrl = cleanPhone 
+      ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsAppCustomMsg)}`
+      : `https://wa.me/?text=${encodeURIComponent(whatsAppCustomMsg)}`;
+    window.open(waUrl, '_blank');
+  };
+
+  const handleCopyWhatsAppText = async () => {
+    try {
+      await navigator.clipboard.writeText(whatsAppCustomMsg);
+      setCopiedWhatsAppText(true);
+      setTimeout(() => setCopiedWhatsAppText(false), 2500);
+    } catch (err) {
+      alert('Message copied to clipboard!');
+    }
+  };
+
+  const handleDownloadBrochureImage = () => {
+    const link = document.createElement('a');
+    link.href = '/hotel_announcement.png';
+    link.download = 'Hotel_Bhopal_Inn_Brochure.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyImageToClipboard = async () => {
+    try {
+      const response = await fetch('/hotel_announcement.png');
+      const blob = await response.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ [blob.type]: blob })
+      ]);
+      alert('Brochure image copied to clipboard! You can paste (Ctrl+V) directly into WhatsApp chat.');
+    } catch (err) {
+      handleDownloadBrochureImage();
+    }
+  };
+
+  // Calculate Walk-in Financials dynamically based on stay duration and number of rooms
   useEffect(() => {
     const checkIn = new Date(walkInForm.checkInDate);
     const checkOut = new Date(walkInForm.checkOutDate);
     const diffTime = checkOut - checkIn;
     const nights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-    const calculatedTotal = walkInForm.financials.roomTariff * nights;
-    const calculatedBalance = calculatedTotal - walkInForm.financials.amountPaid;
+    const rooms = Math.max(1, Number(walkInForm.numberOfRooms) || 1);
+    const calculatedTotal = (Number(walkInForm.financials.roomTariff) || 0) * nights * rooms;
+    const calculatedBalance = Math.max(0, calculatedTotal - (Number(walkInForm.financials.amountPaid) || 0));
 
     if (calculatedTotal !== walkInForm.financials.totalAmount || calculatedBalance !== walkInForm.financials.balance) {
       setWalkInForm(prev => ({
@@ -143,7 +382,7 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
         }
       }));
     }
-  }, [walkInForm.checkInDate, walkInForm.checkOutDate, walkInForm.financials.roomTariff, walkInForm.financials.amountPaid]);
+  }, [walkInForm.checkInDate, walkInForm.checkOutDate, walkInForm.financials.roomTariff, walkInForm.financials.amountPaid, walkInForm.numberOfRooms]);
 
   useEffect(() => {
     fetchData();
@@ -206,19 +445,12 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
     }
   };
 
-  const handleCheckOut = async (id, override = false) => {
-    try {
-      await axios.post(`${API_BASE}/api/bookings/${id}/check-out`, { override });
-      fetchData();
-      setIsDetailOpen(false);
-      alert('Checkout Successful. Room marked as Dirty.');
-    } catch (err) {
-      if (err.response?.data?.requiresOverride) {
-        // Red alert popup for balance due
-        setSelectedBooking(prev => ({...prev, checkoutError: `STRICT ALERT: BALANCE DUE ₹${err.response.data.balance}`}));
-      } else {
-        alert(err.response?.data?.message || 'Check-out failed');
-      }
+  const handleCheckOut = (id, override = false) => {
+    const booking = bookings.find(b => b._id === id) || selectedBooking;
+    if (booking) {
+      openInspectionModal(booking, override);
+    } else {
+      alert('Selected booking not found for checkout.');
     }
   };
 
@@ -266,6 +498,9 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
     if (isSubmittingWalkIn) return;
     try {
       setIsSubmittingWalkIn(true);
+      const isAdvance = walkInForm.bookingType === 'Advance';
+      const todayStr = new Date().toISOString().split('T')[0];
+
       const payload = {
         guestDetails: walkInForm.guestDetails,
         roomCategory: walkInForm.roomCategory,
@@ -280,14 +515,30 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
         roomPlan: walkInForm.roomPlan,
         immediateCheckIn: walkInForm.immediateCheckIn,
         status: walkInForm.isHistorical ? (walkInForm.customStatus || 'Confirmed') : (walkInForm.immediateCheckIn ? 'Checked-In' : 'Confirmed'),
-        paymentDate: walkInForm.paymentDate || walkInForm.checkInDate,
-        bookingDate: walkInForm.checkInDate
+        paymentDate: isAdvance ? walkInForm.checkInDate : (walkInForm.paymentDate || walkInForm.checkInDate),
+        bookingDate: todayStr,
+        bookingType: walkInForm.bookingType || (walkInForm.immediateCheckIn ? 'Immediate' : 'Walk-in'),
+        numberOfRooms: walkInForm.numberOfRooms ? Number(walkInForm.numberOfRooms) : 1,
+        voucherUrl: walkInForm.voucherUrl || ''
       };
 
-      await axios.post(`${API_BASE}/api/bookings/walk-in`, payload);
+      const res = await axios.post(`${API_BASE}/api/bookings/walk-in`, payload);
 
       setIsWalkInOpen(false);
       fetchData();
+      
+      const createdBooking = res.data;
+      if (isAdvance) {
+        openWhatsAppModalForBooking({
+          ...createdBooking,
+          bookingDate: todayStr,
+          numberOfRooms: walkInForm.numberOfRooms || 1,
+          voucherUrl: walkInForm.voucherUrl
+        });
+      } else {
+        alert('Walk-in registered and guest checked-in successfully!');
+      }
+
       // Reset form state
       setWalkInForm({
         guestDetails: { firstName: '', lastName: '', phone: '', email: '', idProof: '', adults: 2, children: 0 },
@@ -304,10 +555,13 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
         immediateCheckIn: false,
         isHistorical: false,
         customStatus: 'Confirmed',
-        paymentDate: ''
+        paymentDate: '',
+        bookingType: 'Immediate',
+        numberOfRooms: 1,
+        voucherUrl: ''
       });
     } catch (err) {
-      alert('Failed to register walk-in: ' + (err.response?.data?.message || err.message));
+      alert('Failed to register booking: ' + (err.response?.data?.message || err.message));
     } finally {
       setIsSubmittingWalkIn(false);
     }
@@ -521,22 +775,310 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
     }
   };
 
+  const handleEditMeterClick = (r) => {
+    const formattedDate = r.dateStr || (r.date ? new Date(r.date).toISOString().split('T')[0] : '');
+    setMeterForm({
+      date: formattedDate,
+      reading: r.reading,
+      notes: r.notes || ''
+    });
+    setEditingMeterId(r._id);
+  };
+
+  const handleCancelMeterEdit = () => {
+    setEditingMeterId(null);
+    setMeterForm({
+      date: new Date().toISOString().split('T')[0],
+      reading: '',
+      notes: ''
+    });
+  };
+
+  const handleDeleteMeter = async (id) => {
+    if (!window.confirm('Delete this electricity meter reading entry?')) return;
+    try {
+      await axios.delete(`${API_BASE}/api/finance/meter-reading/${id}`);
+      alert('Meter reading deleted.');
+      if (editingMeterId === id) handleCancelMeterEdit();
+      fetchMeterReadings();
+    } catch (err) {
+      alert('Failed to delete reading: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   const handleMeterSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API_BASE}/api/finance/meter-reading`, {
-        date: meterForm.date,
-        reading: Number(meterForm.reading),
-        notes: meterForm.notes,
-        recordedBy: 'Front Desk'
-      });
-      alert('Electricity meter reading saved successfully!');
-      setMeterForm({ date: new Date().toISOString().split('T')[0], reading: '', notes: '' });
-      setIsMeterModalOpen(false);
+      if (editingMeterId) {
+        await axios.put(`${API_BASE}/api/finance/meter-reading/${editingMeterId}`, {
+          date: meterForm.date,
+          reading: Number(meterForm.reading),
+          notes: meterForm.notes,
+          recordedBy: (user && user.name) || 'Front Desk'
+        });
+        alert('Electricity meter reading updated successfully!');
+      } else {
+        await axios.post(`${API_BASE}/api/finance/meter-reading`, {
+          date: meterForm.date,
+          reading: Number(meterForm.reading),
+          notes: meterForm.notes,
+          recordedBy: (user && user.name) || 'Front Desk'
+        });
+        alert('Electricity meter reading saved successfully!');
+      }
+      handleCancelMeterEdit();
       fetchMeterReadings();
     } catch (err) {
       console.error(err);
       alert('Failed to save meter reading: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
+  // Requirement 2: Default Fallback Menu Catalog for Front Desk Food Billing
+  const DEFAULT_MENU_CATEGORIES = [
+    { _id: 'cat_starters', name: 'Starters & Snacks' },
+    { _id: 'cat_main', name: 'Main Course' },
+    { _id: 'cat_breads', name: 'Breads & Rotis' },
+    { _id: 'cat_rice', name: 'Rice & Biryani' },
+    { _id: 'cat_beverages', name: 'Beverages & Drinks' },
+    { _id: 'cat_desserts', name: 'Desserts' }
+  ];
+
+  const DEFAULT_MENU_ITEMS = [
+    // Starters & Snacks
+    { _id: 'item_1', name: 'Paneer Tikka (6 Pcs)', category: { _id: 'cat_starters', name: 'Starters & Snacks' }, cost: 240, isVeg: true, description: 'Cottage cheese marinated in spices and grilled in tandoor' },
+    { _id: 'item_2', name: 'Veg Crispy', category: { _id: 'cat_starters', name: 'Starters & Snacks' }, cost: 180, isVeg: true, description: 'Crisp fried mixed vegetables tossed in sweet and spicy sauce' },
+    { _id: 'item_3', name: 'French Fries', category: { _id: 'cat_starters', name: 'Starters & Snacks' }, cost: 110, isVeg: true, description: 'Golden crispy salted potato fries' },
+    { _id: 'item_4', name: 'Veg Pakoda Platter', category: { _id: 'cat_starters', name: 'Starters & Snacks' }, cost: 140, isVeg: true, description: 'Assorted seasonal vegetable fritters served with mint chutney' },
+    { _id: 'item_5', name: 'Hara Bhara Kabab', category: { _id: 'cat_starters', name: 'Starters & Snacks' }, cost: 190, isVeg: true, description: 'Spiced spinach, green peas and potato patties' },
+    { _id: 'item_6', name: 'Cheese Grilled Sandwich', category: { _id: 'cat_starters', name: 'Starters & Snacks' }, cost: 130, isVeg: true, description: 'Toasted bread filled with molten cheese and spices' },
+    { _id: 'item_7', name: 'Veg Club Sandwich', category: { _id: 'cat_starters', name: 'Starters & Snacks' }, cost: 140, isVeg: true, description: 'Double decker toasted sandwich with cucumber, tomato and cheese' },
+
+    // Main Course
+    { _id: 'item_8', name: 'Paneer Butter Masala', category: { _id: 'cat_main', name: 'Main Course' }, cost: 260, isVeg: true, description: 'Cubes of cottage cheese in rich makhani gravy' },
+    { _id: 'item_9', name: 'Kadhai Paneer', category: { _id: 'cat_main', name: 'Main Course' }, cost: 270, isVeg: true, description: 'Paneer tossed with bell peppers and roasted ground spices' },
+    { _id: 'item_10', name: 'Dal Makhani', category: { _id: 'cat_main', name: 'Main Course' }, cost: 210, isVeg: true, description: 'Slow cooked black lentils with fresh cream and butter' },
+    { _id: 'item_11', name: 'Dal Tadka (Yellow Dal)', category: { _id: 'cat_main', name: 'Main Course' }, cost: 160, isVeg: true, description: 'Yellow lentils tempered with cumin, garlic and dried chili' },
+    { _id: 'item_12', name: 'Mix Vegetable Handi', category: { _id: 'cat_main', name: 'Main Course' }, cost: 190, isVeg: true, description: 'Melange of garden fresh vegetables in aromatic Indian gravy' },
+    { _id: 'item_13', name: 'Malai Kofta', category: { _id: 'cat_main', name: 'Main Course' }, cost: 280, isVeg: true, description: 'Dumplings of paneer and potato in luscious cashew gravy' },
+    { _id: 'item_14', name: 'Sev Tamatar', category: { _id: 'cat_main', name: 'Main Course' }, cost: 160, isVeg: true, description: 'Traditional spicy Malwa tomato curry topped with ratlami sev' },
+    { _id: 'item_15', name: 'Kaju Curry', category: { _id: 'cat_main', name: 'Main Course' }, cost: 310, isVeg: true, description: 'Roasted whole cashew nuts in creamy onion tomato sauce' },
+
+    // Breads & Rotis
+    { _id: 'item_16', name: 'Butter Tandoori Roti', category: { _id: 'cat_breads', name: 'Breads & Rotis' }, cost: 25, isVeg: true, description: 'Freshly baked wheat bread with butter' },
+    { _id: 'item_17', name: 'Plain Tandoori Roti', category: { _id: 'cat_breads', name: 'Breads & Rotis' }, cost: 20, isVeg: true, description: 'Freshly baked whole wheat flatbread' },
+    { _id: 'item_18', name: 'Butter Naan', category: { _id: 'cat_breads', name: 'Breads & Rotis' }, cost: 55, isVeg: true, description: 'Leavened soft flatbread brushed with butter' },
+    { _id: 'item_19', name: 'Garlic Naan', category: { _id: 'cat_breads', name: 'Breads & Rotis' }, cost: 75, isVeg: true, description: 'Clay oven bread infused with chopped roasted garlic' },
+    { _id: 'item_20', name: 'Lachha Paratha', category: { _id: 'cat_breads', name: 'Breads & Rotis' }, cost: 50, isVeg: true, description: 'Flaky layered whole wheat flatbread' },
+
+    // Rice & Biryani
+    { _id: 'item_21', name: 'Steamed Basmati Rice', category: { _id: 'cat_rice', name: 'Rice & Biryani' }, cost: 120, isVeg: true, description: 'Fragrant long grain white rice' },
+    { _id: 'item_22', name: 'Jeera Rice', category: { _id: 'cat_rice', name: 'Rice & Biryani' }, cost: 150, isVeg: true, description: 'Basmati rice tempered with roasted cumin seeds and ghee' },
+    { _id: 'item_23', name: 'Veg Pulao', category: { _id: 'cat_rice', name: 'Rice & Biryani' }, cost: 180, isVeg: true, description: 'Rice cooked with diced vegetables and mild whole spices' },
+    { _id: 'item_24', name: 'Special Veg Dum Biryani', category: { _id: 'cat_rice', name: 'Rice & Biryani' }, cost: 240, isVeg: true, description: 'Layered basmati rice with spiced vegetables, served with raita' },
+
+    // Beverages & Drinks
+    { _id: 'item_25', name: 'Special Masala Chai', category: { _id: 'cat_beverages', name: 'Beverages & Drinks' }, cost: 30, isVeg: true, description: 'Freshly brewed tea with ginger, cardamom and milk' },
+    { _id: 'item_26', name: 'Hot Coffee', category: { _id: 'cat_beverages', name: 'Beverages & Drinks' }, cost: 50, isVeg: true, description: 'Frothy hot coffee with milk' },
+    { _id: 'item_27', name: 'Cold Coffee with Ice Cream', category: { _id: 'cat_beverages', name: 'Beverages & Drinks' }, cost: 100, isVeg: true, description: 'Chilled blended coffee topped with vanilla ice cream' },
+    { _id: 'item_28', name: 'Fresh Lime Soda (Sweet/Salt)', category: { _id: 'cat_beverages', name: 'Beverages & Drinks' }, cost: 60, isVeg: true, description: 'Refreshing sparkling lime drink' },
+    { _id: 'item_29', name: 'Packaged Mineral Water (1L)', category: { _id: 'cat_beverages', name: 'Beverages & Drinks' }, cost: 25, isVeg: true, description: 'Sealed purified drinking water bottle' },
+    { _id: 'item_30', name: 'Soft Drink Can / Bottle', category: { _id: 'cat_beverages', name: 'Beverages & Drinks' }, cost: 45, isVeg: true, description: 'Chilled cold drink (Coke, Sprite, Thums Up)' },
+
+    // Desserts
+    { _id: 'item_31', name: 'Gulab Jamun (2 Pcs)', category: { _id: 'cat_desserts', name: 'Desserts' }, cost: 70, isVeg: true, description: 'Hot khoya dumplings soaked in fragrant sugar syrup' },
+    { _id: 'item_32', name: 'Rasgulla (2 Pcs)', category: { _id: 'cat_desserts', name: 'Desserts' }, cost: 70, isVeg: true, description: 'Spongy cottage cheese balls in light sugar syrup' },
+    { _id: 'item_33', name: 'Vanilla / Butterscotch Ice Cream', category: { _id: 'cat_desserts', name: 'Desserts' }, cost: 60, isVeg: true, description: 'Two scoops of premium ice cream' }
+  ];
+
+  const fetchMenuData = async () => {
+    try {
+      const [catRes, itemRes] = await Promise.all([
+        axios.get(`${API_BASE}/api/menu/categories`).catch(() => ({ data: [] })),
+        axios.get(`${API_BASE}/api/menu/items`).catch(() => ({ data: [] }))
+      ]);
+
+      const fetchedCats = Array.isArray(catRes.data) && catRes.data.length > 0 ? catRes.data : DEFAULT_MENU_CATEGORIES;
+      const fetchedItems = Array.isArray(itemRes.data) && itemRes.data.length > 0 ? itemRes.data : DEFAULT_MENU_ITEMS;
+
+      setMenuCategories(fetchedCats);
+      setMenuItems(fetchedItems);
+    } catch (err) {
+      console.error('Error loading menu:', err);
+      setMenuCategories(DEFAULT_MENU_CATEGORIES);
+      setMenuItems(DEFAULT_MENU_ITEMS);
+    }
+  };
+
+  const openFoodBillModal = (booking = null) => {
+    if (booking) {
+      setFoodTargetBookingId(booking._id);
+    } else {
+      const checkedInList = bookings.filter(b => b.status === 'Checked-In');
+      if (checkedInList.length > 0) {
+        setFoodTargetBookingId(checkedInList[0]._id);
+      } else if (bookings.length > 0) {
+        setFoodTargetBookingId(bookings[0]._id);
+      } else {
+        setFoodTargetBookingId('');
+      }
+    }
+    setFoodSearchQuery('');
+    setFoodActiveCategory('All');
+    setFoodOrderCart([]);
+    setFoodOrderNotes('');
+    setIsFoodBillOpen(true);
+    fetchMenuData();
+  };
+
+  const getFoodItemQuantity = (itemId) => {
+    const found = foodOrderCart.find(c => (c.item._id || c.item.name) === itemId);
+    return found ? found.quantity : 0;
+  };
+
+  const addFoodItemToCart = (item) => {
+    const idToMatch = item._id || item.name;
+    setFoodOrderCart(prev => {
+      const existing = prev.find(c => (c.item._id || c.item.name) === idToMatch);
+      if (existing) {
+        return prev.map(c => (c.item._id || c.item.name) === idToMatch ? { ...c, quantity: c.quantity + 1 } : c);
+      } else {
+        return [...prev, { item, quantity: 1 }];
+      }
+    });
+  };
+
+  const removeFoodItemFromCart = (item) => {
+    const idToMatch = item._id || item.name;
+    setFoodOrderCart(prev => {
+      const existing = prev.find(c => (c.item._id || c.item.name) === idToMatch);
+      if (!existing) return prev;
+      if (existing.quantity > 1) {
+        return prev.map(c => (c.item._id || c.item.name) === idToMatch ? { ...c, quantity: c.quantity - 1 } : c);
+      } else {
+        return prev.filter(c => (c.item._id || c.item.name) !== idToMatch);
+      }
+    });
+  };
+
+  const handleFoodBillSubmit = async (e) => {
+    e.preventDefault();
+    if (!foodTargetBookingId) {
+      alert('Please select an active in-house room/guest to attach the food bill.');
+      return;
+    }
+    if (foodOrderCart.length === 0) {
+      alert('Please add at least one menu item to the food bill.');
+      return;
+    }
+
+    try {
+      setIsSubmittingFoodBill(true);
+      const totalAmount = foodOrderCart.reduce((sum, c) => sum + ((c.item.cost || c.item.price || 0) * c.quantity), 0);
+      const itemsText = foodOrderCart.map(c => `${c.item.name} (x${c.quantity})`).join(', ');
+      const description = `Food Bill: ${itemsText}${foodOrderNotes ? ' [Notes: ' + foodOrderNotes + ']' : ''}`;
+
+      await axios.post(`${API_BASE}/api/bookings/${foodTargetBookingId}/add-charge`, {
+        description,
+        amount: totalAmount,
+        source: 'F&B'
+      });
+
+      alert(`✅ Food bill of ₹${totalAmount.toLocaleString()} successfully added to Room Bill!`);
+      setIsFoodBillOpen(false);
+      setFoodOrderCart([]);
+      setFoodOrderNotes('');
+      fetchData();
+      if (selectedBooking && selectedBooking._id === foodTargetBookingId) {
+        const updated = (await axios.get(`${API_BASE}/api/bookings`)).data.find(b => b._id === foodTargetBookingId);
+        if (updated) setSelectedBooking(updated);
+      }
+    } catch (err) {
+      alert('Failed to add food bill: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSubmittingFoodBill(false);
+    }
+  };
+
+  // Mandatory Room Inspection Modal Handlers (Requirement 3)
+  const openInspectionModal = (booking, isOverride = false) => {
+    if (!booking) return;
+    setInspectionBooking(booking);
+    setInspectionForm({
+      inspected: 'Yes',
+      inspectedBy: 'Vishal Singh',
+      customInspectorName: '',
+      issueFound: 'No',
+      issueDescription: '',
+      damageCharge: '',
+      addDamageToBill: true,
+      remarks: '',
+      override: isOverride
+    });
+    setIsInspectionModalOpen(true);
+  };
+
+  const handleInspectionCheckoutSubmit = async (e) => {
+    e.preventDefault();
+    if (!inspectionBooking) return;
+
+    if (inspectionForm.inspected !== 'Yes') {
+      alert('⚠️ Mandatory Room Inspection Required: You must complete the room inspection before checking out.');
+      return;
+    }
+
+    const inspectorName = inspectionForm.inspectedBy === 'Other' 
+      ? inspectionForm.customInspectorName.trim() 
+      : inspectionForm.inspectedBy;
+
+    if (!inspectorName) {
+      alert('Please specify the staff member who inspected the room.');
+      return;
+    }
+
+    const hasIssue = inspectionForm.issueFound === 'Yes';
+    if (hasIssue && !inspectionForm.issueDescription.trim()) {
+      alert('Please enter details of the damaged or missing items found.');
+      return;
+    }
+
+    const damageChargeNum = hasIssue && inspectionForm.damageCharge ? Number(inspectionForm.damageCharge) : 0;
+
+    try {
+      setIsSubmittingCheckout(true);
+      await axios.post(`${API_BASE}/api/bookings/${inspectionBooking._id}/check-out`, {
+        override: inspectionForm.override,
+        inspection: {
+          inspected: true,
+          inspectedBy: inspectorName,
+          issueFound: hasIssue,
+          issueDescription: hasIssue ? inspectionForm.issueDescription.trim() : '',
+          damageCharge: damageChargeNum,
+          remarks: inspectionForm.remarks.trim()
+        },
+        addDamageCharge: inspectionForm.addDamageToBill
+      });
+
+      alert(`✅ Checkout Successful!\n\nRoom unit has been marked as "Dirty" for Housekeeping inspection and cleaning.\nRoom will NOT become available until marked clean by Housekeeping.`);
+      setIsInspectionModalOpen(false);
+      setInspectionBooking(null);
+      setIsDetailOpen(false);
+      setSelectedBooking(null);
+      fetchData();
+      fetchSupportData();
+    } catch (err) {
+      if (err.response?.data?.requiresOverride) {
+        const bal = err.response.data.balance;
+        alert(`⚠️ BALANCE DUE: ₹${bal.toLocaleString()}\n\nGuest has an outstanding balance (including any damage charges).\nPlease collect the balance before finalizing checkout, or have Super Admin authorize Manager Override.`);
+        setIsInspectionModalOpen(false);
+        fetchData();
+        const updated = (await axios.get(`${API_BASE}/api/bookings`)).data.find(b => b._id === inspectionBooking._id);
+        if (updated) setSelectedBooking(updated);
+      } else {
+        alert('Checkout failed: ' + (err.response?.data?.message || err.message));
+      }
+    } finally {
+      setIsSubmittingCheckout(false);
     }
   };
 
@@ -997,24 +1539,32 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
   };
 
   return (
-    <div className="space-y-6 font-sans p-6 bg-slate-50 min-h-screen">
-      {/* Top Electricity Meter Tracker Bar (Requirement 3) */}
+    <div className="space-y-6 font-sans p-6 bg-slate-50 rounded-2xl">
+      {/* Top Operations Tracker Bar: Electricity Meter & Food Bill */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 border border-amber-500/40 shadow-md rounded-sm gap-3">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-amber-500/10 text-amber-600 rounded">
             <Zap size={20} className="fill-amber-500" />
           </div>
           <div>
-            <h3 className="text-xs font-black uppercase text-[#1A2B48] tracking-wider">Electricity Meter Reading Tracker</h3>
-            <p className="text-[10px] text-slate-500 font-semibold">Record daily kWh readings for Front Desk & Financial Analytics</p>
+            <h3 className="text-xs font-black uppercase text-[#1A2B48] tracking-wider">Property Operations & F&B Services</h3>
+            <p className="text-[10px] text-slate-500 font-semibold">Record daily kWh meter readings & process guest food bills</p>
           </div>
         </div>
-        <button 
-          onClick={() => setIsMeterModalOpen(true)}
-          className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-5 py-2.5 rounded-sm text-[11px] font-black uppercase tracking-wider flex items-center gap-2 shadow-md transition-all hover:scale-[1.02] active:scale-95"
-        >
-          <Zap size={14} className="fill-slate-950" /> Enter Meter Readings
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button 
+            onClick={() => openFoodBillModal()}
+            className="bg-[#1A2B48] hover:bg-[#253d66] text-white px-5 py-2.5 rounded-sm text-[11px] font-black uppercase tracking-wider flex items-center gap-2 shadow-md transition-all hover:scale-[1.02] active:scale-95 border border-slate-700"
+          >
+            <Utensils size={14} className="text-amber-400" /> 🍽️ Food Bill
+          </button>
+          <button 
+            onClick={() => setIsMeterModalOpen(true)}
+            className="bg-amber-500 hover:bg-amber-600 text-slate-950 px-5 py-2.5 rounded-sm text-[11px] font-black uppercase tracking-wider flex items-center gap-2 shadow-md transition-all hover:scale-[1.02] active:scale-95"
+          >
+            <Zap size={14} className="fill-slate-950" /> Meter Readings
+          </button>
+        </div>
       </div>
 
       {/* Dynamic Summary Bar */}
@@ -1161,18 +1711,30 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
             </div>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <span className="text-[10px] font-bold text-[#BFA37E] uppercase tracking-widest hidden md:inline bg-[#BFA37E]/10 px-2.5 py-1 rounded border border-[#BFA37E]/20">
-              Front Desk Intelligence
-            </span>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+            {isSuperAdmin && (
+              <button 
+                onClick={() => setIsAnalyticsOpen(true)} 
+                className="h-10 px-4 bg-[#BFA37E] hover:bg-[#a68d6d] text-slate-950 rounded-sm text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all hover:scale-105 active:scale-95 whitespace-nowrap shrink-0"
+              >
+                <TrendingUp size={15} />
+                <span>Analytics</span>
+              </button>
+            )}
             <button 
-              onClick={() => setIsAnalyticsOpen(true)} 
-              className="bg-[#BFA37E] hover:bg-[#a68d6d] text-slate-950 px-5 py-2 rounded-sm text-[11px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg transition-all hover:scale-105 active:scale-95"
+              onClick={() => openFoodBillModal()} 
+              className="h-10 px-4 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-sm text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all hover:scale-105 active:scale-95 whitespace-nowrap shrink-0"
+              title="Create Food Bill & Restaurant Order"
             >
-              <TrendingUp size={16} /> Analytics
+              <Utensils size={15} />
+              <span>Food Bill</span>
             </button>
-            <button onClick={() => setIsWalkInOpen(true)} className="bg-white hover:bg-slate-100 text-[#1A2B48] px-6 py-2 rounded-sm text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-lg">
-              <Plus size={16} /> New Walk-In
+            <button 
+              onClick={() => setIsBookingTypeSelectOpen(true)} 
+              className="h-10 px-4 bg-white hover:bg-slate-100 text-[#1A2B48] rounded-sm text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all hover:scale-105 active:scale-95 whitespace-nowrap shrink-0"
+            >
+              <Plus size={16} />
+              <span>New Walk-In</span>
             </button>
           </div>
         </div>
@@ -1380,6 +1942,98 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                         </table>
                     </div>
 
+                    {/* Checkout & Room Inspection Clearance Details (Displayed directly after Bill Section on Left Side) */}
+                    <div className="border border-slate-200 rounded-sm overflow-hidden bg-white shadow-xs">
+                        <div className="bg-[#1A2B48] text-white p-3 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                <ClipboardCheck size={16} className="text-amber-400 shrink-0" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                    Checkout & Room Inspection Clearance Details
+                                </span>
+                            </div>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                                selectedBooking.status === 'Checked Out' 
+                                    ? 'bg-emerald-500 text-white' 
+                                    : 'bg-amber-400 text-slate-900'
+                            }`}>
+                                {selectedBooking.status === 'Checked Out' ? 'Checked Out' : 'Active In-House'}
+                            </span>
+                        </div>
+
+                        <div className="p-4 space-y-3 bg-slate-50/60">
+                            {/* Key Fields Grid */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                <div className="bg-white p-2.5 rounded border border-slate-200">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">Room Inspection</span>
+                                    <span className={`font-black text-xs ${
+                                        selectedBooking.roomInspection?.inspected ? 'text-emerald-700' : (selectedBooking.status === 'Checked Out' ? 'text-slate-700' : 'text-amber-600')
+                                    }`}>
+                                        {selectedBooking.roomInspection?.inspected ? '✓ Yes (Completed)' : (selectedBooking.status === 'Checked Out' ? 'Completed' : 'Pending Checkout')}
+                                    </span>
+                                </div>
+
+                                <div className="bg-white p-2.5 rounded border border-slate-200">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">Inspected By</span>
+                                    <span className="font-black text-xs text-slate-800">
+                                        {selectedBooking.roomInspection?.inspectedBy || (selectedBooking.status === 'Checked Out' ? 'Front Desk Staff' : '—')}
+                                    </span>
+                                </div>
+
+                                <div className="bg-white p-2.5 rounded border border-slate-200">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">Any Issue Found</span>
+                                    <span className={`font-black text-xs ${
+                                        selectedBooking.roomInspection?.issueFound ? 'text-rose-600' : 'text-emerald-700'
+                                    }`}>
+                                        {selectedBooking.roomInspection?.issueFound ? '⚠️ Yes (Issues Found)' : '✅ No (All Clear)'}
+                                    </span>
+                                </div>
+
+                                <div className="bg-white p-2.5 rounded border border-slate-200">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">Checkout Timestamp</span>
+                                    <span className="font-bold text-[11px] text-slate-700 block truncate">
+                                        {selectedBooking.actualCheckOutTime 
+                                            ? new Date(selectedBooking.actualCheckOutTime).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })
+                                            : (selectedBooking.status === 'Checked Out' ? 'Completed' : 'Not Checked Out')}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Damage / Missing Items Callout */}
+                            {selectedBooking.roomInspection?.issueDescription && (
+                                <div className="bg-rose-50 border border-rose-200 p-3 rounded text-xs space-y-1">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-black text-rose-800 uppercase tracking-wider flex items-center gap-1.5">
+                                            <AlertTriangle size={13} className="text-rose-600" />
+                                            Damaged / Missing Items Mentioned
+                                        </span>
+                                        {selectedBooking.roomInspection?.damageCharge > 0 && (
+                                            <span className="text-xs font-black text-rose-700 bg-rose-100 px-2 py-0.5 rounded border border-rose-300">
+                                                Damage Charge: ₹{Number(selectedBooking.roomInspection.damageCharge).toLocaleString('en-IN')}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-slate-800 font-semibold">{selectedBooking.roomInspection.issueDescription}</p>
+                                </div>
+                            )}
+
+                            {/* Inspection Remarks if present */}
+                            {selectedBooking.roomInspection?.remarks && (
+                                <div className="bg-amber-50/70 border border-amber-200 p-2.5 rounded text-xs">
+                                    <span className="text-[9px] font-black text-amber-800 uppercase block mb-0.5">Staff Remarks:</span>
+                                    <p className="text-slate-700 italic">"{selectedBooking.roomInspection.remarks}"</p>
+                                </div>
+                            )}
+
+                            {/* Housekeeping status notice */}
+                            <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-200">
+                                <span className="font-semibold">
+                                    Room Unit Post-Checkout: <strong className="text-amber-700">Marked as Dirty (Sent to Housekeeping)</strong>
+                                </span>
+                                <span>Assigned Unit: <strong className="text-slate-800">{selectedBooking.roomUnit?.roomNumber || 'Assigned Room'}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Payment Audit History */}
                     <div>
                         <div className="flex items-center gap-2 mb-3">
@@ -1469,10 +2123,10 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                             disabled={selectedBooking.status === 'Checked-Out' || selectedBooking.status === 'Cancelled'}
                         />
                         <ActionButton 
-                            icon={<Coffee size={18} />} 
-                            label="Add F&B Order" 
-                            color="bg-amber-600" 
-                            onClick={() => setIsFBModalOpen(true)}
+                            icon={<Utensils size={18} />} 
+                            label="🍽️ Food Bill & Menu Order" 
+                            color="bg-amber-600 hover:bg-amber-700" 
+                            onClick={() => openFoodBillModal(selectedBooking)}
                         />
                         <ActionButton 
                             icon={<LogOut size={18} />} 
@@ -1616,17 +2270,208 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
         </div>
       )}
 
-      {/* Walk-In Modal */}
+      {/* Select Booking Mode Modal: Immediate vs Advance */}
+      {isBookingTypeSelectOpen && (
+        <div className="fixed inset-0 bg-[#1A2B48]/90 z-[120] flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-xl rounded-sm p-8 shadow-2xl border-t-8 border-[#BFA37E]">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-xl font-black text-[#1A2B48] uppercase tracking-wide">
+                  Select Registration Type
+                </h3>
+                <p className="text-xs text-slate-500 font-medium mt-1">
+                  Choose whether the guest is checking in immediately or reserving in advance.
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsBookingTypeSelectOpen(false)} 
+                className="bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors"
+              >
+                <X size={20}/>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 my-4">
+              {/* Immediate Booking Card */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBookingTypeSelectOpen(false);
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+                  setWalkInForm({
+                    guestDetails: { firstName: '', lastName: '', phone: '', email: '', idProof: '', adults: 2, children: 0 },
+                    roomCategory: '',
+                    roomUnit: '',
+                    checkInDate: todayStr,
+                    checkOutDate: tomorrowStr,
+                    financials: { roomTariff: 0, amountPaid: 0, totalAmount: 0, balance: 0 },
+                    paymentMode: 'Cash',
+                    source: 'Walk-in',
+                    otaPlatform: '',
+                    otaReferenceId: '',
+                    roomPlan: 'EP',
+                    immediateCheckIn: true,
+                    isHistorical: false,
+                    customStatus: 'Checked-In',
+                    paymentDate: '',
+                    bookingType: 'Immediate',
+                    numberOfRooms: 1,
+                    voucherUrl: ''
+                  });
+                  setIsWalkInOpen(true);
+                }}
+                className="aspect-square p-6 border-2 border-slate-200 hover:border-emerald-500 rounded-xl hover:bg-emerald-50/40 transition-all group flex flex-col items-center justify-center text-center cursor-pointer shadow-sm hover:shadow-md"
+              >
+                <div className="w-16 h-16 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Zap size={32} />
+                </div>
+                <h4 className="text-base font-black text-slate-900 uppercase tracking-wide">Immediate Booking</h4>
+              </button>
+
+              {/* Advance Booking Card */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBookingTypeSelectOpen(false);
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+                  const dayAfterTomorrowStr = new Date(Date.now() + 172800000).toISOString().split('T')[0];
+                  setWalkInForm({
+                    guestDetails: { firstName: '', lastName: '', phone: '', email: '', idProof: '', adults: 2, children: 0 },
+                    roomCategory: '',
+                    roomUnit: '',
+                    checkInDate: tomorrowStr,
+                    checkOutDate: dayAfterTomorrowStr,
+                    financials: { roomTariff: 0, amountPaid: 0, totalAmount: 0, balance: 0 },
+                    paymentMode: 'Cash',
+                    source: 'Walk-in',
+                    otaPlatform: '',
+                    otaReferenceId: '',
+                    roomPlan: 'EP',
+                    immediateCheckIn: false,
+                    isHistorical: false,
+                    customStatus: 'Confirmed',
+                    paymentDate: tomorrowStr,
+                    bookingType: 'Advance',
+                    numberOfRooms: 1,
+                    voucherUrl: ''
+                  });
+                  setIsWalkInOpen(true);
+                }}
+                className="aspect-square p-6 border-2 border-slate-200 hover:border-[#1A2B48] rounded-xl hover:bg-slate-50 transition-all group flex flex-col items-center justify-center text-center cursor-pointer shadow-sm hover:shadow-md"
+              >
+                <div className="w-16 h-16 rounded-xl bg-[#1A2B48] text-white flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <CalendarCheck size={32} />
+                </div>
+                <h4 className="text-base font-black text-slate-900 uppercase tracking-wide">Advance Booking</h4>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Walk-In / Advance Booking Modal */}
       {isWalkInOpen && (
         <div className="fixed inset-0 bg-[#1A2B48]/95 z-[100] flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto">
           <div className="bg-white w-full max-w-2xl rounded-sm p-8 shadow-2xl border-t-8 border-[#BFA37E] my-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-black text-[#1A2B48] uppercase">New Walk-In Registration</h3>
-              <button onClick={() => setIsWalkInOpen(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors"><X size={24}/></button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-xl sm:text-2xl font-black text-[#1A2B48] uppercase tracking-tight">
+                    {walkInForm.bookingType === 'Advance' ? 'New Advance Booking Registration' : 'New Walk-In Registration'}
+                  </h3>
+                  <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded whitespace-nowrap shrink-0 ${
+                    walkInForm.bookingType === 'Advance' 
+                      ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                      : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                  }`}>
+                    {walkInForm.bookingType === 'Advance' ? '📅 Advance Mode' : '⚡ Immediate Mode'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 font-medium mt-1">
+                  {walkInForm.bookingType === 'Advance' 
+                    ? 'Reserve rooms for future stay. Advance money collected reflects on check-in start date.' 
+                    : 'Guest arriving now at Front Desk. Check-in and assign room unit immediately.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newType = walkInForm.bookingType === 'Advance' ? 'Immediate' : 'Advance';
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const tomorrowStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+                    const dayAfterTomorrowStr = new Date(Date.now() + 172800000).toISOString().split('T')[0];
+
+                    setWalkInForm(prev => ({
+                      ...prev,
+                      bookingType: newType,
+                      immediateCheckIn: newType === 'Immediate',
+                      customStatus: newType === 'Immediate' ? 'Checked-In' : 'Confirmed',
+                      checkInDate: newType === 'Immediate' ? todayStr : (prev.checkInDate || tomorrowStr),
+                      checkOutDate: newType === 'Immediate' ? tomorrowStr : (prev.checkOutDate || dayAfterTomorrowStr),
+                      paymentDate: newType === 'Advance' ? (prev.checkInDate || tomorrowStr) : ''
+                    }));
+                  }}
+                  className="px-3 py-1.5 text-xs font-bold rounded border border-slate-300 hover:bg-slate-100 text-slate-700 transition-colors whitespace-nowrap shrink-0"
+                  title="Switch between Immediate and Advance modes"
+                >
+                  Switch to {walkInForm.bookingType === 'Advance' ? '⚡ Immediate' : '📅 Advance'}
+                </button>
+                <button onClick={() => setIsWalkInOpen(false)} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors shrink-0"><X size={20}/></button>
+              </div>
             </div>
+
             <form onSubmit={handleWalkInSubmit} className="space-y-6">
                <div className="grid grid-cols-2 gap-6">
-                  <InputField label="First Name" value={walkInForm.guestDetails.firstName} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, firstName: v}})} />
+                  <div className="relative">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">First Name</label>
+                    <input
+                      type="text"
+                      value={walkInForm.guestDetails.firstName}
+                      onFocus={() => setShowGuestSuggestions(true)}
+                      onChange={e => {
+                        setWalkInForm({
+                          ...walkInForm, 
+                          guestDetails: { ...walkInForm.guestDetails, firstName: e.target.value }
+                        });
+                        setShowGuestSuggestions(true);
+                      }}
+                      placeholder="e.g. Rahul"
+                      className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all focus:outline-none font-semibold text-slate-800"
+                      required
+                    />
+                    {showGuestSuggestions && guestSuggestions.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border-2 border-[#1A2B48] shadow-2xl rounded-sm z-[150] max-h-56 overflow-y-auto">
+                        <div className="p-2 bg-slate-100 text-[10px] font-black uppercase text-slate-500 border-b flex justify-between items-center">
+                          <span>Previous Guests Found ({guestSuggestions.length})</span>
+                          <span className="text-emerald-700 font-bold">Click to Autofill</span>
+                        </div>
+                        {guestSuggestions.map((g, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleSelectPastGuest(g)}
+                            className="w-full text-left p-2.5 hover:bg-emerald-50 border-b border-slate-100 transition-colors flex items-center justify-between group"
+                          >
+                            <div>
+                              <div className="font-bold text-xs text-slate-900 group-hover:text-emerald-700">
+                                {g.firstName} {g.lastName}
+                              </div>
+                              <div className="text-[10px] text-slate-500">
+                                📞 {g.phone || 'No phone'} {g.idProof ? `• ID: ${g.idProof}` : ''}
+                              </div>
+                            </div>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-black uppercase group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                              Autofill ➔
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <InputField label="Last Name" value={walkInForm.guestDetails.lastName} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, lastName: v}})} />
                </div>
                <div className="grid grid-cols-2 gap-6">
@@ -1654,6 +2499,23 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                    <InputField label="Check-Out" type="date" value={walkInForm.checkOutDate} onChange={v => setWalkInForm({...walkInForm, checkOutDate: v})} />
                </div>
                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">No. of Rooms</label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        max="20"
+                        className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all font-semibold focus:outline-none" 
+                        value={walkInForm.numberOfRooms || 1} 
+                        onChange={e => setWalkInForm({...walkInForm, numberOfRooms: Math.max(1, parseInt(e.target.value) || 1)})} 
+                        required
+                      />
+                  </div>
+                  <div>
+                      <InputField label="ID Proof Number" value={walkInForm.guestDetails.idProof} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, idProof: v}})} required={false} />
+                  </div>
+               </div>
+               <div className="grid grid-cols-2 gap-6">
                   <InputField label="Adults" type="number" value={walkInForm.guestDetails.adults} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, adults: Number(v)}})} />
                   <InputField label="Children" type="number" value={walkInForm.guestDetails.children} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, children: Number(v)}})} />
                </div>
@@ -1673,9 +2535,6 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                         <option value="Bank Transfer">Bank Transfer</option>
                       </select>
                   </div>
-               </div>
-               <div className="grid grid-cols-1 gap-6">
-                  <InputField label="ID Proof Number" value={walkInForm.guestDetails.idProof} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, idProof: v}})} required={false} />
                </div>
                <div className="grid grid-cols-2 gap-6">
                   <div>
@@ -1798,16 +2657,29 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                    </div>
                 )}
 
-                {(walkInForm.immediateCheckIn || walkInForm.customStatus === 'Checked-In') && (
+                {(walkInForm.immediateCheckIn || walkInForm.customStatus === 'Checked-In' || walkInForm.bookingType === 'Advance') && (
                    <div className="animate-in slide-in-from-top-2 duration-200 space-y-2">
-                       <label className="block text-[10px] font-black text-slate-400 uppercase">Assign Room Unit</label>
+                       <div className="flex justify-between items-center">
+                          <label className="block text-[10px] font-black text-slate-400 uppercase">
+                            Assign Room Unit {walkInForm.bookingType === 'Advance' ? '(Optional in advance — can assign upon arrival)' : ''}
+                          </label>
+                          {walkInForm.bookingType === 'Advance' && walkInForm.roomUnit && (
+                            <button 
+                              type="button" 
+                              onClick={() => setWalkInForm({...walkInForm, roomUnit: ''})}
+                              className="text-[10px] text-slate-400 hover:text-rose-600 underline font-semibold"
+                            >
+                              Clear Unit
+                            </button>
+                          )}
+                       </div>
                        <select 
                            className="w-full border-2 border-slate-200 p-3 text-sm focus:border-[#1A2B48] transition-all font-semibold focus:outline-none" 
                            value={walkInForm.roomUnit} 
                            onChange={e => setWalkInForm({...walkInForm, roomUnit: e.target.value})} 
                            required={walkInForm.immediateCheckIn || walkInForm.customStatus === 'Checked-In'}
                        >
-                           <option value="">-- Choose Room Unit --</option>
+                           <option value="">{walkInForm.bookingType === 'Advance' ? '-- Assign Later upon Check-In --' : '-- Choose Room Unit --'}</option>
                            {availableUnits
                              .filter(u => {
                                if (!u.category || !walkInForm.roomCategory) return false;
@@ -1845,6 +2717,10 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                      </span>
                   </div>
                   <div className="flex justify-between text-xs font-bold text-slate-700">
+                     <span>No. of Rooms:</span>
+                     <span>{walkInForm.numberOfRooms || 1} Room(s)</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-bold text-slate-700">
                      <span>Total Room Tariff:</span>
                      <span>₹{walkInForm.financials.totalAmount.toLocaleString()}</span>
                   </div>
@@ -1861,8 +2737,169 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                   </div>
                </div>
 
-               <button type="submit" className="w-full bg-[#1A2B48] text-white py-5 font-black uppercase text-xs shadow-xl hover:bg-[#253d66] transition-all">Create Registration Entry</button>
+               <button 
+                 type="submit" 
+                 className={`w-full text-white py-5 font-black uppercase text-xs shadow-xl transition-all ${
+                   walkInForm.bookingType === 'Advance' ? 'bg-[#1A2B48] hover:bg-[#253d66]' : 'bg-emerald-600 hover:bg-emerald-700'
+                 }`}
+               >
+                 {walkInForm.bookingType === 'Advance' 
+                   ? 'Confirm Advance Booking & Prepare WhatsApp Voucher' 
+                   : 'Create Registration Entry'}
+               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Booking Confirmation Modal */}
+      {isWhatsAppModalOpen && whatsAppData && (
+        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[120] flex items-center justify-center p-4 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-3xl rounded-sm shadow-2xl border-t-8 border-[#25D366] max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-white border-b px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-md">
+                  <WhatsAppIcon size={22} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                    WhatsApp Booking Voucher
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-black uppercase">
+                      Ready to Send
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Guest: <span className="font-bold text-slate-800">{whatsAppData.guestDetails?.firstName} {whatsAppData.guestDetails?.lastName}</span> | Mobile: <span className="font-bold text-slate-800">{whatsAppData.guestDetails?.phone || whatsAppData.phone}</span>
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsWhatsAppModalOpen(false)} 
+                className="bg-slate-100 p-2 rounded-full hover:bg-slate-200 transition-colors"
+              >
+                <X size={20}/>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-grow">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                {/* Left Column: Formatted Message Text Editor */}
+                <div className="md:col-span-7 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                      Dynamic WhatsApp Message Text
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleCopyWhatsAppText}
+                      className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 transition-colors"
+                    >
+                      {copiedWhatsAppText ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                      <span>{copiedWhatsAppText ? 'Copied!' : 'Copy Text'}</span>
+                    </button>
+                  </div>
+
+                  <textarea
+                    rows="15"
+                    value={whatsAppCustomMsg}
+                    onChange={(e) => setWhatsAppCustomMsg(e.target.value)}
+                    className="w-full border-2 border-slate-200 p-3 text-xs font-mono leading-relaxed rounded-sm focus:outline-none focus:border-[#25D366] bg-slate-50 text-slate-800"
+                    placeholder="Message preview..."
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    💡 You can customize or edit any line in the text above before sending to the guest.
+                  </p>
+                </div>
+
+                {/* Right Column: Hotel Location & Booking Info */}
+                <div className="md:col-span-5 space-y-4">
+                  <div className="border border-slate-200 rounded-sm p-4 bg-slate-50 space-y-3 text-xs">
+                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">
+                      Booking Summary
+                    </span>
+                    <div className="space-y-1.5 font-semibold text-slate-700">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Guest:</span>
+                        <span className="font-bold text-slate-900">{whatsAppData.guestDetails?.firstName} {whatsAppData.guestDetails?.lastName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Phone:</span>
+                        <span className="font-bold text-slate-900">{whatsAppData.guestDetails?.phone || whatsAppData.phone || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Check-In:</span>
+                        <span className="font-bold text-slate-900">{formatDate(whatsAppData.checkInDate)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Check-Out:</span>
+                        <span className="font-bold text-slate-900">{formatDate(whatsAppData.checkOutDate)}</span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-slate-200">
+                        <span className="text-slate-500">Advance Paid:</span>
+                        <span className="font-black text-emerald-700">₹{(whatsAppData.financials?.amountPaid || whatsAppData.amountPaid || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Total Amount:</span>
+                        <span className="font-black text-slate-900">₹{(whatsAppData.financials?.totalAmount || whatsAppData.totalAmount || 0).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border border-slate-200 rounded-sm p-4 bg-white space-y-2 text-xs">
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                      Hotel Location
+                    </span>
+                    <p className="font-bold text-slate-800">
+                      Hotel Bhopal Inn by Ten On Ten Stays
+                    </p>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      D2-214, Danish Nagar, Hoshangabad Road, Bhopal
+                    </p>
+                    <a
+                      href="https://maps.google.com/?q=2/213,+Danish+Nagar,+BBagmugaliya,+Bhopal,+Madhya+Pradesh+462026"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 font-bold underline"
+                    >
+                      <ExternalLink size={12} /> Open in Google Maps
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer CTA */}
+            <div className="bg-slate-50 border-t px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsWhatsAppModalOpen(false)}
+                className="w-full sm:w-auto px-5 py-2.5 text-xs font-black uppercase text-slate-500 hover:text-slate-800 transition-colors"
+              >
+                Close
+              </button>
+
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleCopyWhatsAppText}
+                  className="flex-1 sm:flex-initial px-5 py-3 border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 rounded-sm text-xs font-black uppercase flex items-center justify-center gap-2 shadow-xs transition-colors"
+                >
+                  <Copy size={16} />
+                  <span>{copiedWhatsAppText ? 'Copied!' : 'Copy Text'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSendWhatsApp}
+                  className="flex-1 sm:flex-initial px-6 py-3 bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-sm text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg transition-all hover:scale-105 active:scale-95"
+                >
+                  <WhatsAppIcon size={18} />
+                  <span>Send via WhatsApp</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -2105,7 +3142,27 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
             </div>
 
             <form onSubmit={handleMeterSubmit} className="space-y-6 bg-slate-50 p-6 border border-slate-200 rounded-sm mb-6">
-              <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">New Reading Entry</h4>
+              <div className="flex justify-between items-center pb-2 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  {editingMeterId ? (
+                    <span className="text-xs font-black uppercase text-amber-900 bg-amber-100 px-3 py-1 rounded border border-amber-300 flex items-center gap-1.5 shadow-sm">
+                      <Edit3 size={13} className="text-amber-700" /> Editing Reading ({meterForm.date})
+                    </span>
+                  ) : (
+                    <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">New Reading Entry</h4>
+                  )}
+                </div>
+                {editingMeterId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelMeterEdit}
+                    className="text-[11px] font-black uppercase text-rose-600 hover:text-rose-800 bg-white px-2.5 py-1 rounded border border-rose-200 shadow-sm transition-all"
+                  >
+                    Cancel Edit
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Reading Date</label>
@@ -2141,31 +3198,61 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
                 />
               </div>
 
-              <button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 py-4 font-black uppercase text-xs shadow-lg transition-all flex items-center justify-center gap-2">
-                <Zap size={16} className="fill-slate-950" /> Save Electricity Reading
+              <button 
+                type="submit" 
+                className={`w-full ${editingMeterId ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-slate-950'} py-4 font-black uppercase text-xs shadow-lg transition-all flex items-center justify-center gap-2`}
+              >
+                <Zap size={16} className={editingMeterId ? 'fill-white' : 'fill-slate-950'} />
+                {editingMeterId ? 'Update Electricity Reading (Save Changes)' : 'Save Electricity Reading'}
               </button>
             </form>
 
             <div className="space-y-3">
-              <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Recently Logged Meter Readings</h4>
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-black uppercase text-slate-700 tracking-wider">Recently Logged Meter Readings</h4>
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Click "Edit" to modify any reading</span>
+              </div>
               <div className="border border-slate-200 rounded-sm overflow-hidden text-xs">
                 <table className="w-full text-left">
                   <thead className="bg-slate-100 text-[10px] uppercase font-bold text-slate-500 border-b">
                     <tr>
                       <th className="p-3">Date</th>
                       <th className="p-3">Reading (kWh)</th>
+                      <th className="p-3">Notes</th>
                       <th className="p-3">Recorded By</th>
+                      <th className="p-3 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {meterReadings.length === 0 ? (
-                      <tr><td colSpan="3" className="p-4 text-center text-slate-400 italic">No meter readings recorded yet.</td></tr>
+                      <tr><td colSpan="5" className="p-4 text-center text-slate-400 italic">No meter readings recorded yet.</td></tr>
                     ) : (
                       meterReadings.map(r => (
-                        <tr key={r._id} className="hover:bg-slate-50">
-                          <td className="p-3 font-bold">{new Date(r.date).toLocaleDateString('en-GB')}</td>
+                        <tr key={r._id} className={`hover:bg-slate-50 transition-colors ${editingMeterId === r._id ? 'bg-amber-50/80 font-bold' : ''}`}>
+                          <td className="p-3 font-bold">{r.dateStr || (r.date ? new Date(r.date).toLocaleDateString('en-GB') : '---')}</td>
                           <td className="p-3 font-black text-amber-600">{r.reading} kWh</td>
+                          <td className="p-3 text-slate-500 max-w-[120px] truncate" title={r.notes}>{r.notes || '-'}</td>
                           <td className="p-3 text-slate-500">{r.recordedBy}</td>
+                          <td className="p-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleEditMeterClick(r)}
+                                className="px-2.5 py-1 text-[10px] font-black uppercase rounded bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all flex items-center gap-1 shadow-sm"
+                                title="Edit this meter reading"
+                              >
+                                <Edit3 size={11} /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMeter(r._id)}
+                                className="p-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-all"
+                                title="Delete this reading"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))
                     )}
@@ -2242,6 +3329,600 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
               <div className="flex gap-4 pt-2">
                 <button type="button" onClick={() => setIsCleaningModalOpen(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-400 hover:text-slate-700">Cancel</button>
                 <button type="submit" className="flex-1 bg-[#1A2B48] hover:bg-[#253d66] text-white py-4 text-xs font-black uppercase shadow-xl transition-all">Save Housekeeping Status</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Requirement 2: Front Desk Food Bill & Restaurant Ordering Modal */}
+      {isFoodBillOpen && (
+        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[160] flex items-center justify-center p-3 sm:p-6 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-5xl rounded-sm shadow-2xl border-t-8 border-amber-500 max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500/10 text-amber-700 rounded border border-amber-500/20">
+                  <Utensils size={22} className="text-amber-600" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-black text-[#1A2B48] uppercase tracking-wide">Food Bill & Room Service</h3>
+                    <span className="bg-amber-100 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded border border-amber-200 uppercase">
+                      Front Desk & Admin
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                    Select room, browse menu categories, and add charges directly to guest room folio
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsFoodBillOpen(false)} 
+                className="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-full transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Target Room / In-House Guest Selection Bar */}
+            <div className="px-6 py-3.5 bg-amber-50/60 border-b border-amber-200/70 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-[11px] font-black text-[#1A2B48] uppercase tracking-wider whitespace-nowrap">
+                  Attach Bill To Room:
+                </span>
+                <select
+                  value={foodTargetBookingId}
+                  onChange={(e) => setFoodTargetBookingId(e.target.value)}
+                  className="bg-white border-2 border-amber-300 text-[#1A2B48] text-xs font-black px-3 py-2 rounded-sm outline-none focus:border-amber-600 w-full sm:w-80 shadow-sm cursor-pointer"
+                >
+                  <option value="">-- Choose In-House Room / Guest --</option>
+                  {bookings.map(b => (
+                    <option key={b._id} value={b._id}>
+                      Room {b.roomUnit?.roomNumber || '---'} — {b.guestDetails?.firstName} {b.guestDetails?.lastName} ({b.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {foodTargetBookingId && (
+                <div className="text-xs text-slate-600 font-bold flex items-center gap-2 bg-white px-3 py-1.5 rounded border border-amber-200 shadow-sm">
+                  <span className="text-[10px] uppercase text-slate-400">Current Balance:</span>
+                  <span className="text-rose-600 font-black">
+                    ₹{(bookings.find(b => b._id === foodTargetBookingId)?.financials?.balance || 0).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Search Bar & Category Dropdown Bar */}
+            <div className="p-4 bg-white border-b border-slate-200 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Search Bar */}
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search dishes, starters, breads, snacks, beverages (e.g. Paneer, Naan, Chai)..."
+                    value={foodSearchQuery}
+                    onChange={(e) => setFoodSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 text-sm font-bold text-[#1A2B48] placeholder-slate-400 rounded-sm focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+                  />
+                  {foodSearchQuery && (
+                    <button 
+                      onClick={() => setFoodSearchQuery('')}
+                      className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Dropdown */}
+                <div className="w-full sm:w-64">
+                  <select
+                    value={foodActiveCategory}
+                    onChange={(e) => setFoodActiveCategory(e.target.value)}
+                    className="w-full bg-slate-50 border-2 border-slate-200 text-xs font-black uppercase text-[#1A2B48] py-2.5 px-3 rounded-sm outline-none focus:border-amber-500 cursor-pointer transition-all"
+                  >
+                    <option value="All">All Categories ({menuItems.length})</option>
+                    {menuCategories.map(cat => (
+                      <option key={cat._id} value={cat._id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Category Quick Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+                <button
+                  type="button"
+                  onClick={() => setFoodActiveCategory('All')}
+                  className={`px-3 py-1 rounded text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${
+                    foodActiveCategory === 'All'
+                      ? 'bg-[#1A2B48] text-white shadow'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  All Items
+                </button>
+                {menuCategories.map(cat => {
+                  const isActive = foodActiveCategory === cat._id;
+                  return (
+                    <button
+                      key={cat._id}
+                      type="button"
+                      onClick={() => setFoodActiveCategory(cat._id)}
+                      className={`px-3 py-1 rounded text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all ${
+                        isActive
+                          ? 'bg-amber-500 text-slate-950 shadow'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Two-Column Layout: Menu Items Catalogue & Live Bill Cart */}
+            <div className="flex-1 grid grid-cols-12 overflow-hidden min-h-0">
+              {/* Left Column: Menu Items Grid */}
+              <div className="col-span-12 md:col-span-7 lg:col-span-8 p-4 overflow-y-auto border-r border-slate-200 bg-slate-50 space-y-3 max-h-[50vh] md:max-h-[55vh]">
+                {(() => {
+                  const filtered = menuItems.filter(item => {
+                    const matchCategory = foodActiveCategory === 'All' || 
+                      (item.category && (item.category._id === foodActiveCategory || item.category.name === foodActiveCategory || item.category === foodActiveCategory));
+                    
+                    const q = foodSearchQuery.trim().toLowerCase();
+                    const matchQuery = !q || 
+                      (item.name && item.name.toLowerCase().includes(q)) ||
+                      (item.description && item.description.toLowerCase().includes(q)) ||
+                      (item.category && item.category.name && item.category.name.toLowerCase().includes(q));
+
+                    return matchCategory && matchQuery;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="p-8 text-center bg-white rounded border border-dashed border-slate-300">
+                        <Utensils size={32} className="mx-auto text-slate-300 mb-2" />
+                        <p className="text-xs font-black uppercase text-slate-500">No dishes match your filter</p>
+                        <p className="text-[11px] text-slate-400 mt-1">Try another category or clear your search query.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {filtered.map(item => {
+                        const idKey = item._id || item.name;
+                        const qtyInCart = getFoodItemQuantity(idKey);
+                        const catName = item.category?.name || 'Menu';
+                        const price = item.cost || item.price || 0;
+
+                        return (
+                          <div 
+                            key={idKey} 
+                            className={`p-3.5 bg-white border rounded-sm transition-all shadow-sm flex flex-col justify-between ${
+                              qtyInCart > 0 ? 'border-amber-400 ring-2 ring-amber-400/20 bg-amber-50/20' : 'border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`w-3 h-3 rounded-xs border flex items-center justify-center shrink-0 ${
+                                    item.isVeg !== false ? 'border-emerald-600' : 'border-rose-600'
+                                  }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                      item.isVeg !== false ? 'bg-emerald-600' : 'bg-rose-600'
+                                    }`}></span>
+                                  </span>
+                                  <h4 className="text-xs font-black text-[#1A2B48] leading-tight">
+                                    {item.name}
+                                  </h4>
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                                  {catName}
+                                </span>
+                              </div>
+                              {item.description && (
+                                <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5 mb-2 leading-relaxed">
+                                  {item.description}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-2">
+                              <span className="text-sm font-black text-amber-700">
+                                ₹{price.toLocaleString()}
+                              </span>
+
+                              {/* Quantity Selector (+ / -) */}
+                              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded border border-slate-200">
+                                <button
+                                  type="button"
+                                  onClick={() => removeFoodItemFromCart(item)}
+                                  disabled={qtyInCart === 0}
+                                  className={`w-6 h-6 rounded flex items-center justify-center font-bold text-xs transition-all ${
+                                    qtyInCart > 0 
+                                      ? 'bg-white hover:bg-rose-50 text-rose-700 shadow-sm border border-slate-200' 
+                                      : 'text-slate-300 cursor-not-allowed'
+                                  }`}
+                                  title="Decrease quantity"
+                                >
+                                  <Minus size={12} />
+                                </button>
+                                <span className="w-6 text-center text-xs font-black text-[#1A2B48]">
+                                  {qtyInCart}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => addFoodItemToCart(item)}
+                                  className="w-6 h-6 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 flex items-center justify-center font-bold text-xs shadow-sm transition-all"
+                                  title="Add to bill"
+                                >
+                                  <Plus size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Right Column: Live Order Summary & Bill Folio */}
+              <div className="col-span-12 md:col-span-5 lg:col-span-4 p-5 bg-white flex flex-col justify-between overflow-y-auto max-h-[50vh] md:max-h-[55vh]">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black uppercase text-[#1A2B48] tracking-wider">
+                        Order Folio Summary
+                      </span>
+                      <span className="bg-amber-100 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full">
+                        {foodOrderCart.reduce((acc, c) => acc + c.quantity, 0)} Items
+                      </span>
+                    </div>
+                    {foodOrderCart.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setFoodOrderCart([])}
+                        className="text-[10px] font-bold text-rose-600 hover:underline uppercase"
+                      >
+                        Reset Cart
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Cart Items List */}
+                  <div className="space-y-2 max-h-[22vh] overflow-y-auto pr-1">
+                    {foodOrderCart.length === 0 ? (
+                      <div className="p-6 text-center text-slate-400 italic text-xs border border-dashed rounded bg-slate-50">
+                        Click "+" on any item to add to this food bill.
+                      </div>
+                    ) : (
+                      foodOrderCart.map(({ item, quantity }) => {
+                        const price = item.cost || item.price || 0;
+                        const lineTotal = price * quantity;
+                        return (
+                          <div key={item._id || item.name} className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-200 text-xs">
+                            <div className="flex-1 pr-2">
+                              <span className="font-bold text-[#1A2B48] block leading-tight">{item.name}</span>
+                              <span className="text-[10px] text-slate-500 font-semibold">₹{price} × {quantity}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-black text-[#1A2B48]">₹{lineTotal}</span>
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => removeFoodItemFromCart(item)}
+                                  className="w-5 h-5 bg-white border rounded text-slate-700 hover:bg-slate-100 flex items-center justify-center font-bold text-[10px]"
+                                >
+                                  -
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => addFoodItemToCart(item)}
+                                  className="w-5 h-5 bg-amber-500 text-slate-950 rounded flex items-center justify-center font-bold text-[10px]"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Special Kitchen Notes */}
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">
+                      Kitchen / Delivery Notes (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Less spicy, send extra chutney/plates"
+                      value={foodOrderNotes}
+                      onChange={(e) => setFoodOrderNotes(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 text-xs font-medium p-2.5 rounded-sm focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Bill Subtotal & Submit Action */}
+                <div className="pt-4 border-t border-slate-200 space-y-3 mt-4">
+                  <div className="bg-slate-50 p-3 rounded-sm border border-slate-200 space-y-1">
+                    <div className="flex justify-between text-xs text-slate-500 font-bold">
+                      <span>Items Subtotal:</span>
+                      <span>₹{foodOrderCart.reduce((sum, c) => sum + ((c.item.cost || c.item.price || 0) * c.quantity), 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-black text-[#1A2B48] pt-1 border-t border-slate-200">
+                      <span>Total Food Bill:</span>
+                      <span className="text-amber-700 text-base">
+                        ₹{foodOrderCart.reduce((sum, c) => sum + ((c.item.cost || c.item.price || 0) * c.quantity), 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleFoodBillSubmit}
+                    disabled={isSubmittingFoodBill || foodOrderCart.length === 0 || !foodTargetBookingId}
+                    className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-slate-950 py-3.5 rounded-sm text-xs font-black uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2"
+                  >
+                    <Utensils size={15} />
+                    {isSubmittingFoodBill 
+                      ? 'Adding Bill...' 
+                      : `Add to Room Bill (₹${foodOrderCart.reduce((sum, c) => sum + ((c.item.cost || c.item.price || 0) * c.quantity), 0).toLocaleString()})`
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Requirement 3: Mandatory Room Inspection & Checkout Clearance Modal */}
+      {isInspectionModalOpen && inspectionBooking && (
+        <div className="fixed inset-0 bg-[#1A2B48]/95 z-[170] flex items-center justify-center p-4 backdrop-blur-md animate-in zoom-in-95 duration-200">
+          <div className="bg-white w-full max-w-xl rounded-sm shadow-2xl p-7 border-t-8 border-rose-600 max-h-[92vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-rose-100 text-rose-800 rounded border border-rose-200">
+                  <ClipboardCheck size={24} className="text-rose-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[#1A2B48] uppercase tracking-wide">
+                    Mandatory Room Inspection
+                  </h3>
+                  <p className="text-xs text-slate-500 font-bold mt-0.5">
+                    Pre-checkout verification & housekeeping clearance
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsInspectionModalOpen(false)} 
+                className="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2 rounded-full transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Room Summary Header Box */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-sm mb-5 flex justify-between items-center">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 block">Room Assigned</span>
+                <span className="text-base font-black text-[#1A2B48]">
+                  Room {inspectionBooking.roomUnit?.roomNumber || '---'} ({inspectionBooking.roomCategory?.title || 'Standard'})
+                </span>
+                <span className="text-xs text-slate-600 font-bold block mt-0.5">
+                  Guest: {inspectionBooking.guestDetails?.firstName} {inspectionBooking.guestDetails?.lastName}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-black uppercase text-slate-400 block">Current Folio Balance</span>
+                <span className="text-base font-black text-rose-600">
+                  ₹{(inspectionBooking.financials?.balance || 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleInspectionCheckoutSubmit} className="space-y-5">
+              {/* Field 1: Room Inspection: Yes / No */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black uppercase text-[#1A2B48] tracking-wider">
+                  1. Room Inspection Completed? <span className="text-rose-600">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setInspectionForm({ ...inspectionForm, inspected: 'Yes' })}
+                    className={`py-3 px-4 rounded text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border-2 transition-all ${
+                      inspectionForm.inspected === 'Yes'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <CheckSquare size={16} /> Yes (Inspected)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInspectionForm({ ...inspectionForm, inspected: 'No' })}
+                    className={`py-3 px-4 rounded text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border-2 transition-all ${
+                      inspectionForm.inspected === 'No'
+                        ? 'bg-rose-600 text-white border-rose-600 shadow-md'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <AlertTriangle size={16} /> No (Not Inspected)
+                  </button>
+                </div>
+
+                {inspectionForm.inspected === 'No' && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded text-rose-800 text-xs font-bold flex items-center gap-2 mt-2">
+                    <AlertTriangle size={16} className="text-rose-600 shrink-0" />
+                    <span>MANDATORY REQUIREMENT: Room inspection must be completed before finalizing checkout. Checkout cannot proceed without inspection.</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Field 2: Inspected By: Staff Member Name */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black uppercase text-[#1A2B48] tracking-wider">
+                  2. Inspected By (Staff Member) <span className="text-rose-600">*</span>
+                </label>
+                <select
+                  value={inspectionForm.inspectedBy}
+                  onChange={(e) => setInspectionForm({ ...inspectionForm, inspectedBy: e.target.value })}
+                  className="w-full bg-white border-2 border-slate-200 text-xs font-bold text-[#1A2B48] p-3 rounded-sm outline-none focus:border-[#1A2B48] cursor-pointer"
+                  required
+                >
+                  <option value="Vishal Singh">1. Vishal Singh</option>
+                  <option value="Abhi">2. Abhi</option>
+                  <option value="Aneesh">3. Aneesh</option>
+                  <option value="Sonu">4. Sonu</option>
+                  <option value="Vishal">5. Vishal</option>
+                  <option value="Other">6. Other (Enter Staff Name)</option>
+                </select>
+
+                {inspectionForm.inspectedBy === 'Other' && (
+                  <div className="pt-1.5">
+                    <input
+                      type="text"
+                      placeholder="Enter staff member's full name..."
+                      value={inspectionForm.customInspectorName}
+                      onChange={(e) => setInspectionForm({ ...inspectionForm, customInspectorName: e.target.value })}
+                      className="w-full bg-white border-2 border-amber-300 text-xs font-bold p-3 rounded-sm outline-none focus:border-amber-600"
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Field 3: Any Issue Found: Yes / No */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black uppercase text-[#1A2B48] tracking-wider">
+                  3. Any Issue / Damage Found? <span className="text-rose-600">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setInspectionForm({ ...inspectionForm, issueFound: 'No', damageCharge: '' })}
+                    className={`py-3 px-4 rounded text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border-2 transition-all ${
+                      inspectionForm.issueFound === 'No'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <CheckCircle2 size={16} /> No (Room is All Clear)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInspectionForm({ ...inspectionForm, issueFound: 'Yes' })}
+                    className={`py-3 px-4 rounded text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border-2 transition-all ${
+                      inspectionForm.issueFound === 'Yes'
+                        ? 'bg-rose-600 text-white border-rose-600 shadow-md'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <AlertTriangle size={16} /> Yes (Damage / Missing Items)
+                  </button>
+                </div>
+              </div>
+
+              {/* Conditional Fields if Issue Found is Yes */}
+              {inspectionForm.issueFound === 'Yes' && (
+                <div className="p-4 bg-rose-50/70 border-2 border-rose-200 rounded-sm space-y-3 animate-in fade-in duration-150">
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-rose-900 mb-1">
+                      Damaged / Missing Items Description <span className="text-rose-600">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Broken kettle, missing bath towel, torn bedsheet, AC remote missing"
+                      value={inspectionForm.issueDescription}
+                      onChange={(e) => setInspectionForm({ ...inspectionForm, issueDescription: e.target.value })}
+                      className="w-full bg-white border border-rose-300 text-xs font-semibold p-3 rounded-sm outline-none focus:border-rose-600"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black uppercase text-rose-900 mb-1">
+                      Damage Charges (₹)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 500"
+                      value={inspectionForm.damageCharge}
+                      onChange={(e) => setInspectionForm({ ...inspectionForm, damageCharge: e.target.value })}
+                      className="w-full bg-white border border-rose-300 text-sm font-black p-3 rounded-sm outline-none focus:border-rose-600 text-rose-700"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 text-xs font-bold text-rose-900 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={inspectionForm.addDamageToBill}
+                      onChange={(e) => setInspectionForm({ ...inspectionForm, addDamageToBill: e.target.checked })}
+                      className="w-4 h-4 text-rose-600 rounded border-rose-300"
+                    />
+                    <span>Automatically add damage charge to guest room bill</span>
+                  </label>
+                </div>
+              )}
+
+              {/* Field 4: Remarks / Notes */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-black uppercase text-[#1A2B48] tracking-wider">
+                  4. Remarks / Notes (Optional)
+                </label>
+                <textarea
+                  rows="2"
+                  placeholder="e.g. Keycard returned, mini-bar checked, AC powered off..."
+                  value={inspectionForm.remarks}
+                  onChange={(e) => setInspectionForm({ ...inspectionForm, remarks: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 text-xs font-semibold p-3 rounded-sm outline-none focus:border-[#1A2B48]"
+                />
+              </div>
+
+              {/* Informational Notice */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded text-amber-900 text-[11px] font-semibold flex items-center gap-2">
+                <Info size={16} className="text-amber-600 shrink-0" />
+                <span>
+                  Notice: Finalizing checkout will move this room into <b>"Dirty"</b> status. It will NOT become available until Housekeeping completes cleaning and marks it clean.
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsInspectionModalOpen(false)}
+                  className="flex-1 py-3.5 text-xs font-black uppercase text-slate-500 hover:text-slate-800 bg-slate-100 rounded-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingCheckout || inspectionForm.inspected !== 'Yes'}
+                  className={`flex-1 py-3.5 text-xs font-black uppercase tracking-wider rounded-sm shadow-xl transition-all ${
+                    inspectionForm.inspected === 'Yes'
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isSubmittingCheckout ? 'Processing...' : 'Confirm Inspection & Finalize Checkout'}
+                </button>
               </div>
             </form>
           </div>

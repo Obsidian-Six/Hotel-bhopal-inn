@@ -128,7 +128,10 @@ router.post('/walk-in', async (req, res) => {
             paymentMode,
             status: customStatus,
             paymentDate,
-            bookingDate
+            bookingDate,
+            bookingType,
+            numberOfRooms,
+            voucherUrl
         } = req.body;
         
         const todayStr = new Date().toISOString().split('T')[0];
@@ -177,7 +180,10 @@ router.post('/walk-in', async (req, res) => {
             source: source || 'Walk-in',
             otaPlatform: otaPlatform || '',
             roomPlan: roomPlan || 'EP',
-            status: initialStatus
+            status: initialStatus,
+            bookingType: bookingType || (immediateCheckIn ? 'Immediate' : 'Walk-in'),
+            numberOfRooms: numberOfRooms ? Number(numberOfRooms) : 1,
+            voucherUrl: voucherUrl || ''
         });
 
         if (bookingDate) {
@@ -187,19 +193,31 @@ router.post('/walk-in', async (req, res) => {
         if (paidAmt > 0) {
             const effectiveMode = paymentMode || 'Cash';
             const staffName = req.user ? `${req.user.firstName} ${req.user.lastName}`.trim() : 'FrontDesk';
+
+            // For advance bookings, paymentDate defaults to checkInDate (noon) so that it is credited to the start date's finance and analytics
+            let effectiveDate;
+            if (paymentDate) {
+                effectiveDate = new Date(typeof paymentDate === 'string' && !paymentDate.includes('T') ? paymentDate + 'T12:00:00' : paymentDate);
+            } else if (bookingType === 'Advance') {
+                effectiveDate = new Date(typeof checkInDate === 'string' && !checkInDate.includes('T') ? checkInDate + 'T12:00:00' : checkInDate);
+            } else {
+                effectiveDate = new Date();
+            }
+
             booking.financials.paymentHistory.push({
                 amount: paidAmt,
                 mode: effectiveMode,
                 staff: staffName,
-                note: 'Advance payment at registration',
-                timestamp: paymentDate ? new Date(paymentDate) : new Date()
+                note: bookingType === 'Advance' ? 'Advance deposit for upcoming booking' : 'Advance payment at registration',
+                timestamp: effectiveDate
             });
 
             // Single source of truth for transaction creation
             const isOta = effectiveMode === 'OTA';
+            const bookingTypeLabel = bookingType === 'Advance' ? 'Advance Booking' : 'Walk-in';
             const desc = isOta 
                 ? `OTA Advance (${otaPlatform || source || 'OTA'}) - ${guestDetails.firstName} ${guestDetails.lastName} - Ref #${booking._id.toString().slice(-8)}`
-                : `Walk-in Advance (${source || 'Walk-in'}) - ${guestDetails.firstName} ${guestDetails.lastName} - Ref #${booking._id.toString().slice(-8)}`;
+                : `${bookingTypeLabel} Advance (${source || 'Walk-in'}) - ${guestDetails.firstName} ${guestDetails.lastName} - Ref #${booking._id.toString().slice(-8)}`;
 
             const advanceTx = new Transaction({
                 type: 'Income',
@@ -209,7 +227,7 @@ router.post('/walk-in', async (req, res) => {
                 paymentMode: effectiveMode,
                 recordedBy: staffName,
                 approved: !isOta,
-                date: paymentDate ? new Date(paymentDate) : new Date(),
+                date: effectiveDate,
                 booking: booking._id
             });
             await advanceTx.save();
@@ -228,6 +246,7 @@ router.post('/walk-in', async (req, res) => {
         await booking.save();
 
         // Update Inventory Count (UTC midnight normalization)
+        const roomsToBook = numberOfRooms ? Math.max(1, Number(numberOfRooms)) : 1;
         const start = new Date(checkInDate);
         const end = new Date(checkOutDate);
         let curr = new Date(start);
@@ -238,7 +257,7 @@ router.post('/walk-in', async (req, res) => {
             
             await DailyInventory.findOneAndUpdate(
                 { roomCategory, date: utcDate },
-                { $inc: { bookingsCount: 1 } },
+                { $inc: { bookingsCount: roomsToBook } },
                 { upsert: true }
             );
             curr.setDate(curr.getDate() + 1);
@@ -248,6 +267,9 @@ router.post('/walk-in', async (req, res) => {
         if (io) {
             io.emit('inventory_updated', { roomCategory });
             io.emit('booking_updated', booking);
+            if (paidAmt > 0) {
+                io.emit('finance_updated');
+            }
         }
 
         res.status(201).json(booking);
@@ -442,31 +464,73 @@ router.post('/:id/add-charge', async (req, res) => {
     }
 });
 
-// POST: Check-Out Guest
+// POST: Check-Out Guest (With Mandatory Room Inspection & Clearance)
 router.post('/:id/check-out', async (req, res) => {
     try {
         const booking = await Booking.findById(req.params.id);
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
 
+        const { override, inspection, addDamageCharge } = req.body;
+
+        // Process Room Inspection if provided
+        if (inspection) {
+            const hasIssue = inspection.issueFound === true || inspection.issueFound === 'Yes' || inspection.issueFound === 'true';
+            const damageCharge = hasIssue && inspection.damageCharge ? Number(inspection.damageCharge) : 0;
+
+            booking.roomInspection = {
+                inspected: inspection.inspected === true || inspection.inspected === 'Yes' || inspection.inspected === 'true',
+                inspectedBy: inspection.inspectedBy || '',
+                issueFound: hasIssue,
+                issueDescription: hasIssue ? (inspection.issueDescription || '') : '',
+                damageCharge: damageCharge,
+                remarks: inspection.remarks || '',
+                inspectedAt: new Date()
+            };
+
+            // If damage charge applies and should be added to bill
+            if (damageCharge > 0 && (addDamageCharge !== false)) {
+                // Avoid duplicating the damage charge if already added
+                const alreadyAdded = (booking.financials.extraCharges || []).some(
+                    c => c.source === 'Damage Charges' && c.amount === damageCharge
+                );
+                if (!alreadyAdded) {
+                    booking.financials.extraCharges.push({
+                        description: `Room Damage / Missing Items: ${inspection.issueDescription || 'Damaged Items'}`,
+                        amount: damageCharge,
+                        source: 'Damage Charges',
+                        date: new Date()
+                    });
+                    booking.financials.totalAmount = (booking.financials.totalAmount || 0) + damageCharge;
+                    booking.financials.balance = booking.financials.totalAmount - (booking.financials.amountPaid || 0);
+                }
+            }
+        }
 
         // Strict Balance Check
-        if (booking.financials.balance > 0 && !req.body.override) {
+        if (booking.financials.balance > 0 && !override) {
+            // Save inspection state so far, but don't finalize checkout yet
+            await booking.save();
             return res.status(400).json({ 
                 message: 'BALANCE DUE', 
                 balance: booking.financials.balance,
                 requiresOverride: true 
-                });
+            });
         }
 
         booking.status = 'Checked-Out';
         booking.actualCheckOutTime = new Date();
         await booking.save();
 
+        // Room is NOT made available immediately: it is marked as 'Dirty' for housekeeping inspection and cleaning
         if (booking.roomUnit) {
             await RoomUnit.findByIdAndUpdate(booking.roomUnit, { status: 'Dirty' });
         }
 
-        req.app.get('socketio').emit('booking_updated', { type: 'check-out', bookingId: booking._id });
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('booking_updated', { type: 'check-out', bookingId: booking._id });
+            io.emit('room_updated', { roomUnit: booking.roomUnit, status: 'Dirty' });
+        }
         res.json(booking);
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -535,7 +599,10 @@ router.put('/:id', protect, superAdmin, async (req, res) => {
                 if (booking.roomUnit) await RoomUnit.findByIdAndUpdate(booking.roomUnit, { status: 'Occupied' });
             } else if (status === 'Checked-Out' || status === 'Cancelled') {
                 if (status === 'Checked-Out' && !booking.actualCheckOutTime) booking.actualCheckOutTime = new Date();
-                if (booking.roomUnit) await RoomUnit.findByIdAndUpdate(booking.roomUnit, { status: 'Available' });
+                if (booking.roomUnit) {
+                    const targetRoomStatus = status === 'Checked-Out' ? 'Dirty' : 'Available';
+                    await RoomUnit.findByIdAndUpdate(booking.roomUnit, { status: targetRoomStatus });
+                }
             }
         }
 

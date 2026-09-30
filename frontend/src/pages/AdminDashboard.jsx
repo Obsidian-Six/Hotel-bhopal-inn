@@ -73,6 +73,12 @@ const AdminDashboard = ({ portalMode }) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isSuperAdminView && activeTab === 'analytics') {
+      setActiveTab('bookings');
+    }
+  }, [isSuperAdminView, activeTab]);
+
   const fetchImages = async () => {
     try {
       const res = await axios.get(API_HERO);
@@ -129,9 +135,9 @@ const AdminDashboard = ({ portalMode }) => {
   const onDelete = handleDelete;
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] flex">
+    <div className="h-screen w-full bg-[#FDFBF7] flex overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#000000] text-white flex flex-col">
+      <aside className="w-72 bg-[#000000] text-white flex flex-col justify-between shrink-0 h-full overflow-y-auto">
         <div className="p-8 border-b border-white/10">
           <div className="h-16 w-full overflow-hidden flex items-center justify-center bg-white rounded-sm p-1">
             <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain scale-[2.2]" />
@@ -205,13 +211,15 @@ const AdminDashboard = ({ portalMode }) => {
             <Users size={18} className="shrink-0" />
             <span className="truncate">Front Desk</span>
           </button>
-          <button 
-            onClick={() => setActiveTab('analytics')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'analytics' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
-          >
-            <TrendingUp size={18} className="shrink-0 text-amber-400" />
-            <span className="truncate">Front Desk Analytics</span>
-          </button>
+          {isSuperAdminView && (
+            <button 
+              onClick={() => setActiveTab('analytics')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'analytics' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            >
+              <TrendingUp size={18} className="shrink-0 text-amber-400" />
+              <span className="truncate">Front Desk Analytics</span>
+            </button>
+          )}
           <button 
             onClick={() => setActiveTab('inventory')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'inventory' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
@@ -285,8 +293,8 @@ const AdminDashboard = ({ portalMode }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-grow p-10 overflow-y-auto h-screen">
-        <div className="max-w-6xl mx-auto">
+      <main className="flex-1 min-w-0 h-full overflow-y-auto p-6 md:p-10 overscroll-contain">
+        <div className="max-w-7xl mx-auto">
           {activeTab === 'hero' ? (
             <div className="space-y-10">
               <div className="flex items-center justify-between">

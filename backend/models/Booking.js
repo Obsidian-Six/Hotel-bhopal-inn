@@ -79,6 +79,28 @@ const BookingSchema = new mongoose.Schema({
     otaReferenceId: {
         type: String,
         default: ''
+    },
+    bookingType: {
+        type: String,
+        enum: ['Immediate', 'Advance', 'Walk-in', 'Online'],
+        default: 'Walk-in'
+    },
+    numberOfRooms: {
+        type: Number,
+        default: 1
+    },
+    voucherUrl: {
+        type: String,
+        default: ''
+    },
+    roomInspection: {
+        inspected: { type: Boolean, default: false },
+        inspectedBy: { type: String, default: '' },
+        issueFound: { type: Boolean, default: false },
+        issueDescription: { type: String, default: '' },
+        damageCharge: { type: Number, default: 0 },
+        remarks: { type: String, default: '' },
+        inspectedAt: { type: Date }
     }
 }, { timestamps: true });
 
