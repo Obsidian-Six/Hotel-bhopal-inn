@@ -260,7 +260,7 @@ router.post('/transactions/void/:id', async (req, res) => {
     }
 });
 
-// Helper: Calculate financials for a specific date range (prevents double-counting and captures walk-in registration sales)
+// Helper: Calculate financials for a specific date range (calculates total collections actually received on that day)
 const calculateFinancialsForRange = async (sDate, eDate) => {
     const txs = await Transaction.find({
         date: { $gte: sDate, $lte: eDate },
@@ -275,8 +275,13 @@ const calculateFinancialsForRange = async (sDate, eDate) => {
     let otaPendingCount = 0;
     let expenses = 0;
 
+    const decryptedTxs = [];
+
     txs.forEach(tx => {
         const amount = Number(decrypt(tx.amount)) || 0;
+        const desc = decrypt(tx.description);
+        decryptedTxs.push({ ...tx.toObject(), amount, description: desc });
+
         if (tx.type === 'Income') {
             if (tx.paymentMode === 'OTA') {
                 otaTotal += amount;
@@ -286,16 +291,10 @@ const calculateFinancialsForRange = async (sDate, eDate) => {
                 } else {
                     otaPendingCount++;
                 }
+            } else if (tx.paymentMode === 'Cash') {
+                cash += amount;
             } else {
-                // If it's a standalone transaction (no tx.booking), always count it.
-                // If it's linked to a booking and category is Room Rent, booking.financials handles it below.
-                if (!tx.booking || tx.category !== 'Room Rent') {
-                    if (tx.paymentMode === 'Cash') {
-                        cash += amount;
-                    } else {
-                        online += amount;
-                    }
-                }
+                online += amount;
             }
         } else if (tx.type === 'Expense' && tx.approved) {
             if (tx.paymentMode === 'Cash' || !tx.paymentMode) {
@@ -304,66 +303,47 @@ const calculateFinancialsForRange = async (sDate, eDate) => {
         }
     });
 
+    // Fallback: check booking paymentHistory for any payments on this date not already in Transaction
     const bookings = await Booking.find({
         status: { $ne: 'Cancelled' },
-        $or: [
-            { 'financials.paymentHistory.timestamp': { $gte: sDate, $lte: eDate } },
-            { createdAt: { $gte: sDate, $lte: eDate } }
-        ]
+        'financials.paymentHistory.timestamp': { $gte: sDate, $lte: eDate }
     });
 
     bookings.forEach(b => {
-        const historyOnDate = (b.financials?.paymentHistory || []).filter(
-            p => p.timestamp >= sDate && p.timestamp <= eDate
-        );
+        (b.financials?.paymentHistory || []).forEach(p => {
+            if (p.timestamp >= sDate && p.timestamp <= eDate) {
+                const amt = Number(p.amount) || 0;
+                if (amt <= 0) return;
 
-        let historySumOnDate = 0;
-        historyOnDate.forEach(p => {
-            const amt = Number(p.amount) || 0;
-            historySumOnDate += amt;
-            if (p.mode === 'OTA') {
-                const hasTx = txs.some(t => {
-                    const tAmt = Number(decrypt(t.amount)) || 0;
-                    return t.paymentMode === 'OTA' && Math.abs(tAmt - amt) < 0.01;
+                const isDuplicate = decryptedTxs.some(tx => {
+                    if (tx.booking && tx.booking.toString() === b._id.toString()) {
+                        if (Math.abs(Number(tx.amount) - amt) < 0.01) return true;
+                    }
+                    const bRef = b._id.toString().slice(-8).toLowerCase();
+                    const txDesc = (tx.description || '').toLowerCase();
+                    if (txDesc.includes(bRef) && Math.abs(Number(tx.amount) - amt) < 0.01) return true;
+
+                    const fName = (b.guestDetails?.firstName || '').toLowerCase().trim();
+                    const lName = (b.guestDetails?.lastName || '').toLowerCase().trim();
+                    const nameMatch = (fName && txDesc.includes(fName)) || (lName && txDesc.includes(lName));
+                    return Math.abs(Number(tx.amount) - amt) < 0.01 && nameMatch;
                 });
-                if (!hasTx) {
-                    otaTotal += amt;
-                    otaPendingCount++;
+
+                if (!isDuplicate) {
+                    if (p.mode === 'OTA') {
+                        otaTotal += amt;
+                        otaApproved += amt;
+                        otaApprovedCount++;
+                    } else if (p.mode === 'Cash') {
+                        cash += amt;
+                    } else {
+                        online += amt;
+                    }
                 }
-            } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(p.mode)) {
-                online += amt;
-            } else {
-                cash += amt;
             }
         });
-
-        // For bookings / walk-in registrations created on this date
-        if (b.createdAt >= sDate && b.createdAt <= eDate) {
-            const fin = b.financials || {};
-            const bookingTotal = Number(fin.totalAmount || fin.paidAmount || fin.advancePayment) || 0;
-            const remainingUnrecorded = Math.max(0, bookingTotal - historySumOnDate);
-
-            if (remainingUnrecorded > 0) {
-                const pMode = fin.paymentMode || 'Cash';
-                if (pMode === 'OTA' || ['Booking.com', 'MakeMyTrip', 'Goibibo', 'Agoda', 'Expedia', 'Airbnb', 'OTA'].includes(b.source)) {
-                    const hasTx = txs.some(t => {
-                        const tAmt = Number(decrypt(t.amount)) || 0;
-                        return t.paymentMode === 'OTA' && Math.abs(tAmt - remainingUnrecorded) < 0.01;
-                    });
-                    if (!hasTx) {
-                        otaTotal += remainingUnrecorded;
-                        otaPendingCount++;
-                    }
-                } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(pMode)) {
-                    online += remainingUnrecorded;
-                } else {
-                    cash += remainingUnrecorded;
-                }
-            }
-        }
     });
 
-    // CRITICAL: Only approved OTA is added to total
     const otaPending = Math.max(0, otaTotal - otaApproved);
     return { 
         cash, 
@@ -373,8 +353,8 @@ const calculateFinancialsForRange = async (sDate, eDate) => {
         otaPending,
         otaApprovedCount,
         otaPendingCount,
-        ota: otaApproved, 
-        total: cash + online + otaApproved, 
+        ota: otaTotal, 
+        total: cash + online + otaTotal, 
         expenses 
     };
 };
@@ -457,7 +437,7 @@ router.get('/daily-report', async (req, res) => {
             UPI: 0,
             Card: 0,
             'Bank Transfer': 0,
-            OTA: todayFin.otaApproved
+            OTA: todayFin.otaTotal
         };
 
         transactions.forEach(tx => {
@@ -1292,9 +1272,10 @@ router.get('/monthly-report', async (req, res) => {
                     if (tx.paymentMode === 'OTA') {
                         dayOtaTotal += amt;
                         if (tx.approved) dayOtaApproved += amt;
-                    } else if (tx.category !== 'Room Rent') {
-                        if (tx.paymentMode === 'Cash') dayCash += amt;
-                        else dayOnline += amt;
+                    } else if (tx.paymentMode === 'Cash') {
+                        dayCash += amt;
+                    } else {
+                        dayOnline += amt;
                     }
                 } else if (tx.type === 'Expense' && tx.approved) {
                     if (tx.paymentMode === 'Cash' || !tx.paymentMode) {
@@ -1314,43 +1295,30 @@ router.get('/monthly-report', async (req, res) => {
                 const pHistory = (b.financials?.paymentHistory || []).filter(
                     p => p.timestamp >= dayStart && p.timestamp <= dayEnd
                 );
-                let pSum = 0;
                 pHistory.forEach(p => {
                     const amt = Number(p.amount) || 0;
-                    pSum += amt;
-                    if (p.mode === 'OTA') {
-                        const hasTx = dayTxs.some(t => {
-                            const tAmt = Number(decrypt(t.amount)) || 0;
-                            return t.paymentMode === 'OTA' && Math.abs(tAmt - amt) < 0.01;
-                        });
-                        if (!hasTx) dayOtaTotal += amt;
-                    } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(p.mode)) {
-                        dayOnline += amt;
-                    } else {
-                        dayCash += amt;
-                    }
-                });
+                    if (amt <= 0) return;
 
-                // Walk-in / new booking on this day
-                if (b.createdAt >= dayStart && b.createdAt <= dayEnd) {
-                    const fin = b.financials || {};
-                    const bTotal = Number(fin.totalAmount || fin.paidAmount || fin.advancePayment) || 0;
-                    const unrecorded = Math.max(0, bTotal - pSum);
-                    if (unrecorded > 0) {
-                        const pMode = fin.paymentMode || 'Cash';
-                        if (pMode === 'OTA' || ['Booking.com', 'MakeMyTrip', 'Goibibo', 'Agoda', 'Expedia', 'Airbnb', 'OTA'].includes(b.source)) {
-                            const hasTx = dayTxs.some(t => {
-                                const tAmt = Number(decrypt(t.amount)) || 0;
-                                return t.paymentMode === 'OTA' && Math.abs(tAmt - unrecorded) < 0.01;
-                            });
-                            if (!hasTx) dayOtaTotal += unrecorded;
-                        } else if (['Online', 'Card', 'UPI', 'Bank Transfer', 'PhonePe', 'Online / UPI'].includes(pMode)) {
-                            dayOnline += unrecorded;
+                    const isDup = dayTxs.some(t => {
+                        const tAmt = Number(decrypt(t.amount)) || 0;
+                        if (t.booking && t.booking.toString() === b._id.toString() && Math.abs(tAmt - amt) < 0.01) return true;
+                        const bRef = b._id.toString().slice(-8).toLowerCase();
+                        const desc = (decrypt(t.description) || '').toLowerCase();
+                        if (desc.includes(bRef) && Math.abs(tAmt - amt) < 0.01) return true;
+                        return false;
+                    });
+
+                    if (!isDup) {
+                        if (p.mode === 'OTA') {
+                            dayOtaTotal += amt;
+                            dayOtaApproved += amt;
+                        } else if (p.mode === 'Cash') {
+                            dayCash += amt;
                         } else {
-                            dayCash += unrecorded;
+                            dayOnline += amt;
                         }
                     }
-                }
+                });
 
                 // In-house occupancy count for this day
                 const cIn = new Date(b.checkInDate);
@@ -1360,7 +1328,7 @@ router.get('/monthly-report', async (req, res) => {
                 }
             });
 
-            const dayTotalSale = dayCash + dayOnline + dayOtaApproved;
+            const dayTotalSale = dayCash + dayOnline + dayOtaTotal;
             const dayNet = dayTotalSale - dayExpenses;
 
             monthCash += dayCash;
