@@ -273,7 +273,8 @@ const calculateFinancialsForRange = async (sDate, eDate) => {
     let otaApproved = 0;
     let otaApprovedCount = 0;
     let otaPendingCount = 0;
-    let expenses = 0;
+    let totalExpenses = 0;
+    let cashExpenses = 0;
 
     const decryptedTxs = [];
 
@@ -297,8 +298,9 @@ const calculateFinancialsForRange = async (sDate, eDate) => {
                 online += amount;
             }
         } else if (tx.type === 'Expense' && tx.approved) {
+            totalExpenses += amount;
             if (tx.paymentMode === 'Cash' || !tx.paymentMode) {
-                expenses += amount;
+                cashExpenses += amount;
             }
         }
     });
@@ -350,12 +352,13 @@ const calculateFinancialsForRange = async (sDate, eDate) => {
         online, 
         otaTotal, 
         otaApproved, 
-        otaPending,
-        otaApprovedCount,
-        otaPendingCount,
+        otaPending, 
+        otaApprovedCount, 
+        otaPendingCount, 
         ota: otaTotal, 
         total: cash + online + otaTotal, 
-        expenses 
+        expenses: totalExpenses,
+        cashExpenses: cashExpenses
     };
 };
 
@@ -397,7 +400,7 @@ const getOpeningCashBalance = async (startOfDay) => {
 
     // Calculate cash income and cash expenses between baseDate and startOfDay
     const priorFin = await calculateFinancialsForRange(baseDate, new Date(startOfDay.getTime() - 1));
-    const accumulatedCash = (priorFin.cash || 0) - (priorFin.expenses || 0);
+    const accumulatedCash = (priorFin.cash || 0) - (priorFin.cashExpenses || 0);
 
     return Math.max(0, baseBalance + accumulatedCash);
 };
@@ -433,7 +436,7 @@ router.get('/daily-report', async (req, res) => {
 
         let incomeByMode = {
             Cash: todayFin.cash,
-            Online: todayFin.online,
+            Online: 0,
             UPI: 0,
             Card: 0,
             'Bank Transfer': 0,
@@ -442,29 +445,20 @@ router.get('/daily-report', async (req, res) => {
 
         transactions.forEach(tx => {
             const amount = Number(decrypt(tx.amount)) || 0;
-            if (tx.type === 'Income' && ['UPI', 'Card', 'Bank Transfer'].includes(tx.paymentMode)) {
-                incomeByMode[tx.paymentMode] = (incomeByMode[tx.paymentMode] || 0) + amount;
-            }
-        });
-
-        const bookings = await Booking.find({
-            'financials.paymentHistory.timestamp': { $gte: startOfDay, $lte: endOfDay }
-        });
-        bookings.forEach(b => {
-            (b.financials?.paymentHistory || []).forEach(p => {
-                if (p.timestamp >= startOfDay && p.timestamp <= endOfDay) {
-                    if (['UPI', 'Card', 'Bank Transfer'].includes(p.mode)) {
-                        incomeByMode[p.mode] = (incomeByMode[p.mode] || 0) + (Number(p.amount) || 0);
-                    }
+            if (tx.type === 'Income') {
+                if (['UPI', 'Card', 'Bank Transfer'].includes(tx.paymentMode)) {
+                    incomeByMode[tx.paymentMode] = (incomeByMode[tx.paymentMode] || 0) + amount;
+                } else if (tx.paymentMode !== 'Cash' && tx.paymentMode !== 'OTA') {
+                    incomeByMode.Online = (incomeByMode.Online || 0) + amount;
                 }
-            });
+            }
         });
 
         // 3. Opening Cash Balance carried forward from previous day
         const openingBalance = await getOpeningCashBalance(startOfDay);
 
         const totalCashIncome = todayFin.cash;
-        const totalCashExpense = todayFin.expenses;
+        const totalCashExpense = todayFin.cashExpenses;
         const closingCashBalance = openingBalance + totalCashIncome - totalCashExpense;
 
         let summary = {

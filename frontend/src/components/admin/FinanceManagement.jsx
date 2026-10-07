@@ -352,8 +352,8 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
               date: new Date(selectedDate),
               openingBalance: summary.openingBalance || 0, 
               totalCashIncome: summary.incomeByMode['Cash'] || 0,
-              totalCashExpense: summary.totalExpense || 0, 
-              closingBalance: (summary.openingBalance || 0) + (summary.incomeByMode['Cash'] || 0) - (summary.totalExpense || 0),
+              totalCashExpense: summary.todayCashExpense !== undefined ? summary.todayCashExpense : (summary.totalExpense || 0), 
+              closingBalance: summary.closingBalance !== undefined ? summary.closingBalance : ((summary.openingBalance || 0) + (summary.incomeByMode['Cash'] || 0) - (summary.todayCashExpense || 0)),
               netDayTotal: (summary.totalIncome || 0) - (summary.totalExpense || 0)
           });
           fetchData();
@@ -370,7 +370,8 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
       const totalIncome = summary?.totalIncome || 0;
       const totalExpense = summary?.totalExpense || 0;
       const openingBalance = summary?.openingBalance || 0;
-      const netCashBalance = openingBalance + (incomeByMode['Cash'] || 0) - totalExpense;
+      const todayCashExpense = summary?.todayCashExpense !== undefined ? summary.todayCashExpense : (summary?.totalExpense || 0);
+      const netCashBalance = summary?.closingBalance !== undefined ? summary.closingBalance : (openingBalance + (incomeByMode['Cash'] || 0) - todayCashExpense);
       const totalPendingDues = pendingDues.reduce((acc, curr) => acc + (curr.balance || 0), 0);
 
       const tableHtml = `
@@ -410,6 +411,10 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
             <td style="border: 1px solid #CBD5E1; padding: 6px; text-align: right; font-weight: bold; color: #065F46;">₹${totalIncome.toLocaleString()}</td>
             <td style="border: 1px solid #CBD5E1; padding: 6px; text-align: right; font-weight: bold; color: #991B1B;">₹${totalExpense.toLocaleString()}</td>
             <td style="border: 1px solid #CBD5E1; padding: 6px; text-align: right; font-weight: bold;">₹${netCashBalance.toLocaleString()}</td>
+          </tr>
+          <tr style="background-color: #ECFDF5; font-weight: bold;">
+            <td colspan="5" style="border: 1px solid #CBD5E1; padding: 6px; text-align: right; font-weight: bold; color: #065F46;">Today Net Income (Total Income - Total Expenses):</td>
+            <td colspan="2" style="border: 1px solid #CBD5E1; padding: 6px; text-align: right; font-weight: bold; color: ${(totalIncome - totalExpense) >= 0 ? '#065F46' : '#991B1B'};">₹${(totalIncome - totalExpense).toLocaleString()}</td>
           </tr>
           <tr><td colspan="7"></td></tr>
 
@@ -1304,11 +1309,20 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                             </div>
                             <div className="p-4 col-span-2 border-b border-white/5 flex justify-between items-center bg-white/5">
                                 <span className="text-white/80 font-bold">Closing Cash Balance (Physical Cash):</span>
-                                <span className="font-bold text-white">₹{((summary.openingBalance || 0) + (summary.incomeByMode?.['Cash'] || 0) - (summary.totalExpense || 0)).toLocaleString()}</span>
+                                <span className="font-bold text-white">₹{(summary.closingBalance !== undefined ? summary.closingBalance : ((summary.openingBalance || 0) + (summary.incomeByMode?.['Cash'] || 0) - (summary.todayCashExpense !== undefined ? summary.todayCashExpense : (summary.totalExpense || 0)))).toLocaleString()}</span>
+                            </div>
+                            <div className="p-4 col-span-2 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-emerald-500/10 border-l-4 border-l-emerald-500">
+                                <div>
+                                    <span className="text-emerald-400 font-black text-sm uppercase tracking-wide block">Today Net Income:</span>
+                                    <span className="text-[10px] text-white/60 font-medium">Today Total Income - Expenditure</span>
+                                </div>
+                                <span className={`font-black text-xl ${((summary.totalIncome || 0) - (summary.totalExpense || 0)) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                    ₹{((summary.totalIncome || 0) - (summary.totalExpense || 0)).toLocaleString()}
+                                </span>
                             </div>
                             <div className="p-4 col-span-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-[#BFA37E]/20">
                                 <div>
-                                    <span className="text-[#BFA37E] font-black text-sm uppercase tracking-wide block">Net Income / Balance:</span>
+                                    <span className="text-[#BFA37E] font-black text-sm uppercase tracking-wide block">Net Balance / Carry Forward:</span>
                                     <span className="text-[10px] text-white/60 font-medium">Opening Balance + Today Income - Expenditure</span>
                                 </div>
                                 <span className="font-black text-xl text-[#BFA37E]">
