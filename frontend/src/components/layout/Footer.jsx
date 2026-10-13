@@ -86,9 +86,7 @@ const Footer = () => {
                     <a href="https://wa.me/919630252729" target="_blank" rel="noopener noreferrer" className="hover:text-[#25D366] transition-colors flex items-center gap-2">
                         +91 96302 52729
                     </a>
-                    <a href="https://wa.me/917225888650" target="_blank" rel="noopener noreferrer" className="hover:text-[#25D366] transition-colors flex items-center gap-2">
-                        +91 72258 88650
-                    </a>
+                    
                 </div>
               </li>
             </ul>

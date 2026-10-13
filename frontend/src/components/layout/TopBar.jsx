@@ -12,7 +12,7 @@ const TopBar = () => {
           </a>
           <a href="tel:+916267276957" className="flex items-center gap-2 hover:text-[#BFA37E] transition-colors">
             <Phone size={14} className="text-[#BFA37E]" />
-            +91 62672 76957 / +91 96302 52729 / +91 72258 88650
+            +91 62672 76957 / +91 96302 52729
           </a>
         </div>
         
