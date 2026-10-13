@@ -15,6 +15,7 @@ import Testimonials from '@/components/home/Testimonials';
 import InstagramFeed from '@/components/home/InstagramFeed';
 import NewsletterSignup from '@/components/home/NewsletterSignup';
 import Footer from '@/components/layout/Footer';
+// import HeroSection2 from '@/components/home/HeroSection2';
 
 const Home = () => {
   return (
@@ -26,6 +27,7 @@ const Home = () => {
       
       <main className="flex-grow pt-0"> {/* Let hero slide under fixed header */}
         <HeroSection />
+        {/* <HeroSection2 /> */}
         <BookingWidget />
         <USPStrip />
         <RoomCategories />
