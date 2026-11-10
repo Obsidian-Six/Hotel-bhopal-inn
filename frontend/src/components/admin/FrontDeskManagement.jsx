@@ -1089,6 +1089,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
   }, [isMeterModalOpen]);
 
   const [selectedDashboardDate, setSelectedDashboardDate] = useState('');
+  const [dashboardSearch, setDashboardSearch] = useState('');
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -1097,7 +1098,23 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
   };
 
   // Derived filtered bookings for Dashboard Table based on Selected Calendar Date
+  // Search by room number, guest name or phone (works together with the date filter)
+  const matchesDashboardSearch = (b) => {
+    const q = dashboardSearch.trim().toLowerCase();
+    if (!q) return true;
+    const room = String(b.roomUnit?.roomNumber || '').toLowerCase();
+    const g = b.guestDetails || {};
+    const clean = (t) => String(t).toLowerCase().replace(/[^a-z0-9\u0900-\u097f ]/g, ' ').replace(/\s+/g, ' ').trim();
+    const name = clean(`${g.firstName || ''} ${g.lastName || ''}`);
+    const phone = String(g.phone || '').replace(/\D/g, '');
+    const qDigits = q.replace(/\D/g, '');
+    if (/^\d{1,4}$/.test(q)) return room.startsWith(q);          // short number = room
+    if (/^[\d\s+-]+$/.test(q)) return qDigits.length >= 5 && phone.includes(qDigits); // long number = phone
+    return name.includes(clean(q)) || room === q;
+  };
+
   const filteredDashboardBookings = (bookings || []).filter(b => {
+    if (!matchesDashboardSearch(b)) return false;
     if (!selectedDashboardDate) return true;
     const targetDate = selectedDashboardDate;
     const cIn = b.checkInDate ? b.checkInDate.split('T')[0] : '';
@@ -1709,6 +1726,28 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                 </button>
               )}
             </div>
+
+            {/* Search by room number, guest name or phone */}
+            <div className="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded border border-slate-700">
+              <Search size={14} className="text-[#BFA37E]" />
+              <input
+                type="search"
+                value={dashboardSearch}
+                onChange={e => setDashboardSearch(e.target.value)}
+                placeholder="Room no., guest name or phone"
+                aria-label="Search bookings by room number, guest name or phone"
+                className="bg-slate-800 text-white text-xs font-bold px-2 py-0.5 rounded border border-slate-600 focus:outline-none focus:border-[#BFA37E] w-56 placeholder:text-slate-500 placeholder:font-normal"
+              />
+              {dashboardSearch && (
+                <button
+                  onClick={() => setDashboardSearch('')}
+                  className="text-slate-400 hover:text-white"
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap sm:flex-nowrap">
@@ -1756,7 +1795,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
               {loading && bookings.length === 0 ? (
                 <tr><td colSpan="7" className="p-12 text-center text-slate-400 uppercase font-bold tracking-widest">Syncing Dashboard...</td></tr>
               ) : filteredDashboardBookings.length === 0 ? (
-                <tr><td colSpan="7" className="p-12 text-center text-slate-400 uppercase font-bold tracking-widest">No bookings found for selected calendar date ({selectedDashboardDate}).</td></tr>
+                <tr><td colSpan="7" className="p-12 text-center text-slate-400 uppercase font-bold tracking-widest">{dashboardSearch.trim() ? `No bookings match "${dashboardSearch.trim()}"${selectedDashboardDate ? ` on ${selectedDashboardDate}` : ''}.` : `No bookings found for selected calendar date (${selectedDashboardDate}).`}</td></tr>
               ) : filteredDashboardBookings.map((booking) => (
                 <tr key={booking._id} onClick={() => { setSelectedBooking(booking); setIsDetailOpen(true); }} className="border-b hover:bg-emerald-50/50 cursor-pointer transition-colors group">
                   <td className="px-6 py-5">

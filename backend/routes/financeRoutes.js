@@ -8,10 +8,10 @@ const RoomUnit = require('../models/RoomUnit');
 const ElectricityReading = require('../models/ElectricityReading');
 const Amendment = require('../models/Amendment');
 const { encrypt, decrypt } = require('../utils/crypto');
-const { protect, superAdmin } = require('../middleware/auth');
+const { protect, superAdmin, admin, staffOrIntegration } = require('../middleware/auth');
 
 // Add a transaction
-router.post('/transactions', async (req, res) => {
+router.post('/transactions', protect, admin, async (req, res) => {
     try {
         const { type, category, amount, description, paymentMode, recordedBy, approved, approvedBy, date } = req.body;
         
@@ -58,7 +58,7 @@ router.post('/transactions', async (req, res) => {
 });
 
 // Get transactions (filter by date)
-router.get('/transactions', async (req, res) => {
+router.get('/transactions', protect, admin, async (req, res) => {
     try {
         const { date } = req.query;
         let query = { isVoided: false };
@@ -154,7 +154,7 @@ router.get('/transactions', async (req, res) => {
 });
 
 // PUT: Edit Transaction (Super Admin or staff with approved amendment)
-router.put('/transactions/:id', protect, async (req, res) => {
+router.put('/transactions/:id', protect, admin, async (req, res) => {
     try {
         const tx = await Transaction.findById(req.params.id);
         if (!tx) return res.status(404).json({ message: 'Transaction not found' });
@@ -244,7 +244,7 @@ router.put('/transactions/:id', protect, async (req, res) => {
 });
 
 // Void a transaction (instead of delete)
-router.post('/transactions/void/:id', async (req, res) => {
+router.post('/transactions/void/:id', protect, admin, async (req, res) => {
     try {
         const { voidReason } = req.body;
         const tx = await Transaction.findById(req.params.id);
@@ -406,7 +406,7 @@ const getOpeningCashBalance = async (startOfDay) => {
 };
 
 // Get daily report summary
-router.get('/daily-report', async (req, res) => {
+router.get('/daily-report', protect, admin, async (req, res) => {
     try {
         const { date } = req.query;
         let startOfDay, endOfDay, queryDate;
@@ -483,7 +483,7 @@ router.get('/daily-report', async (req, res) => {
 });
 
 // GET: Dedicated Front Desk Analytics for selected date
-router.get('/analytics-date', async (req, res) => {
+router.get('/analytics-date', staffOrIntegration, async (req, res) => {
     try {
         const { date } = req.query;
         let startOfDay, endOfDay;
@@ -711,7 +711,7 @@ router.get('/analytics-date', async (req, res) => {
 });
 
 // GET: F&B Food Orders & Restaurant Bills for Front Desk Analytics
-router.get('/food-orders', async (req, res) => {
+router.get('/food-orders', staffOrIntegration, async (req, res) => {
     try {
         const { date } = req.query; // date in YYYY-MM-DD format
         let startOfDay, endOfDay;
@@ -833,7 +833,7 @@ router.get('/food-orders', async (req, res) => {
 });
 
 // Get pending dues from bookings with amendment status
-router.get('/pending-dues', async (req, res) => {
+router.get('/pending-dues', protect, admin, async (req, res) => {
     try {
         const bookings = await Booking.find({
             status: { $in: ['Confirmed', 'Checked-In', 'Checked-Out'] },
@@ -878,7 +878,7 @@ router.get('/pending-dues', async (req, res) => {
 });
 
 // Submit Cash Handover
-router.post('/cash-handover', async (req, res) => {
+router.post('/cash-handover', protect, admin, async (req, res) => {
     try {
         const { date, shiftEndTime, staffName, handoverTo, openingBalance, totalCashIncome, totalCashExpense, closingBalance, netDayTotal } = req.body;
         
@@ -902,7 +902,7 @@ router.post('/cash-handover', async (req, res) => {
 });
 
 // Get Cash Handover for a date
-router.get('/cash-handover', async (req, res) => {
+router.get('/cash-handover', protect, admin, async (req, res) => {
     try {
         const { date } = req.query;
         if (!date) return res.status(400).json({ message: 'Date is required' });
@@ -933,7 +933,7 @@ router.get('/cash-handover', async (req, res) => {
 });
 
 // Save or Update Electricity Meter Reading (Support both create and edit by ID/date)
-router.post('/meter-reading', async (req, res) => {
+router.post('/meter-reading', protect, admin, async (req, res) => {
     try {
         const { _id, date, reading, notes, recordedBy } = req.body;
         if (!date || reading === undefined || reading === null || reading === '') {
@@ -991,7 +991,7 @@ router.post('/meter-reading', async (req, res) => {
 });
 
 // Update specific Meter Reading by ID
-router.put('/meter-reading/:id', async (req, res) => {
+router.put('/meter-reading/:id', protect, admin, async (req, res) => {
     try {
         const { date, reading, notes, recordedBy } = req.body;
         if (!date || reading === undefined || reading === null || reading === '') {
@@ -1035,7 +1035,7 @@ router.put('/meter-reading/:id', async (req, res) => {
 });
 
 // Delete specific Meter Reading by ID
-router.delete('/meter-reading/:id', async (req, res) => {
+router.delete('/meter-reading/:id', protect, admin, async (req, res) => {
     try {
         const deleted = await ElectricityReading.findByIdAndDelete(req.params.id);
         if (!deleted) {
@@ -1054,7 +1054,7 @@ router.delete('/meter-reading/:id', async (req, res) => {
 });
 
 // Get Electricity Meter Readings
-router.get('/meter-readings', async (req, res) => {
+router.get('/meter-readings', protect, admin, async (req, res) => {
     try {
         const readings = await ElectricityReading.find().sort({ dateStr: -1 }).limit(50);
         res.json(readings);
@@ -1064,7 +1064,7 @@ router.get('/meter-readings', async (req, res) => {
 });
 
 // GET: Fetch all OTA transactions (with optional ?date=YYYY-MM-DD and ?status=all|pending|approved)
-router.get('/ota-transactions', async (req, res) => {
+router.get('/ota-transactions', protect, admin, async (req, res) => {
     try {
         const { date, status } = req.query;
         let query = {
@@ -1118,7 +1118,7 @@ router.get('/ota-transactions', async (req, res) => {
 });
 
 // POST: Approve an OTA transaction
-router.post('/ota-transactions/:id/approve', async (req, res) => {
+router.post('/ota-transactions/:id/approve', protect, admin, async (req, res) => {
     try {
         const tx = await Transaction.findById(req.params.id);
         if (!tx) {
@@ -1153,7 +1153,7 @@ router.post('/ota-transactions/:id/approve', async (req, res) => {
 });
 
 // POST: Batch approve all pending OTA transactions
-router.post('/ota-transactions/approve-all', async (req, res) => {
+router.post('/ota-transactions/approve-all', protect, admin, async (req, res) => {
     try {
         const { date } = req.body;
         let query = {
@@ -1192,7 +1192,7 @@ router.post('/ota-transactions/approve-all', async (req, res) => {
 });
 
 // GET: Dedicated Front Desk Analytics Monthly Report
-router.get('/monthly-report', async (req, res) => {
+router.get('/monthly-report', protect, admin, async (req, res) => {
     try {
         const { month, year: qYear } = req.query;
         let targetYear, targetMonth; // 1-indexed

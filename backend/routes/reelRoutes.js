@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { protect, admin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const Reel = require('../models/Reel');
@@ -34,7 +35,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.post('/', upload.single('video'), async (req, res) => {
+router.post('/', protect, admin, upload.single('video'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'Please upload a video' });
     
     const newReel = new Reel({
@@ -50,7 +51,7 @@ router.post('/', upload.single('video'), async (req, res) => {
     }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, admin, async (req, res) => {
     try {
         const updatedReel = await Reel.findByIdAndUpdate(
             req.params.id, 
@@ -63,7 +64,7 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, admin, async (req, res) => {
     try {
         const reel = await Reel.findById(req.params.id);
         if (!reel) return res.status(404).json({ message: 'Reel not found' });

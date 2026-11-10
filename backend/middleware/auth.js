@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -45,4 +46,18 @@ const superAdmin = (req, res, next) => {
     }
 };
 
-module.exports = { protect, admin, superAdmin };
+// Read-only access for the Daily Ops app: a GET request carrying the secret
+// X-Integration-Key header (DAILY_OPS_KEY in .env) is let through; anything
+// else must be a logged-in staff/admin user as before.
+const staffOrIntegration = (req, res, next) => {
+    const key = process.env.DAILY_OPS_KEY || '';
+    const sent = req.headers['x-integration-key'];
+    if (req.method === 'GET' && key.length >= 24 && typeof sent === 'string' && sent.length === key.length
+        && crypto.timingSafeEqual(Buffer.from(sent), Buffer.from(key))) {
+        req.user = { _id: null, role: 'integration' };
+        return next();
+    }
+    return protect(req, res, () => admin(req, res, next));
+};
+
+module.exports = { protect, admin, superAdmin, staffOrIntegration };

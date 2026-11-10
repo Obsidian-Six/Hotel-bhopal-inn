@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { protect, admin } = require('../middleware/auth');
 const Testimonial = require('../models/Testimonial');
 
 // @route   GET /api/testimonials
@@ -19,7 +20,7 @@ router.get('/', async (req, res) => {
 
 // @route   POST /api/testimonials
 // @desc    Create a testimonial
-router.post('/', async (req, res) => {
+router.post('/', protect, admin, async (req, res) => {
     const { name, city, text, source, rating, isVisible } = req.body;
     
     if (!name || !city || !text) {
@@ -45,7 +46,7 @@ router.post('/', async (req, res) => {
 
 // @route   PUT /api/testimonials/:id
 // @desc    Update a testimonial
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, admin, async (req, res) => {
     const { name, city, text, source, rating } = req.body;
 
     try {
@@ -69,7 +70,7 @@ router.put('/:id', async (req, res) => {
 
 // @route   DELETE /api/testimonials/:id
 // @desc    Delete a testimonial
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, admin, async (req, res) => {
     try {
         const mongoose = require('mongoose');
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -87,7 +88,7 @@ router.delete('/:id', async (req, res) => {
 
 // @route   PATCH /api/testimonials/:id/toggle
 // @desc    Toggle visibility
-router.patch('/:id/toggle', async (req, res) => {
+router.patch('/:id/toggle', protect, admin, async (req, res) => {
     try {
         const testimonial = await Testimonial.findById(req.params.id);
         if (!testimonial) {

@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const { protect, admin, staffOrIntegration } = require('../middleware/auth');
 const RoomUnit = require('../models/RoomUnit');
 const Room = require('../models/Room');
 const Booking = require('../models/Booking');
 const DailyInventory = require('../models/DailyInventory');
 
 // Get extranet calendar data
-router.get('/calendar', async (req, res) => {
+router.get('/calendar', protect, admin, async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
         
@@ -33,7 +34,7 @@ router.get('/calendar', async (req, res) => {
 });
 
 // Extranet Calendar API (Matches Booking.com style)
-router.get('/extranet-calendar', async (req, res) => {
+router.get('/extranet-calendar', protect, admin, async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
         
@@ -70,7 +71,7 @@ router.get('/extranet-calendar', async (req, res) => {
 });
 
 // Bulk Edit API
-router.post('/bulk-edit', async (req, res) => {
+router.post('/bulk-edit', protect, admin, async (req, res) => {
     try {
         const { fromDate, toDate, daysOfWeek, roomCategory, roomsToSell, price, status } = req.body;
         
@@ -237,7 +238,7 @@ router.post('/calculate-price', async (req, res) => {
 });
 
 // Room Unit Management endpoints
-router.post('/units', async (req, res) => {
+router.post('/units', protect, admin, async (req, res) => {
     try {
         const { roomNumber, category, status } = req.body;
         const newUnit = new RoomUnit({ roomNumber, category, status });
@@ -248,7 +249,7 @@ router.post('/units', async (req, res) => {
     }
 });
 
-router.get('/units', async (req, res) => {
+router.get('/units', staffOrIntegration, async (req, res) => {
     try {
         const units = await RoomUnit.find().populate('category');
         res.json(units);
@@ -257,7 +258,7 @@ router.get('/units', async (req, res) => {
     }
 });
 
-router.get('/units/available', async (req, res) => {
+router.get('/units/available', protect, admin, async (req, res) => {
     try {
         const units = await RoomUnit.find({ status: 'Available' }).populate('category');
         res.json(units);
@@ -266,7 +267,7 @@ router.get('/units/available', async (req, res) => {
     }
 });
 
-router.put('/units/:id/status', async (req, res) => {
+router.put('/units/:id/status', protect, admin, async (req, res) => {
     try {
         const { status } = req.body;
         const unit = await RoomUnit.findByIdAndUpdate(
@@ -288,7 +289,7 @@ router.put('/units/:id/status', async (req, res) => {
     }
 });
 
-router.delete('/units/:id', async (req, res) => {
+router.delete('/units/:id', protect, admin, async (req, res) => {
     try {
         await RoomUnit.findByIdAndDelete(req.params.id);
         res.json({ message: 'Room unit deleted' });

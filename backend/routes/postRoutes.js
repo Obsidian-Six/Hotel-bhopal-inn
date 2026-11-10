@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { protect, admin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const Post = require('../models/Post');
@@ -27,7 +28,7 @@ router.get('/', async (req, res) => {
 
 const { optimizeImage } = require('../utils/imageOptimizer');
 
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/', protect, admin, upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'Please upload an image' });
     await optimizeImage(req.file.path);
     const post = new Post({
@@ -42,7 +43,7 @@ router.post('/', upload.single('image'), async (req, res) => {
     }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, admin, async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
         if (post && fs.existsSync(path.join(__dirname, '..', post.image))) {

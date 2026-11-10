@@ -6,10 +6,10 @@ const RoomUnit = require('../models/RoomUnit');
 const DailyInventory = require('../models/DailyInventory');
 const Transaction = require('../models/Transaction');
 const { encrypt, decrypt } = require('../utils/crypto');
-const { protect, superAdmin } = require('../middleware/auth');
+const { protect, admin, superAdmin } = require('../middleware/auth');
 
 // GET: List all amendment requests (Supports ?status=all|pending|approved|rejected|completed|active)
-router.get('/', protect, async (req, res) => {
+router.get('/', protect, admin, async (req, res) => {
     try {
         const { status } = req.query;
         let query = {};
@@ -38,7 +38,7 @@ router.get('/', protect, async (req, res) => {
 });
 
 // GET: Single amendment request by ID
-router.get('/:id', protect, async (req, res) => {
+router.get('/:id', protect, admin, async (req, res) => {
     try {
         const amendment = await Amendment.findById(req.params.id)
             .populate({
@@ -60,7 +60,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // POST: Normal Admin requests an amendment on a wrong entry
-router.post('/request', protect, async (req, res) => {
+router.post('/request', protect, admin, async (req, res) => {
     try {
         const { bookingId, transactionId, reason } = req.body;
         if (!bookingId && !transactionId) {
@@ -266,7 +266,7 @@ router.put('/:id/reject', protect, superAdmin, async (req, res) => {
 });
 
 // PUT: Execute Edit on the Entry (Staff Admin with approved access OR Super Admin)
-router.put('/:id/execute-edit', protect, async (req, res) => {
+router.put('/:id/execute-edit', protect, admin, async (req, res) => {
     try {
         const amendment = await Amendment.findById(req.params.id);
         if (!amendment) {
@@ -471,7 +471,7 @@ router.put('/:id/execute-edit', protect, async (req, res) => {
 });
 
 // DELETE: Execute Delete on the Entry (Staff Admin with approved access OR Super Admin)
-router.delete('/:id/execute-delete', protect, async (req, res) => {
+router.delete('/:id/execute-delete', protect, admin, async (req, res) => {
     try {
         const amendment = await Amendment.findById(req.params.id);
         if (!amendment) {

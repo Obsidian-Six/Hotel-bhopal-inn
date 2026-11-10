@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { protect, admin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const EventGallery = require('../models/EventGallery');
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
 
 const { optimizeImage } = require('../utils/imageOptimizer');
 
-router.post('/', upload.array('images', 10), async (req, res) => {
+router.post('/', protect, admin, upload.array('images', 10), async (req, res) => {
     try {
         const { title, category } = req.body;
         const uploadedImages = [];
@@ -50,7 +51,7 @@ router.post('/', upload.array('images', 10), async (req, res) => {
     }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, admin, async (req, res) => {
     try {
         const mongoose = require('mongoose');
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -69,7 +70,7 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', protect, admin, async (req, res) => {
     try {
         const mongoose = require('mongoose');
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {

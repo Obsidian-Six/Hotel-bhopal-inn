@@ -2,6 +2,28 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import config from '../config';
 
+// Attach the saved login to every request before any page starts loading data.
+try {
+    const savedToken = localStorage.getItem('token');
+    if (savedToken) axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
+} catch (e) { /* storage unavailable */ }
+
+// If a staff/admin session has expired, send the person back to the right login page.
+axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        const status = error?.response?.status;
+        const path = typeof window !== 'undefined' ? window.location.pathname : '';
+        if (status === 401 && (path.startsWith('/super-admin') || path.startsWith('/admin'))
+            && !path.startsWith('/super-admin-login') && !path.startsWith('/admin-login')) {
+            try { localStorage.removeItem('token'); localStorage.removeItem('user'); } catch (e) { /* ignore */ }
+            delete axios.defaults.headers.common['Authorization'];
+            window.location.href = path.startsWith('/super-admin') ? '/super-admin-login' : '/admin-login';
+        }
+        return Promise.reject(error);
+    }
+);
+
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { protect, admin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const Banquet = require('../models/Banquet');
@@ -34,7 +35,7 @@ router.get('/', async (req, res) => {
 
 // @route   PUT /api/banquet
 // @desc    Update banquet details
-router.put('/', async (req, res) => {
+router.put('/', protect, admin, async (req, res) => {
     try {
         let banquet = await Banquet.findOne();
         if (!banquet) banquet = new Banquet();
@@ -51,7 +52,7 @@ const { optimizeImage } = require('../utils/imageOptimizer');
 
 // @route   POST /api/banquet/hero
 // @desc    Upload hero image
-router.post('/hero', upload.single('image'), async (req, res) => {
+router.post('/hero', protect, admin, upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'Please upload an image' });
 
     try {
@@ -69,7 +70,7 @@ router.post('/hero', upload.single('image'), async (req, res) => {
 
 // @route   DELETE /api/banquet/hero/:filename
 // @desc    Delete hero image
-router.delete('/hero/:filename', async (req, res) => {
+router.delete('/hero/:filename', protect, admin, async (req, res) => {
     try {
         let banquet = await Banquet.findOne();
         if (!banquet) return res.status(404).json({ message: 'Banquet not found' });
@@ -89,7 +90,7 @@ router.delete('/hero/:filename', async (req, res) => {
 
 // @route   POST /api/banquet/overview
 // @desc    Add overview photo
-router.post('/overview', upload.single('image'), async (req, res) => {
+router.post('/overview', protect, admin, upload.single('image'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'Please upload an image' });
 
     try {
@@ -107,7 +108,7 @@ router.post('/overview', upload.single('image'), async (req, res) => {
 
 // @route   DELETE /api/banquet/overview/:filename
 // @desc    Delete overview photo
-router.delete('/overview/:filename', async (req, res) => {
+router.delete('/overview/:filename', protect, admin, async (req, res) => {
     try {
         let banquet = await Banquet.findOne();
         if (!banquet) return res.status(404).json({ message: 'Banquet not found' });

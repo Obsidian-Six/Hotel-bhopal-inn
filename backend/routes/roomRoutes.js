@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { protect, admin } = require('../middleware/auth');
 const Room = require('../models/Room');
 const DailyInventory = require('../models/DailyInventory');
 const multer = require('multer');
@@ -77,7 +78,7 @@ router.get('/:category', async (req, res) => {
 const { optimizeImage } = require('../utils/imageOptimizer');
 
 // Create/Update Room (Admin)
-router.post('/', upload.array('images', 10), async (req, res) => {
+router.post('/', protect, admin, upload.array('images', 10), async (req, res) => {
     try {
         const { category, title, description, amenities, details, tags, icalUrls } = req.body;
         
@@ -172,7 +173,7 @@ router.post('/', upload.array('images', 10), async (req, res) => {
 });
 
 // Delete Room (Admin)
-router.delete('/:category', async (req, res) => {
+router.delete('/:category', protect, admin, async (req, res) => {
     try {
         const result = await Room.deleteOne({ category: req.params.category });
         if (result.deletedCount === 0) {

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { protect, admin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const Category = require('../models/Category');
@@ -30,7 +31,7 @@ router.get('/categories', async (req, res) => {
 
 const { optimizeImage } = require('../utils/imageOptimizer');
 
-router.post('/categories', upload.single('image'), async (req, res) => {
+router.post('/categories', protect, admin, upload.single('image'), async (req, res) => {
     if (req.file) await optimizeImage(req.file.path);
     const category = new Category({
         name: req.body.name,
@@ -44,7 +45,7 @@ router.post('/categories', upload.single('image'), async (req, res) => {
     }
 });
 
-router.delete('/categories/:id', async (req, res) => {
+router.delete('/categories/:id', protect, admin, async (req, res) => {
     try {
         const cat = await Category.findById(req.params.id);
         if (cat && fs.existsSync(path.join(__dirname, '..', cat.image))) {
@@ -68,7 +69,7 @@ router.get('/items', async (req, res) => {
     }
 });
 
-router.post('/items', upload.single('picture'), async (req, res) => {
+router.post('/items', protect, admin, upload.single('picture'), async (req, res) => {
     if (req.file) await optimizeImage(req.file.path);
     const item = new MenuItem({
         ...req.body,
@@ -82,7 +83,7 @@ router.post('/items', upload.single('picture'), async (req, res) => {
     }
 });
 
-router.put('/items/:id', upload.single('picture'), async (req, res) => {
+router.put('/items/:id', protect, admin, upload.single('picture'), async (req, res) => {
     try {
         const update = { ...req.body };
         if (req.file) {
@@ -96,7 +97,7 @@ router.put('/items/:id', upload.single('picture'), async (req, res) => {
     }
 });
 
-router.delete('/items/:id', async (req, res) => {
+router.delete('/items/:id', protect, admin, async (req, res) => {
     try {
         const item = await MenuItem.findById(req.params.id);
         if (item && fs.existsSync(path.join(__dirname, '..', item.picture))) {
@@ -119,7 +120,7 @@ router.get('/specials', async (req, res) => {
     }
 });
 
-router.post('/specials', upload.single('image'), async (req, res) => {
+router.post('/specials', protect, admin, upload.single('image'), async (req, res) => {
     try {
         let items = [];
         if (req.body.items) {
@@ -137,7 +138,7 @@ router.post('/specials', upload.single('image'), async (req, res) => {
     }
 });
 
-router.put('/specials/:id', upload.single('image'), async (req, res) => {
+router.put('/specials/:id', protect, admin, upload.single('image'), async (req, res) => {
     try {
         const update = { heading: req.body.heading };
         if (req.file) {
@@ -153,7 +154,7 @@ router.put('/specials/:id', upload.single('image'), async (req, res) => {
     }
 });
 
-router.delete('/specials/:id', async (req, res) => {
+router.delete('/specials/:id', protect, admin, async (req, res) => {
     try {
         const special = await Special.findById(req.params.id);
         if (special && fs.existsSync(path.join(__dirname, '..', special.image))) {
@@ -167,7 +168,7 @@ router.delete('/specials/:id', async (req, res) => {
 });
 
 // Special Items
-router.post('/specials/:id/items', upload.single('picture'), async (req, res) => {
+router.post('/specials/:id/items', protect, admin, upload.single('picture'), async (req, res) => {
     try {
         const special = await Special.findById(req.params.id);
         if (!special) return res.status(404).json({ message: 'Special not found' });
@@ -189,7 +190,7 @@ router.post('/specials/:id/items', upload.single('picture'), async (req, res) =>
     }
 });
 
-router.delete('/specials/:specialId/items/:itemId', async (req, res) => {
+router.delete('/specials/:specialId/items/:itemId', protect, admin, async (req, res) => {
     try {
         const special = await Special.findById(req.params.specialId);
         if (!special) return res.status(404).json({ message: 'Special not found' });

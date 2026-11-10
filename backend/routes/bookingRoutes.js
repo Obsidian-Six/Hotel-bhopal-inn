@@ -7,7 +7,7 @@ const RoomUnit = require('../models/RoomUnit');
 const DailyInventory = require('../models/DailyInventory');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
-const { protect, admin, superAdmin } = require('../middleware/auth');
+const { protect, admin, superAdmin, staffOrIntegration } = require('../middleware/auth');
 const Transaction = require('../models/Transaction');
 const { encrypt, decrypt } = require('../utils/crypto');
 const axios = require('axios');
@@ -40,7 +40,7 @@ try {
 }
 
 // GET: Today's Summary Stats for Front Desk
-router.get('/front-desk/stats', async (req, res) => {
+router.get('/front-desk/stats', staffOrIntegration, async (req, res) => {
     try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -112,7 +112,7 @@ router.post('/', async (req, res) => {
 });
 
 // POST: Walk-in / OTA Registration (Creates + Optional immediate check-in / historical entries)
-router.post('/walk-in', async (req, res) => {
+router.post('/walk-in', protect, admin, async (req, res) => {
     try {
         const { 
             guestDetails, 
@@ -279,7 +279,7 @@ router.post('/walk-in', async (req, res) => {
 });
 
 // POST: Check-In Guest
-router.post('/:id/check-in', async (req, res) => {
+router.post('/:id/check-in', protect, admin, async (req, res) => {
     try {
         const { roomUnit, idProof } = req.body;
         const booking = await Booking.findById(req.params.id);
@@ -307,7 +307,7 @@ router.post('/:id/check-in', async (req, res) => {
 });
 
 // POST: Extend Stay for Guest
-router.post('/:id/extend-stay', async (req, res) => {
+router.post('/:id/extend-stay', protect, admin, async (req, res) => {
     try {
         const { newCheckOutDate, additionalTariff } = req.body;
         const booking = await Booking.findById(req.params.id);
@@ -380,7 +380,7 @@ router.post('/:id/extend-stay', async (req, res) => {
 });
 
 // POST: Collect Payment (Audit Log)
-router.post('/:id/collect-payment', async (req, res) => {
+router.post('/:id/collect-payment', protect, admin, async (req, res) => {
     try {
         const { amount, mode, staff } = req.body;
         const booking = await Booking.findById(req.params.id);
@@ -439,7 +439,7 @@ router.post('/:id/collect-payment', async (req, res) => {
 });
 
 // POST: Add Service Charge (F&B / Other)
-router.post('/:id/add-charge', async (req, res) => {
+router.post('/:id/add-charge', protect, admin, async (req, res) => {
     try {
         const { description, amount, source } = req.body;
         const booking = await Booking.findById(req.params.id);
@@ -465,7 +465,7 @@ router.post('/:id/add-charge', async (req, res) => {
 });
 
 // POST: Check-Out Guest (With Mandatory Room Inspection & Clearance)
-router.post('/:id/check-out', async (req, res) => {
+router.post('/:id/check-out', protect, admin, async (req, res) => {
     try {
         const booking = await Booking.findById(req.params.id);
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
@@ -869,7 +869,7 @@ router.delete('/:id/payment/:paymentIndex', protect, superAdmin, async (req, res
 });
 
 // Get all bookings (Admin)
-router.get('/', async (req, res) => {
+router.get('/', protect, admin, async (req, res) => {
     try {
         const bookings = await Booking.find().populate('roomCategory').populate('roomUnit').sort({ createdAt: -1 });
         res.json(bookings);
@@ -1054,12 +1054,16 @@ router.post('/:id/notify', async (req, res) => {
 });
 
 // POST: Extend Booking
-router.post('/:id/extend', async (req, res) => {
+router.post('/:id/extend', protect, async (req, res) => {
     try {
         const { newCheckOutDate, additionalAmount } = req.body;
         const booking = await Booking.findById(req.params.id);
         
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
+        const isStaff = ['admin', 'superadmin'].includes(req.user.role);
+        if (!isStaff && String(booking.user) !== String(req.user._id)) {
+            return res.status(403).json({ message: 'You can only extend your own booking' });
+        }
 
         // Update booking details
         booking.checkOutDate = new Date(newCheckOutDate);

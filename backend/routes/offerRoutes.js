@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { protect, admin } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const Offer = require('../models/Offer');
@@ -43,7 +44,7 @@ const { optimizeImage } = require('../utils/imageOptimizer');
 
 // @route   POST /api/offers
 // @desc    Add a new offer
-router.post('/', (req, res) => {
+router.post('/', protect, admin, (req, res) => {
     upload(req, res, async (err) => {
         if (err) {
             return res.status(400).json({ message: err.message });
@@ -72,7 +73,7 @@ router.post('/', (req, res) => {
 
 // @route   PUT /api/offers/:id
 // @desc    Update an offer
-router.put('/:id', (req, res) => {
+router.put('/:id', protect, admin, (req, res) => {
     upload(req, res, async (err) => {
         if (err) {
             return res.status(400).json({ message: err.message });
@@ -112,7 +113,7 @@ router.put('/:id', (req, res) => {
 
 // @route   DELETE /api/offers/:id
 // @desc    Delete an offer
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, admin, async (req, res) => {
     try {
         const offer = await Offer.findByIdAndDelete(req.params.id);
         if (!offer) {
