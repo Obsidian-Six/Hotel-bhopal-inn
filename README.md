@@ -68,9 +68,7 @@ Run the following command in the `backend` folder to create an initial admin acc
 cd backend
 node seedAdmin.js
 ```
-**Default Admin Credentials:**
-- **Email:** `admin@bhopalinn.com`
-- **Password:** `adminpassword123`
+**Admin login:** set `ADMIN_PASSWORD` (staff admin) and `SUPERADMIN_PASSWORD` (super admin) in `backend/.env` before running the seed scripts. Passwords are never stored in the code. Change them any time from the admin panel with the Change Password button.
 
 ---
 

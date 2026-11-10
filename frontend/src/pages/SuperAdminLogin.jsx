@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import { ShieldCheck, Lock, Mail, ArrowRight, Eye, EyeOff, KeyRound } from 'lucide-react';
 
 const SuperAdminLogin = () => {
-    const [email, setEmail] = useState('superadmin@hotelbhopalinn.com');
-    const [password, setPassword] = useState('SuperAdmin@BhopalInn2026#');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);

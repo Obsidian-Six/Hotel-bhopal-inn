@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 const User = require('./models/User');
 require('dotenv').config();
+if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.length < 10) {
+    console.error('Set ADMIN_PASSWORD (at least 10 characters) before running this script, e.g. ADMIN_PASSWORD=\'...\' node seedAdmin.js');
+    process.exit(1);
+}
+
 
 const seedAdmin = async () => {
     try {
@@ -17,14 +22,14 @@ const seedAdmin = async () => {
             firstName: 'Admin',
             lastName: 'User',
             email: 'admin@bhopalinn.com',
-            password: 'adminpassword123', // User should change this
+            password: process.env.ADMIN_PASSWORD,
             role: 'admin'
         });
 
         await admin.save();
         console.log('Admin user created successfully!');
         console.log('Email: admin@bhopalinn.com');
-        console.log('Password: adminpassword123');
+        console.log('Password: (the ADMIN_PASSWORD you set in .env)');
         process.exit();
     } catch (err) {
         console.error('Error seeding admin:', err);

@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 const User = require('./models/User');
 require('dotenv').config();
+if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.length < 10) {
+    console.error('Set ADMIN_PASSWORD (at least 10 characters) before running this script, e.g. ADMIN_PASSWORD=\'...\' node createSpecificAdmin.js');
+    process.exit(1);
+}
+
 
 const createSpecificAdmin = async () => {
     try {
@@ -13,7 +18,7 @@ const createSpecificAdmin = async () => {
             firstName: 'Admin',
             lastName: 'User',
             email: 'admin@bhopalinn.com',
-            password: 'adminpassword123',
+            password: process.env.ADMIN_PASSWORD,
             role: 'admin'
         });
 

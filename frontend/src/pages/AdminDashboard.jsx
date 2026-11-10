@@ -12,6 +12,7 @@ import InventoryManagement from '@/components/admin/InventoryManagement';
 import FrontDeskManagement from '@/components/admin/FrontDeskManagement';
 import FinanceManagement from '@/components/admin/FinanceManagement';
 import StockInventory from '@/components/admin/StockInventory';
+import ChangePassword from '@/components/admin/ChangePassword';
 import ReelManagement from '@/components/admin/ReelManagement';
 import FoodMenuManagement from '@/components/admin/FoodMenuManagement';
 import PostManagement from '@/components/admin/PostManagement';
@@ -42,6 +43,7 @@ const AdminDashboard = ({ portalMode }) => {
   const [activeTab, setActiveTab] = useState('hero'); // 'hero', 'rooms', or 'banquet'
   // Mobile: the side menu slides in from the left
   const [navOpen, setNavOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
   const goTab = (tab) => { setActiveTab(tab); setNavOpen(false); };
   const TAB_LABELS = { hero: 'Hero Slider', rooms: 'Room Management', banquet: 'Banquet & Events', offers: 'Special Offers', bookings: 'Front Desk', analytics: 'Front Desk Analytics', inventory: 'Inventory Calendar', finance: 'Finance Audit', stock: 'Stock Inventory', amendments: 'Amendments', reels: 'Video Reels', menu: 'Food Menu', posts: 'Posts' };
   const [images, setImages] = useState([]);
@@ -297,6 +299,13 @@ const AdminDashboard = ({ portalMode }) => {
             Back to Site
           </a>
           <button 
+            onClick={() => { setPwOpen(true); setNavOpen(false); }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/60 hover:text-[#BFA37E] transition-all text-left"
+          >
+            <ShieldCheck size={16} />
+            Change Password
+          </button>
+          <button 
             onClick={logout}
             className="w-full flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.2em] text-red-400 hover:bg-red-950/30 transition-all text-left"
           >
@@ -305,6 +314,8 @@ const AdminDashboard = ({ portalMode }) => {
           </button>
         </div>
       </aside>
+
+      {pwOpen && <ChangePassword onClose={() => setPwOpen(false)} />}
 
       {/* Main Content */}
       <main className="admin-main flex-1 min-w-0 h-full overflow-y-auto p-3 sm:p-6 md:p-10 overscroll-contain">

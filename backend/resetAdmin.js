@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 const User = require('./models/User');
 require('dotenv').config();
+if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.length < 10) {
+    console.error('Set ADMIN_PASSWORD (at least 10 characters) before running this script, e.g. ADMIN_PASSWORD=\'...\' node resetAdmin.js');
+    process.exit(1);
+}
+
 
 const resetAdmin = async () => {
     try {
@@ -17,7 +22,7 @@ const resetAdmin = async () => {
 
         if (admin) {
             console.log('Updating password for admin:', admin.email);
-            admin.password = 'adminpassword123';
+            admin.password = process.env.ADMIN_PASSWORD;
             await admin.save();
             console.log('Password updated successfully!');
         } else {
@@ -26,7 +31,7 @@ const resetAdmin = async () => {
                 firstName: 'Admin',
                 lastName: 'User',
                 email: 'admin@bhopalinn.com',
-                password: 'adminpassword123',
+                password: process.env.ADMIN_PASSWORD,
                 role: 'admin'
             });
             await newAdmin.save();

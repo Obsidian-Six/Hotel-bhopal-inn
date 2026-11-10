@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { protect } = require('../middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -34,13 +35,18 @@ router.post('/register', async (req, res) => {
 });
 
 const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL || 'superadmin@hotelbhopalinn.com';
-const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || 'SuperAdmin@BhopalInn2026#';
+// The first-time password must come from the server's .env (SUPERADMIN_PASSWORD), never from the code.
+const SUPERADMIN_PASSWORD = process.env.SUPERADMIN_PASSWORD || '';
 
 // Function to automatically seed and ensure Super Admin account exists
 const seedSuperAdmin = async () => {
     try {
         let superAdmin = await User.findOne({ email: SUPERADMIN_EMAIL.toLowerCase() });
         if (!superAdmin) {
+            if (!SUPERADMIN_PASSWORD) {
+                console.warn('[AUTH] No Super Admin account and SUPERADMIN_PASSWORD is not set in .env — skipping creation.');
+                return;
+            }
             superAdmin = new User({
                 firstName: 'Super',
                 lastName: 'Admin',
@@ -63,6 +69,26 @@ const seedSuperAdmin = async () => {
 
 // Seed on startup
 seedSuperAdmin();
+
+// Change own password (any logged-in user: super admin, staff admin, guest)
+router.post('/change-password', protect, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) return res.status(400).json({ message: 'Enter your current and new password' });
+        if (String(newPassword).length < 10) return res.status(400).json({ message: 'New password must be at least 10 characters' });
+        if (newPassword === currentPassword) return res.status(400).json({ message: 'New password must be different from the current one' });
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (user.isGoogleUser && !user.password) return res.status(400).json({ message: 'This account signs in with Google' });
+        const ok = await user.matchPassword(currentPassword);
+        if (!ok) return res.status(400).json({ message: 'Current password is wrong' });
+        user.password = newPassword;
+        await user.save();
+        res.json({ message: 'Password changed' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
 // Dedicated Super Admin Login Route
 router.post('/super-admin-login', async (req, res) => {
