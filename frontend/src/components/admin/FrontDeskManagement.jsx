@@ -369,7 +369,10 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
     const diffTime = checkOut - checkIn;
     const nights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     const rooms = Math.max(1, Number(walkInForm.numberOfRooms) || 1);
-    const calculatedTotal = (Number(walkInForm.financials.roomTariff) || 0) * nights * rooms;
+    const groupRows = walkInForm.bookingType === 'Advance' ? (walkInForm.groupRooms || []) : null;
+    const calculatedTotal = groupRows
+      ? groupRows.reduce((sum, r) => sum + (Number(r.count) || 0) * (Number(r.rate) || 0) * nights, 0)
+      : (Number(walkInForm.financials.roomTariff) || 0) * nights * rooms;
     const calculatedBalance = Math.max(0, calculatedTotal - (Number(walkInForm.financials.amountPaid) || 0));
 
     if (calculatedTotal !== walkInForm.financials.totalAmount || calculatedBalance !== walkInForm.financials.balance) {
@@ -382,7 +385,31 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
         }
       }));
     }
-  }, [walkInForm.checkInDate, walkInForm.checkOutDate, walkInForm.financials.roomTariff, walkInForm.financials.amountPaid, walkInForm.numberOfRooms]);
+  }, [walkInForm.checkInDate, walkInForm.checkOutDate, walkInForm.financials.roomTariff, walkInForm.financials.amountPaid, walkInForm.numberOfRooms, walkInForm.bookingType, walkInForm.groupRooms]);
+
+  // ---- Advance / group booking helpers: rooms are chosen by TYPE and COUNT, room numbers at check-in ----
+  const defaultRateFor = (catId) => {
+    const c = (roomCategories || []).find(x => x._id === catId);
+    return c?.details?.startingPrice || c?.price || '';
+  };
+  const updateGroupRow = (idx, patch) => {
+    setWalkInForm(prev => {
+      const rows = [...(prev.groupRooms || [])];
+      rows[idx] = { ...rows[idx], ...patch };
+      if (patch.roomCategory !== undefined && (rows[idx].rate === '' || rows[idx].rate === undefined || rows[idx].rateAuto)) {
+        rows[idx].rate = defaultRateFor(patch.roomCategory); rows[idx].rateAuto = true;
+      }
+      return { ...prev, groupRooms: rows };
+    });
+  };
+  const addGroupRow = () => setWalkInForm(prev => ({ ...prev, groupRooms: [...(prev.groupRooms || []), { roomCategory: '', count: 1, rate: '', rateAuto: true }] }));
+  const removeGroupRow = (idx) => setWalkInForm(prev => ({ ...prev, groupRooms: (prev.groupRooms || []).filter((_, i) => i !== idx) }));
+  const groupRoomTotal = (walkInForm.groupRooms || []).reduce((a, r) => a + (Number(r.count) || 0), 0);
+  useEffect(() => {
+    if (walkInForm.bookingType === 'Advance' && !(walkInForm.groupRooms && walkInForm.groupRooms.length)) {
+      setWalkInForm(prev => ({ ...prev, groupRooms: [{ roomCategory: prev.roomCategory || '', count: Math.max(1, Number(prev.numberOfRooms) || 1), rate: prev.financials?.roomTariff || defaultRateFor(prev.roomCategory) || '', rateAuto: !prev.financials?.roomTariff }] }));
+    }
+  }, [walkInForm.bookingType]);
 
   useEffect(() => {
     fetchData();
@@ -522,7 +549,39 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
         voucherUrl: walkInForm.voucherUrl || ''
       };
 
-      const res = await axios.post(`${API_BASE}/api/bookings/walk-in`, payload);
+      let res;
+      if (isAdvance) {
+        const rows = (walkInForm.groupRooms || []).filter(r => r.roomCategory && Number(r.count) > 0);
+        if (!rows.length) { alert('Add at least one room type and how many rooms.'); return; }
+        const groupPayload = {
+          groupName: walkInForm.groupName || '',
+          guestDetails: walkInForm.guestDetails,
+          checkInDate: walkInForm.checkInDate,
+          checkOutDate: walkInForm.checkOutDate,
+          rooms: rows.map(r => ({ roomCategory: r.roomCategory, count: Number(r.count), rate: Number(r.rate) || 0 })),
+          source: walkInForm.source,
+          otaPlatform: walkInForm.otaPlatform,
+          otaReferenceId: walkInForm.otaReferenceId,
+          roomPlan: walkInForm.roomPlan,
+          paymentMode: walkInForm.paymentMode || 'Cash',
+          amountPaid: Number(walkInForm.financials.amountPaid) || 0,
+          paymentDate: walkInForm.checkInDate,
+          voucherUrl: walkInForm.voucherUrl || ''
+        };
+        try {
+          res = await axios.post(`${API_BASE}/api/bookings/group`, groupPayload);
+        } catch (gErr) {
+          if (gErr.response?.status === 409 && gErr.response?.data?.requiresForce) {
+            const lines = (gErr.response.data.shortages || []).slice(0, 8).join('\n');
+            if (!window.confirm(`Not enough free rooms for some nights:\n\n${lines}\n\nBook anyway?`)) return;
+            res = await axios.post(`${API_BASE}/api/bookings/group`, { ...groupPayload, force: true });
+          } else throw gErr;
+        }
+        const leader = (res.data.bookings || []).find(b => b.groupLeader) || (res.data.bookings || [])[0];
+        res = { data: { ...leader, numberOfRooms: res.data.rooms, financials: { ...(leader?.financials || {}), totalAmount: res.data.total } } };
+      } else {
+        res = await axios.post(`${API_BASE}/api/bookings/walk-in`, payload);
+      }
 
       setIsWalkInOpen(false);
       fetchData();
@@ -532,7 +591,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
         openWhatsAppModalForBooking({
           ...createdBooking,
           bookingDate: todayStr,
-          numberOfRooms: walkInForm.numberOfRooms || 1,
+          numberOfRooms: groupRoomTotal || walkInForm.numberOfRooms || 1,
           voucherUrl: walkInForm.voucherUrl
         });
       } else {
@@ -558,7 +617,9 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
         paymentDate: '',
         bookingType: 'Immediate',
         numberOfRooms: 1,
-        voucherUrl: ''
+        voucherUrl: '',
+        groupName: '',
+        groupRooms: [{ roomCategory: '', count: 1, rate: '', rateAuto: true }]
       });
     } catch (err) {
       alert('Failed to register booking: ' + (err.response?.data?.message || err.message));
@@ -1800,8 +1861,13 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                 <tr key={booking._id} onClick={() => { setSelectedBooking(booking); setIsDetailOpen(true); }} className="border-b hover:bg-emerald-50/50 cursor-pointer transition-colors group">
                   <td className="px-6 py-5">
                     <div className="flex flex-col">
-                        <span className="text-lg font-black text-[#1A2B48]">{booking.roomUnit?.roomNumber || '---'}</span>
+                        <span className="text-lg font-black text-[#1A2B48]">{booking.roomUnit?.roomNumber || (booking.status === 'Confirmed' ? 'Assign at check-in' : '---')}</span>
                         <span className="text-[10px] text-slate-400 font-bold uppercase">{booking.roomCategory?.title}</span>
+                        {booking.groupSize > 1 && (
+                          <span className="mt-1 inline-block w-fit text-[9px] font-black uppercase bg-violet-100 text-violet-800 px-2 py-0.5 rounded-sm">
+                            Group: {booking.groupName || 'Party'} · {booking.groupSize} rooms{booking.groupLeader ? ' · bill' : ''}
+                          </span>
+                        )}
                     </div>
                   </td>
                   <td className="px-6 py-5">
@@ -1835,7 +1901,9 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                     </span>
                   </td>
                   <td className="px-6 py-5 text-right font-black">
-                    {booking.financials.balance > 0 ? 
+                    {booking.groupId && !booking.groupLeader ?
+                        <span className="text-violet-700 text-xs">ON GROUP BILL</span> :
+                    booking.financials.balance > 0 ? 
                         <span className="text-rose-600">₹{booking.financials.balance.toLocaleString()}</span> : 
                         <span className="text-emerald-600">PAID ✓</span>
                     }
@@ -1939,6 +2007,30 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                             <p className="text-sm text-slate-600">Assigned: {selectedBooking.roomUnit?.roomNumber || 'PENDING'} ({selectedBooking.roomCategory?.title})</p>
                         </div>
                     </div>
+
+                    {selectedBooking.groupId && selectedBooking.groupSize > 1 && (() => {
+                      const members = (bookings || []).filter(b => b.groupId === selectedBooking.groupId);
+                      const leader = members.find(b => b.groupLeader);
+                      return (
+                        <div className="p-4 bg-violet-50 border border-violet-200 rounded-sm">
+                          <label className="text-[10px] font-black text-violet-700 uppercase block mb-2">Group booking · {selectedBooking.groupName} · {selectedBooking.groupSize} rooms</label>
+                          {leader && (
+                            <p className="text-sm font-bold text-slate-800 mb-2">
+                              Group bill: ₹{(leader.financials?.totalAmount || 0).toLocaleString()} · paid ₹{(leader.financials?.amountPaid || 0).toLocaleString()} · balance ₹{(leader.financials?.balance || 0).toLocaleString()}
+                              {!selectedBooking.groupLeader && <span className="block text-xs font-semibold text-violet-700">Collect payments on the group-bill booking ({leader.roomCategory?.title}).</span>}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            {members.map(m => (
+                              <button key={m._id} type="button" onClick={() => setSelectedBooking(m)}
+                                className={`text-xs font-bold px-2 py-1 border rounded-sm ${m._id === selectedBooking._id ? 'bg-violet-700 text-white border-violet-700' : 'bg-white text-slate-700 border-violet-200'}`}>
+                                {m.roomUnit?.roomNumber || m.roomCategory?.title || 'Room'} · {m.status}{m.groupLeader ? ' · bill' : ''}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Financial Ledger */}
                     <div className="border rounded-sm overflow-hidden">
@@ -2517,6 +2609,41 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                   <InputField label="Phone" value={walkInForm.guestDetails.phone} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, phone: v}})} required={true} />
                   <InputField label="Email" type="email" value={walkInForm.guestDetails.email} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, email: v}})} required={false} />
                </div>
+               {walkInForm.bookingType === 'Advance' ? (
+                 <div className="border-2 border-[#1A2B48]/20 bg-slate-50 p-4 space-y-3">
+                   <div className="flex flex-wrap justify-between items-center gap-2">
+                     <label className="block text-[10px] font-black text-slate-500 uppercase">Rooms — choose type and how many (room numbers are given at check-in)</label>
+                     <span className="text-[10px] font-black uppercase bg-[#1A2B48] text-white px-2 py-1">{groupRoomTotal} room{groupRoomTotal === 1 ? '' : 's'}</span>
+                   </div>
+                   <InputField label="Party / Group Name (optional)" value={walkInForm.groupName || ''} onChange={v => setWalkInForm({...walkInForm, groupName: v})} required={false} />
+                   {(walkInForm.groupRooms || []).map((row, idx) => (
+                     <div key={idx} className="grid grid-cols-12 gap-2 items-end">
+                       <div className="col-span-12 sm:col-span-6">
+                         <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Room Type</label>
+                         <select className="w-full border-2 border-slate-200 p-3 text-sm bg-white font-semibold focus:outline-none focus:border-[#1A2B48]" value={row.roomCategory} onChange={e => updateGroupRow(idx, { roomCategory: e.target.value })} required>
+                           <option value="">-- Select Type --</option>
+                           {roomCategories.map(cat => <option key={cat._id} value={cat._id}>{cat.title}</option>)}
+                         </select>
+                       </div>
+                       <div className="col-span-4 sm:col-span-2">
+                         <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Rooms</label>
+                         <input type="number" min="1" max="40" className="w-full border-2 border-slate-200 p-3 text-sm bg-white font-semibold focus:outline-none focus:border-[#1A2B48]" value={row.count} onChange={e => updateGroupRow(idx, { count: Math.max(1, parseInt(e.target.value) || 1) })} required />
+                       </div>
+                       <div className="col-span-6 sm:col-span-3">
+                         <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Rate / Night ₹</label>
+                         <input type="number" min="0" className="w-full border-2 border-slate-200 p-3 text-sm bg-white font-semibold focus:outline-none focus:border-[#1A2B48]" value={row.rate} onChange={e => updateGroupRow(idx, { rate: e.target.value, rateAuto: false })} required />
+                       </div>
+                       <div className="col-span-2 sm:col-span-1 flex justify-center pb-3">
+                         {(walkInForm.groupRooms || []).length > 1 && (
+                           <button type="button" onClick={() => removeGroupRow(idx)} className="text-rose-600 hover:text-rose-800" aria-label="Remove room type"><X size={18} /></button>
+                         )}
+                       </div>
+                     </div>
+                   ))}
+                   <button type="button" onClick={addGroupRow} className="text-xs font-black uppercase text-[#1A2B48] border-2 border-dashed border-[#1A2B48]/40 w-full py-2 hover:bg-white">+ Add another room type</button>
+                   <p className="text-[11px] text-slate-500">The full bill and advance go on one group bill. Each room is checked in separately on arrival, when you pick its room number.</p>
+                 </div>
+               ) : (
                <div className="grid grid-cols-2 gap-6">
                   <div>
                       <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">Room Category</label>
@@ -2527,6 +2654,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                   </div>
                   <InputField label="Room Tariff (Rack Rate / Night)" type="number" value={walkInForm.financials.roomTariff} onChange={v => setWalkInForm({...walkInForm, financials: {...walkInForm.financials, roomTariff: Number(v)}})} />
                </div>
+               )}
                <div className="grid grid-cols-2 gap-6">
                    <InputField 
                      label="Check-In" 
@@ -2538,6 +2666,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                    <InputField label="Check-Out" type="date" value={walkInForm.checkOutDate} onChange={v => setWalkInForm({...walkInForm, checkOutDate: v})} />
                </div>
                <div className="grid grid-cols-2 gap-6">
+                  {walkInForm.bookingType !== 'Advance' && (
                   <div>
                       <label className="block text-[10px] font-black text-slate-400 uppercase mb-2">No. of Rooms</label>
                       <input 
@@ -2550,6 +2679,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                         required
                       />
                   </div>
+                  )}
                   <div>
                       <InputField label="ID Proof Number" value={walkInForm.guestDetails.idProof} onChange={v => setWalkInForm({...walkInForm, guestDetails: {...walkInForm.guestDetails, idProof: v}})} required={false} />
                   </div>
@@ -2696,7 +2826,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                    </div>
                 )}
 
-                {(walkInForm.immediateCheckIn || walkInForm.customStatus === 'Checked-In' || walkInForm.bookingType === 'Advance') && (
+                {walkInForm.bookingType !== 'Advance' && (walkInForm.immediateCheckIn || walkInForm.customStatus === 'Checked-In') && (
                    <div className="animate-in slide-in-from-top-2 duration-200 space-y-2">
                        <div className="flex justify-between items-center">
                           <label className="block text-[10px] font-black text-slate-400 uppercase">
@@ -2757,7 +2887,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                   </div>
                   <div className="flex justify-between text-xs font-bold text-slate-700">
                      <span>No. of Rooms:</span>
-                     <span>{walkInForm.numberOfRooms || 1} Room(s)</span>
+                     <span>{walkInForm.bookingType === 'Advance' ? groupRoomTotal : (walkInForm.numberOfRooms || 1)} Room(s)</span>
                   </div>
                   <div className="flex justify-between text-xs font-bold text-slate-700">
                      <span>Total Room Tariff:</span>

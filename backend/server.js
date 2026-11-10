@@ -98,6 +98,7 @@ const reelRoutes = require('./routes/reelRoutes');
 const menuRoutes = require('./routes/menuRoutes');
 const postRoutes = require('./routes/postRoutes');
 const amendmentRoutes = require('./routes/amendmentRoutes');
+const stockRoutes = require('./routes/stockRoutes');
 
 app.use('/api/hero-images', heroRoutes);
 app.use('/api/rooms', roomRoutes);
@@ -113,6 +114,7 @@ app.use('/api/finance', financeRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/reels', reelRoutes);
 app.use('/api/menu', menuRoutes);
+app.use('/api/stock', stockRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/amendments', amendmentRoutes);
 

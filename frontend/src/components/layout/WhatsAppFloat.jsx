@@ -1,7 +1,11 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 
 const WhatsAppFloat = () => {
     const phoneNumber = "916267276957"; // Use the first number from the top bar
+    const { pathname } = useLocation();
+    // Guests only: hide on staff / admin screens, where it covers buttons on phones
+    if (/^\/(admin|super-admin|superadmin|reception)/.test(pathname)) return null;
 
     return (
         <a 

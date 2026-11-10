@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Booking = require('../models/Booking');
 const Amendment = require('../models/Amendment');
@@ -273,6 +274,160 @@ router.post('/walk-in', protect, admin, async (req, res) => {
         }
 
         res.status(201).json(booking);
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// POST: Group / multi-room advance booking (no room numbers until check-in)
+// Creates one booking per room. The whole bill and any advance payment go on
+// the first (leader) booking; the other rooms carry no balance of their own.
+router.post('/group', protect, admin, async (req, res) => {
+    try {
+        const {
+            groupName, guestDetails, checkInDate, checkOutDate, rooms,
+            source, otaPlatform, otaReferenceId, roomPlan, paymentMode,
+            amountPaid, paymentDate, voucherUrl, force
+        } = req.body;
+
+        if (!guestDetails || !guestDetails.firstName || !guestDetails.phone) {
+            return res.status(400).json({ message: 'Guest / party contact name and phone are required' });
+        }
+        if (!checkInDate || !checkOutDate || checkOutDate <= checkInDate) {
+            return res.status(400).json({ message: 'Choose a valid check-in and check-out date' });
+        }
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (checkInDate < todayStr) {
+            return res.status(400).json({ message: 'Group bookings must start today or later' });
+        }
+        const lines = (Array.isArray(rooms) ? rooms : [])
+            .map(r => ({ roomCategory: r.roomCategory, count: Math.max(0, parseInt(r.count, 10) || 0), rate: Math.max(0, Number(r.rate) || 0) }))
+            .filter(r => r.roomCategory && r.count > 0);
+        const totalRooms = lines.reduce((a, r) => a + r.count, 0);
+        if (!lines.length || totalRooms < 1) return res.status(400).json({ message: 'Add at least one room' });
+        if (totalRooms > 60) return res.status(400).json({ message: 'Too many rooms in one group' });
+
+        const nights = Math.max(1, Math.round((new Date(checkOutDate) - new Date(checkInDate)) / 86400000));
+
+        // Availability check per room type and night (warn, staff can still force)
+        const shortages = [];
+        for (const line of lines) {
+            const cat = await Room.findById(line.roomCategory);
+            if (!cat) return res.status(400).json({ message: 'Unknown room type' });
+            const unitsTotal = await RoomUnit.countDocuments({ category: line.roomCategory, roomNumber: { $not: /^test/i } });
+            const curr = new Date(checkInDate);
+            const end = new Date(checkOutDate);
+            while (curr < end) {
+                const dateStr = curr.toISOString().split('T')[0];
+                const overlapping = await Booking.countDocuments({
+                    roomCategory: line.roomCategory,
+                    status: { $in: ['Pending', 'Confirmed', 'Checked-In'] },
+                    checkInDate: { $lte: new Date(dateStr + 'T23:59:59.999Z') },
+                    checkOutDate: { $gt: new Date(dateStr + 'T00:00:00.000Z') }
+                });
+                const free = unitsTotal - overlapping;
+                if (line.count > free) shortages.push(`${cat.title || cat.category}: ${Math.max(0, free)} free on ${dateStr}, asked ${line.count}`);
+                curr.setDate(curr.getDate() + 1);
+            }
+        }
+        if (shortages.length && !force) {
+            return res.status(409).json({ message: 'Not enough free rooms', shortages, requiresForce: true });
+        }
+
+        const groupId = new mongoose.Types.ObjectId().toString();
+        const grandTotal = lines.reduce((a, r) => a + r.count * r.rate * nights, 0);
+        const paidAmt = Math.max(0, Number(amountPaid) || 0);
+        const label = (groupName || `${guestDetails.firstName} ${guestDetails.lastName || ''}`).trim();
+        const staffName = req.user ? `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || 'FrontDesk' : 'FrontDesk';
+        const created = [];
+        let index = 0;
+
+        for (const line of lines) {
+            for (let i = 0; i < line.count; i++) {
+                const isLeader = index === 0;
+                const booking = new Booking({
+                    guestDetails: { ...guestDetails, lastName: guestDetails.lastName || '-' },
+                    roomCategory: line.roomCategory,
+                    roomUnit: null,
+                    checkInDate,
+                    checkOutDate,
+                    financials: isLeader ? {
+                        roomTariff: line.rate,
+                        totalAmount: grandTotal,
+                        amountPaid: paidAmt,
+                        balance: Math.max(0, grandTotal - paidAmt),
+                        paymentMode: paidAmt > 0 ? (paymentMode || 'Cash') : 'Pending'
+                    } : {
+                        roomTariff: line.rate,
+                        totalAmount: 0,
+                        amountPaid: 0,
+                        balance: 0,
+                        paymentMode: 'Billed on group'
+                    },
+                    source: source || 'Walk-in',
+                    otaPlatform: otaPlatform || '',
+                    otaReferenceId: otaReferenceId || '',
+                    roomPlan: roomPlan || 'EP',
+                    status: 'Confirmed',
+                    bookingType: 'Advance',
+                    numberOfRooms: 1,
+                    voucherUrl: voucherUrl || '',
+                    groupId,
+                    groupName: label,
+                    groupLeader: isLeader,
+                    groupSize: totalRooms
+                });
+
+                if (isLeader && paidAmt > 0) {
+                    const effectiveMode = paymentMode || 'Cash';
+                    const effectiveDate = paymentDate
+                        ? new Date(String(paymentDate).includes('T') ? paymentDate : paymentDate + 'T12:00:00')
+                        : new Date(String(checkInDate).includes('T') ? checkInDate : checkInDate + 'T12:00:00');
+                    booking.financials.paymentHistory.push({
+                        amount: paidAmt, mode: effectiveMode, staff: staffName,
+                        note: `Group advance for ${totalRooms} rooms`, timestamp: effectiveDate
+                    });
+                    const isOta = effectiveMode === 'OTA';
+                    await new Transaction({
+                        type: 'Income',
+                        category: 'Room Rent',
+                        amount: encrypt(paidAmt.toString()),
+                        description: encrypt(`Group Advance (${totalRooms} rooms) - ${label} - Ref #${booking._id.toString().slice(-8)}`),
+                        paymentMode: effectiveMode,
+                        recordedBy: staffName,
+                        approved: !isOta,
+                        date: effectiveDate,
+                        booking: booking._id
+                    }).save();
+                }
+
+                await booking.save();
+                created.push(booking);
+                index++;
+            }
+
+            // Inventory count per night for this room type
+            const curr = new Date(checkInDate);
+            const end = new Date(checkOutDate);
+            while (curr < end) {
+                const utcDate = new Date(curr.toISOString().split('T')[0]);
+                utcDate.setUTCHours(0, 0, 0, 0);
+                await DailyInventory.findOneAndUpdate(
+                    { roomCategory: line.roomCategory, date: utcDate },
+                    { $inc: { bookingsCount: line.count } },
+                    { upsert: true }
+                );
+                curr.setDate(curr.getDate() + 1);
+            }
+        }
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('inventory_updated', {});
+            io.emit('booking_updated', { type: 'group', groupId });
+            if (paidAmt > 0) io.emit('finance_updated');
+        }
+        res.status(201).json({ groupId, groupName: label, rooms: created.length, total: grandTotal, bookings: created });
     } catch (err) {
         res.status(400).json({ message: err.message });
     }

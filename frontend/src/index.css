@@ -279,3 +279,22 @@ html.w-mod-touch * {
 .kaskady-img.bg-anim2.is--contact2 {
   object-position: 50% 0%;
 }
+/* ---------- Admin panels on phones (Staff Admin + Super Admin) ---------- */
+@media (max-width: 767px) {
+  .admin-main table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+  .admin-main th, .admin-main td { white-space: nowrap; }
+  .admin-main .grid-cols-3, .admin-main .grid-cols-4, .admin-main .grid-cols-5, .admin-main .grid-cols-6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-main form .grid-cols-2.gap-6, .admin-main form .grid-cols-2.gap-8, .admin-main .grid-cols-2.gap-8 { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+  .admin-main .p-8, .admin-main .p-10, .admin-main .p-12 { padding: 1rem; }
+  .admin-main .px-8, .admin-main .px-10 { padding-left: 1rem; padding-right: 1rem; }
+  .admin-main .px-6 { padding-left: 0.75rem; padding-right: 0.75rem; }
+  .admin-main .gap-8, .admin-main .gap-10 { gap: 1rem; }
+  .admin-main .space-y-10 > * + * { margin-top: 1.25rem; }
+  .admin-main .text-5xl { font-size: 1.9rem; line-height: 2.2rem; }
+  .admin-main .text-4xl { font-size: 1.6rem; line-height: 2rem; }
+  .admin-main .text-3xl { font-size: 1.35rem; line-height: 1.75rem; }
+  .admin-main .flex.justify-between { flex-wrap: wrap; gap: 0.5rem; }
+  .admin-main .fixed.inset-0 { padding: 0.5rem; }
+  .admin-main .fixed.inset-0 > div { max-width: 100%; max-height: 96vh; overflow-y: auto; }
+  .admin-main input, .admin-main select, .admin-main textarea { font-size: 16px; } /* stops iPhone zooming into fields */
+}

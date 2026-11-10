@@ -89,6 +89,12 @@ const BookingSchema = new mongoose.Schema({
         type: Number,
         default: 1
     },
+    // Group booking: one booking per room, all sharing groupId. The group's
+    // whole bill (total + payments) sits on the leader booking.
+    groupId: { type: String, default: '', index: true },
+    groupName: { type: String, default: '' },
+    groupLeader: { type: Boolean, default: false },
+    groupSize: { type: Number, default: 0 },
     voucherUrl: {
         type: String,
         default: ''

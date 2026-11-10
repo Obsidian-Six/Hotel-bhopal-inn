@@ -11,13 +11,14 @@ import OfferManagement from '@/components/admin/OfferManagement';
 import InventoryManagement from '@/components/admin/InventoryManagement';
 import FrontDeskManagement from '@/components/admin/FrontDeskManagement';
 import FinanceManagement from '@/components/admin/FinanceManagement';
+import StockInventory from '@/components/admin/StockInventory';
 import ReelManagement from '@/components/admin/ReelManagement';
 import FoodMenuManagement from '@/components/admin/FoodMenuManagement';
 import PostManagement from '@/components/admin/PostManagement';
 import FrontDeskAnalytics from '@/components/admin/FrontDeskAnalytics';
 import AmendmentsManagement from '@/components/admin/AmendmentsManagement';
 import { socket } from '@/lib/socket';
-import { Tag, Calendar, Users, IndianRupee, Film, Utensils, Camera, TrendingUp } from 'lucide-react';
+import { Tag, Calendar, Users, IndianRupee, Film, Utensils, Camera, TrendingUp, Menu, X as CloseIcon, Package } from 'lucide-react';
 
 const AdminDashboard = ({ portalMode }) => {
   const { user: authUser, logout, isSuperAdmin: authIsSuperAdmin } = useAuth();
@@ -39,6 +40,10 @@ const AdminDashboard = ({ portalMode }) => {
   const isSuperAdminView = isSuperAdminRoute && isSuperUser;
 
   const [activeTab, setActiveTab] = useState('hero'); // 'hero', 'rooms', or 'banquet'
+  // Mobile: the side menu slides in from the left
+  const [navOpen, setNavOpen] = useState(false);
+  const goTab = (tab) => { setActiveTab(tab); setNavOpen(false); };
+  const TAB_LABELS = { hero: 'Hero Slider', rooms: 'Room Management', banquet: 'Banquet & Events', offers: 'Special Offers', bookings: 'Front Desk', analytics: 'Front Desk Analytics', inventory: 'Inventory Calendar', finance: 'Finance Audit', stock: 'Stock Inventory', amendments: 'Amendments', reels: 'Video Reels', menu: 'Food Menu', posts: 'Posts' };
   const [images, setImages] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [title, setTitle] = useState('');
@@ -135,9 +140,11 @@ const AdminDashboard = ({ portalMode }) => {
   const onDelete = handleDelete;
 
   return (
-    <div className="h-screen w-full bg-[#FDFBF7] flex overflow-hidden">
+    <div className="admin-shell h-screen w-full bg-[#FDFBF7] flex overflow-hidden">
+      {navOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setNavOpen(false)} aria-hidden="true" />}
       {/* Sidebar */}
-      <aside className="w-72 bg-[#000000] text-white flex flex-col justify-between shrink-0 h-full overflow-y-auto">
+      <aside className={`w-72 bg-[#000000] text-white flex flex-col justify-between shrink-0 h-full overflow-y-auto fixed lg:static inset-y-0 left-0 z-50 transition-transform duration-200 ${navOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        <button type="button" onClick={() => setNavOpen(false)} className="lg:hidden absolute top-3 right-3 text-white/70 hover:text-white z-10" aria-label="Close menu"><CloseIcon size={22} /></button>
         <div className="p-8 border-b border-white/10">
           <div className="h-16 w-full overflow-hidden flex items-center justify-center bg-white rounded-sm p-1">
             <img src="/logo.png" alt="Logo" className="h-full w-auto object-contain scale-[2.2]" />
@@ -176,21 +183,21 @@ const AdminDashboard = ({ portalMode }) => {
         
         <nav className="flex-grow p-4 space-y-1.5 mt-4">
           <button 
-            onClick={() => setActiveTab('hero')}
+            onClick={() => goTab('hero')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'hero' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <ImageIcon size={18} className="shrink-0" />
             <span className="truncate">Hero Slider</span>
           </button>
           <button 
-            onClick={() => setActiveTab('rooms')}
+            onClick={() => goTab('rooms')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'rooms' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <Bed size={18} className="shrink-0" />
             <span className="truncate">Room Management</span>
           </button>
           <button 
-            onClick={() => setActiveTab('banquet')}
+            onClick={() => goTab('banquet')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'banquet' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <Star size={18} className="shrink-0" />
@@ -198,14 +205,14 @@ const AdminDashboard = ({ portalMode }) => {
           </button>
 
           <button 
-            onClick={() => setActiveTab('offers')}
+            onClick={() => goTab('offers')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'offers' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <Tag size={18} className="shrink-0" />
             <span className="truncate">Special Offers</span>
           </button>
           <button 
-            onClick={() => setActiveTab('bookings')}
+            onClick={() => goTab('bookings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'bookings' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <Users size={18} className="shrink-0" />
@@ -213,7 +220,7 @@ const AdminDashboard = ({ portalMode }) => {
           </button>
           {isSuperAdminView && (
             <button 
-              onClick={() => setActiveTab('analytics')}
+              onClick={() => goTab('analytics')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'analytics' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               <TrendingUp size={18} className="shrink-0 text-amber-400" />
@@ -221,7 +228,7 @@ const AdminDashboard = ({ portalMode }) => {
             </button>
           )}
           <button 
-            onClick={() => setActiveTab('inventory')}
+            onClick={() => goTab('inventory')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'inventory' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <Calendar size={18} className="shrink-0 text-cyan-400" />
@@ -229,14 +236,21 @@ const AdminDashboard = ({ portalMode }) => {
           </button>
 
           <button 
-            onClick={() => setActiveTab('finance')}
+            onClick={() => goTab('finance')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'finance' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <IndianRupee size={18} className="shrink-0 text-emerald-400" />
             <span className="truncate">Finance Audit</span>
           </button>
           <button 
-            onClick={() => setActiveTab('amendments')}
+            onClick={() => goTab('stock')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'stock' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+          >
+            <Package size={18} className="shrink-0 text-sky-400" />
+            <span className="truncate">Stock Inventory</span>
+          </button>
+          <button 
+            onClick={() => goTab('amendments')}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'amendments' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <div className="flex items-center gap-3 min-w-0">
@@ -250,21 +264,21 @@ const AdminDashboard = ({ portalMode }) => {
             )}
           </button>
           <button 
-            onClick={() => setActiveTab('reels')}
+            onClick={() => goTab('reels')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'reels' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <Film size={18} className="shrink-0" />
             <span className="truncate">Video Reels</span>
           </button>
           <button 
-            onClick={() => setActiveTab('menu')}
+            onClick={() => goTab('menu')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'menu' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <Utensils size={18} className="shrink-0" />
             <span className="truncate">Food Menu</span>
           </button>
           <button 
-            onClick={() => setActiveTab('posts')}
+            onClick={() => goTab('posts')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'posts' ? 'bg-[#BFA37E] text-white shadow-md' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
           >
             <Camera size={18} className="shrink-0" />
@@ -293,7 +307,12 @@ const AdminDashboard = ({ portalMode }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 h-full overflow-y-auto p-6 md:p-10 overscroll-contain">
+      <main className="admin-main flex-1 min-w-0 h-full overflow-y-auto p-3 sm:p-6 md:p-10 overscroll-contain">
+        <div className="lg:hidden sticky top-0 z-30 -mx-3 sm:-mx-6 -mt-3 sm:-mt-6 mb-4 px-3 py-2 bg-black text-white flex items-center gap-3 shadow">
+          <button type="button" onClick={() => setNavOpen(true)} className="p-2 -ml-1 rounded hover:bg-white/10" aria-label="Open menu"><Menu size={22} /></button>
+          <span className="font-bold text-sm uppercase tracking-wider truncate">{TAB_LABELS[activeTab] || 'Admin'}</span>
+          <span className="ml-auto text-[10px] text-[#BFA37E] font-bold uppercase">{isSuperAdminView ? 'Super Admin' : 'Staff Admin'}</span>
+        </div>
         <div className="max-w-7xl mx-auto">
           {activeTab === 'hero' ? (
             <div className="space-y-10">
@@ -394,6 +413,8 @@ const AdminDashboard = ({ portalMode }) => {
             <InventoryManagement />
           ) : activeTab === 'finance' ? (
             <FinanceManagement isSuperAdmin={isSuperAdminView} role={isSuperAdminView ? 'Super Admin' : 'Admin'} />
+          ) : activeTab === 'stock' ? (
+            <StockInventory isSuperAdmin={isSuperAdminView} />
           ) : activeTab === 'amendments' ? (
             <AmendmentsManagement isSuperAdmin={isSuperAdminView} />
           ) : activeTab === 'reels' ? (
