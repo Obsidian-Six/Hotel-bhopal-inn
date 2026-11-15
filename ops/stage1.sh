@@ -10,9 +10,8 @@ git fetch -q "$REPO" deploy/update-4
 git -c user.name=Aadarsh -c user.email=digitalbyaadarsh@gmail.com cherry-pick FETCH_HEAD
 for s in backend frontend; do docker tag $(docker inspect -f '{{.Image}}' hotel-bhopal-$s) hotel-bhopal-$s-rollback:pre-u4; done
 docker compose build backend frontend > /tmp/u4-build.log 2>&1 || { tail -20 /tmp/u4-build.log; exit 1; }
-IMG=$(docker compose images -q backend 2>/dev/null | head -1)
-[ -z "$IMG" ] && IMG=$(docker compose config --images | grep -i backend | head -1)
-NEWIMG=$(docker images --format '{{.Repository}}:{{.Tag}} {{.CreatedSince}}' | grep -i 'backend' | grep -v rollback | head -1 | cut -d' ' -f1)
+NEWIMG=$(docker compose config --images backend 2>/dev/null | head -1)
+[ -z "$NEWIMG" ] && NEWIMG=hotel-bhopal-inn-backend
 echo "built image: $NEWIMG"
 docker rm -f hotel-stg-api hotel-stg-mongo >/dev/null 2>&1 || true
 docker network create hotel-stg >/dev/null 2>&1 || true
