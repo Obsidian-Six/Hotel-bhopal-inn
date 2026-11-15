@@ -48,7 +48,13 @@ const BookingSchema = new mongoose.Schema({
             description: String,
             amount: Number,
             date: { type: Date, default: Date.now },
-            source: { type: String, default: 'Other' }
+            source: { type: String, default: 'Other' },
+            // Food bill orders (source 'F&B'): itemised lines + kitchen order ticket number
+            items: [{ name: String, qty: Number, rate: Number }],
+            kotNo: { type: String, default: '' },
+            notes: { type: String, default: '' },
+            paidMode: { type: String, default: '' }, // set when the guest paid for this order on the spot
+            staff: { type: String, default: '' }
         }],
         totalAmount: { type: Number, default: 0 },
         amountPaid: { type: Number, default: 0 },

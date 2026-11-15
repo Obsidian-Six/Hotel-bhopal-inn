@@ -406,9 +406,8 @@ const getOpeningCashBalance = async (startOfDay) => {
 };
 
 // Get daily report summary
-router.get('/daily-report', protect, admin, async (req, res) => {
-    try {
-        const { date } = req.query;
+// Builds the Finance Audit day summary (same numbers the Finance screen shows)
+const buildDailyReport = async (date) => {
         let startOfDay, endOfDay, queryDate;
 
         if (date && typeof date === 'string' && date.includes('-')) {
@@ -461,22 +460,62 @@ router.get('/daily-report', protect, admin, async (req, res) => {
         const totalCashExpense = todayFin.cashExpenses;
         const closingCashBalance = openingBalance + totalCashIncome - totalCashExpense;
 
-        let summary = {
-            totalIncome: todayFin.total,
-            totalExpense: todayFin.expenses,
-            openingBalance: openingBalance,
-            closingBalance: closingCashBalance,
-            netCashHandover: closingCashBalance, // Closing cash balance carried forward to Net Cash
-            todayCashIncome: totalCashIncome,
-            todayCashExpense: totalCashExpense,
-            netCashDay: totalCashIncome - totalCashExpense,
-            incomeByMode,
-            otaTotal: todayFin.otaTotal,
-            otaApproved: todayFin.otaApproved,
-            otaPending: todayFin.otaPending
+        return {
+            summary: {
+                totalIncome: todayFin.total,
+                totalExpense: todayFin.expenses,
+                openingBalance: openingBalance,
+                closingBalance: closingCashBalance,
+                netCashHandover: closingCashBalance, // Closing cash balance carried forward to Net Cash
+                todayCashIncome: totalCashIncome,
+                todayCashExpense: totalCashExpense,
+                netCashDay: totalCashIncome - totalCashExpense,
+                incomeByMode,
+                otaTotal: todayFin.otaTotal,
+                otaApproved: todayFin.otaApproved,
+                otaPending: todayFin.otaPending
+            },
+            transactions, startOfDay, endOfDay
         };
+};
 
+router.get('/daily-report', protect, admin, async (req, res) => {
+    try {
+        const { summary } = await buildDailyReport(req.query.date);
         res.json(summary);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// GET: Day money summary for the Daily Ops app (read-only key). Same totals as Finance Audit,
+// plus income by type and the expense list. No guest names or phone numbers leave this route.
+router.get('/ops-summary', staffOrIntegration, async (req, res) => {
+    try {
+        const { summary, transactions } = await buildDailyReport(req.query.date);
+        const incomeByCategory = {};
+        const expenses = [];
+        let pendingExpenseCount = 0, pendingExpenseAmount = 0;
+        transactions.forEach(tx => {
+            const amount = Number(decrypt(tx.amount)) || 0;
+            if (tx.type === 'Income') {
+                const cat = tx.category || 'Other';
+                incomeByCategory[cat] = (incomeByCategory[cat] || 0) + amount;
+            } else if (tx.type === 'Expense') {
+                if (!tx.approved) { pendingExpenseCount++; pendingExpenseAmount += amount; }
+                expenses.push({
+                    category: tx.category || 'Expense',
+                    description: String(decrypt(tx.description) || '').slice(0, 120),
+                    amount,
+                    mode: tx.paymentMode || '',
+                    approved: !!tx.approved,
+                    by: tx.recordedBy || '',
+                    time: tx.date
+                });
+            }
+        });
+        expenses.sort((a, b) => new Date(a.time) - new Date(b.time));
+        res.json({ ...summary, incomeByCategory, expenses, pendingExpenseCount, pendingExpenseAmount });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

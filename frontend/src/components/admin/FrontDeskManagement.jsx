@@ -11,6 +11,7 @@ import {
 import { useAuth } from '@/lib/AuthContext';
 import { socket } from '@/lib/socket';
 import FrontDeskAnalytics from './FrontDeskAnalytics';
+import FoodBill from './FoodBill';
 
 const API_BASE = config.API_URL;
 
@@ -30,6 +31,7 @@ const FrontDeskManagement = ({ isSuperAdmin: propIsSuperAdmin, role = 'Admin' } 
   const { user, isSuperAdmin: authIsSuperAdmin } = useAuth();
   const isSuperAdmin = propIsSuperAdmin !== undefined ? propIsSuperAdmin : authIsSuperAdmin;
   const [bookings, setBookings] = useState([]);
+  const [foodBillFor, setFoodBillFor] = useState(null); // Food Bill screen: { id } of the guest booking
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ checkIns: 0, checkOuts: 0, inHouse: 0, available: 0 });
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -542,7 +544,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
         roomPlan: walkInForm.roomPlan,
         immediateCheckIn: walkInForm.immediateCheckIn,
         status: walkInForm.isHistorical ? (walkInForm.customStatus || 'Confirmed') : (walkInForm.immediateCheckIn ? 'Checked-In' : 'Confirmed'),
-        paymentDate: isAdvance ? walkInForm.checkInDate : (walkInForm.paymentDate || walkInForm.checkInDate),
+        paymentDate: isAdvance ? '' : (walkInForm.paymentDate || walkInForm.checkInDate), // advance: credited today, the day money is received
         bookingDate: todayStr,
         bookingType: walkInForm.bookingType || (walkInForm.immediateCheckIn ? 'Immediate' : 'Walk-in'),
         numberOfRooms: walkInForm.numberOfRooms ? Number(walkInForm.numberOfRooms) : 1,
@@ -565,7 +567,6 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
           roomPlan: walkInForm.roomPlan,
           paymentMode: walkInForm.paymentMode || 'Cash',
           amountPaid: Number(walkInForm.financials.amountPaid) || 0,
-          paymentDate: walkInForm.checkInDate,
           voucherUrl: walkInForm.voucherUrl || ''
         };
         try {
@@ -971,7 +972,11 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
     }
   };
 
+  // New Food Bill screen (items, KOT, print, room bill). { id } = opened from a guest's journey.
   const openFoodBillModal = (booking = null) => {
+    setFoodBillFor({ id: booking ? booking._id : '' });
+  };
+  const openOldFoodBillModal = (booking = null) => {
     if (booking) {
       setFoodTargetBookingId(booking._id);
     } else {
@@ -2255,7 +2260,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                         />
                         <ActionButton 
                             icon={<Utensils size={18} />} 
-                            label="🍽️ Food Bill & Menu Order" 
+                            label="🍽️ Food Bill · KOT · Print" 
                             color="bg-amber-600 hover:bg-amber-700" 
                             onClick={() => openFoodBillModal(selectedBooking)}
                         />
@@ -2522,7 +2527,7 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
                 </div>
                 <p className="text-xs text-slate-500 font-medium mt-1">
                   {walkInForm.bookingType === 'Advance' 
-                    ? 'Reserve rooms for future stay. Advance money collected reflects on check-in start date.' 
+                    ? 'Reserve rooms for future stay. Advance money is counted in Finance on the day it is received (today).' 
                     : 'Guest arriving now at Front Desk. Check-in and assign room unit immediately.'}
                 </p>
               </div>
@@ -3505,6 +3510,18 @@ Please honor this confirmed booking – rejecting it will attract penalty and ma
       )}
 
       {/* Requirement 2: Front Desk Food Bill & Restaurant Ordering Modal */}
+      {foodBillFor && (
+        <FoodBill
+          bookings={bookings}
+          initialBookingId={foodBillFor.id}
+          onClose={() => setFoodBillFor(null)}
+          onSaved={(updated) => {
+            fetchData();
+            if (selectedBooking && selectedBooking._id === updated._id) setSelectedBooking(updated);
+          }}
+        />
+      )}
+
       {isFoodBillOpen && (
         <div className="fixed inset-0 bg-[#1A2B48]/95 z-[160] flex items-center justify-center p-3 sm:p-6 backdrop-blur-md animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-5xl rounded-sm shadow-2xl border-t-8 border-amber-500 max-h-[92vh] flex flex-col overflow-hidden">

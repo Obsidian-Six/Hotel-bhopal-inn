@@ -55,6 +55,11 @@ const TransactionSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Booking',
         default: null
+    },
+    // The booking paymentHistory entry this transaction mirrors (keeps edits/deletes in sync)
+    paymentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null
     }
 }, { timestamps: true });
 

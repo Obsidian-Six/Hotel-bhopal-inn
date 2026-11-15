@@ -76,6 +76,73 @@ router.get('/front-desk/stats', staffOrIntegration, async (req, res) => {
     }
 });
 
+// GET: Room inventory for the Daily Ops app (read-only key). Room-by-room status today and
+// free rooms per room type for the next few nights. No guest names or phone numbers.
+router.get('/front-desk/ops-inventory', staffOrIntegration, async (req, res) => {
+    try {
+        const days = Math.min(Math.max(parseInt(req.query.days, 10) || 7, 1), 31);
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const until = new Date(today); until.setDate(until.getDate() + days);
+        const dayKey = d => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+        const dayStart = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+
+        const units = await RoomUnit.find().populate('category').lean();
+        const bookings = await Booking.find({
+            status: { $nin: ['Cancelled', 'Checked-Out'] },
+            checkInDate: { $lt: until },
+            checkOutDate: { $gt: today }
+        }).select('status checkInDate checkOutDate roomUnit roomCategory numberOfRooms').lean();
+
+        const typeName = c => (c && (c.title || c.category)) || 'Other';
+        const types = {};
+        units.forEach(u => {
+            if (/test/i.test(u.roomNumber)) return;
+            const id = String(u.category?._id || u.category || 'other');
+            types[id] = types[id] || { id, name: typeName(u.category), total: 0 };
+            types[id].total++;
+        });
+
+        // Room-by-room today
+        const inHouseByUnit = {};
+        bookings.filter(b => b.status === 'Checked-In' && b.roomUnit).forEach(b => { inHouseByUnit[String(b.roomUnit)] = b; });
+        const todayKey = dayKey(today);
+        const rooms = units.filter(u => !/test/i.test(u.roomNumber)).map(u => {
+            const b = inHouseByUnit[String(u._id)];
+            return {
+                room: u.roomNumber,
+                type: typeName(u.category),
+                status: b ? 'Occupied' : (u.status === 'Occupied' ? 'Available' : u.status),
+                checkOut: b ? dayKey(b.checkOutDate) : null,
+                leavingToday: b ? dayKey(b.checkOutDate) <= todayKey : false
+            };
+        }).sort((a, b) => String(a.room).localeCompare(String(b.room), undefined, { numeric: true }));
+
+        // Free rooms per type per night
+        const nights = [];
+        for (let i = 0; i < days; i++) {
+            const d = new Date(today); d.setDate(d.getDate() + i);
+            const key = dayKey(d);
+            const row = { date: key, byType: {} };
+            Object.values(types).forEach(t => { row.byType[t.id] = { booked: 0, total: t.total }; });
+            bookings.forEach(b => {
+                const cin = dayStart(b.checkInDate), cout = dayStart(b.checkOutDate);
+                if (!(cin <= d && d < cout)) return;
+                const tid = String(b.roomCategory || 'other');
+                if (!row.byType[tid]) return;
+                row.byType[tid].booked += Math.max(1, Number(b.numberOfRooms) || 1);
+            });
+            nights.push(row);
+        }
+        const arrivalsToday = bookings.filter(b => b.status !== 'Checked-In' && dayKey(b.checkInDate) === todayKey)
+            .reduce((n, b) => n + Math.max(1, Number(b.numberOfRooms) || 1), 0);
+        const departuresToday = rooms.filter(r => r.leavingToday).length;
+
+        res.json({ today: todayKey, types: Object.values(types), rooms, nights, arrivalsToday, departuresToday });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // POST: Create New Booking (Website / App)
 router.post('/', async (req, res) => {
     try {
@@ -195,12 +262,10 @@ router.post('/walk-in', protect, admin, async (req, res) => {
             const effectiveMode = paymentMode || 'Cash';
             const staffName = req.user ? `${req.user.firstName} ${req.user.lastName}`.trim() : 'FrontDesk';
 
-            // For advance bookings, paymentDate defaults to checkInDate (noon) so that it is credited to the start date's finance and analytics
+            // Money is credited to the day it is actually received (today unless a payment date is given)
             let effectiveDate;
             if (paymentDate) {
                 effectiveDate = new Date(typeof paymentDate === 'string' && !paymentDate.includes('T') ? paymentDate + 'T12:00:00' : paymentDate);
-            } else if (bookingType === 'Advance') {
-                effectiveDate = new Date(typeof checkInDate === 'string' && !checkInDate.includes('T') ? checkInDate + 'T12:00:00' : checkInDate);
             } else {
                 effectiveDate = new Date();
             }
@@ -212,6 +277,7 @@ router.post('/walk-in', protect, admin, async (req, res) => {
                 note: bookingType === 'Advance' ? 'Advance deposit for upcoming booking' : 'Advance payment at registration',
                 timestamp: effectiveDate
             });
+            const advPayment = booking.financials.paymentHistory[booking.financials.paymentHistory.length - 1];
 
             // Single source of truth for transaction creation
             const isOta = effectiveMode === 'OTA';
@@ -229,7 +295,8 @@ router.post('/walk-in', protect, admin, async (req, res) => {
                 recordedBy: staffName,
                 approved: !isOta,
                 date: effectiveDate,
-                booking: booking._id
+                booking: booking._id,
+                paymentId: advPayment._id
             });
             await advanceTx.save();
         }
@@ -380,13 +447,15 @@ router.post('/group', protect, admin, async (req, res) => {
 
                 if (isLeader && paidAmt > 0) {
                     const effectiveMode = paymentMode || 'Cash';
+                    // Credited to the day the money is received (today unless a payment date is given)
                     const effectiveDate = paymentDate
                         ? new Date(String(paymentDate).includes('T') ? paymentDate : paymentDate + 'T12:00:00')
-                        : new Date(String(checkInDate).includes('T') ? checkInDate : checkInDate + 'T12:00:00');
+                        : new Date();
                     booking.financials.paymentHistory.push({
                         amount: paidAmt, mode: effectiveMode, staff: staffName,
                         note: `Group advance for ${totalRooms} rooms`, timestamp: effectiveDate
                     });
+                    const grpPayment = booking.financials.paymentHistory[booking.financials.paymentHistory.length - 1];
                     const isOta = effectiveMode === 'OTA';
                     await new Transaction({
                         type: 'Income',
@@ -397,7 +466,8 @@ router.post('/group', protect, admin, async (req, res) => {
                         recordedBy: staffName,
                         approved: !isOta,
                         date: effectiveDate,
-                        booking: booking._id
+                        booking: booking._id,
+                        paymentId: grpPayment._id
                     }).save();
                 }
 
@@ -548,6 +618,7 @@ router.post('/:id/collect-payment', protect, admin, async (req, res) => {
             staff: staff || 'FrontDesk',
             timestamp: new Date()
         });
+        const collected = booking.financials.paymentHistory[booking.financials.paymentHistory.length - 1];
 
         booking.financials.amountPaid += Number(amount);
         booking.financials.balance = booking.financials.totalAmount - booking.financials.amountPaid;
@@ -576,8 +647,9 @@ router.post('/:id/collect-payment', protect, admin, async (req, res) => {
             paymentMode: mode,
             recordedBy: staff || 'FrontDesk',
             approved: !isOtaMode, // OTA requires approval
-            date: new Date(),
-            booking: booking._id
+            date: collected.timestamp,
+            booking: booking._id,
+            paymentId: collected._id
         });
         await newTx.save();
 
@@ -615,6 +687,93 @@ router.post('/:id/add-charge', protect, admin, async (req, res) => {
         req.app.get('socketio').emit('booking_updated', { type: 'charge', bookingId: booking._id });
         res.json(booking);
     } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// POST: Food order for a guest (Food Bill). Adds an itemised F&B line to the room bill with a KOT number.
+// If paidNow is given, the guest paid on the spot: a payment entry + F&B income is recorded too.
+router.post('/:id/food-order', protect, admin, async (req, res) => {
+    try {
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) return res.status(404).json({ message: 'Booking not found' });
+        if (booking.status === 'Cancelled') return res.status(400).json({ message: 'This booking is cancelled' });
+
+        const raw = Array.isArray(req.body.items) ? req.body.items : [];
+        const items = raw.map(i => ({
+            name: String(i.name || '').trim().slice(0, 80),
+            qty: Math.round(Number(i.qty) || 0),
+            rate: Math.round((Number(i.rate) || 0) * 100) / 100
+        })).filter(i => i.name && i.qty > 0 && i.rate >= 0);
+        if (!items.length) return res.status(400).json({ message: 'Add at least one food item' });
+        if (items.length > 60) return res.status(400).json({ message: 'Too many items in one order' });
+        const amount = Math.round(items.reduce((s, i) => s + i.qty * i.rate, 0) * 100) / 100;
+        if (amount <= 0) return res.status(400).json({ message: 'Order total must be more than ₹0' });
+
+        const notes = String(req.body.notes || '').trim().slice(0, 200);
+        const allowedModes = ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Online'];
+        const paidNow = req.body.paidNow && allowedModes.includes(req.body.paidNow.mode) ? req.body.paidNow.mode : '';
+        const staffName = req.user ? `${req.user.firstName} ${req.user.lastName}`.trim() : 'FrontDesk';
+
+        // KOT number: running count for today across all guests, e.g. KOT-1511-04
+        const now = new Date();
+        const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        const agg = await Booking.aggregate([
+            { $unwind: '$financials.extraCharges' },
+            { $match: { 'financials.extraCharges.kotNo': { $nin: ['', null] }, 'financials.extraCharges.date': { $gte: dayStart, $lte: dayEnd } } },
+            { $count: 'n' }
+        ]);
+        const seq = ((agg[0] && agg[0].n) || 0) + 1;
+        const kotNo = `KOT-${String(now.getDate()).padStart(2, '0')}${String(now.getMonth() + 1).padStart(2, '0')}-${String(seq).padStart(2, '0')}`;
+
+        const itemsText = items.map(i => `${i.name} x${i.qty}`).join(', ');
+        booking.financials.extraCharges.push({
+            description: `Food Bill ${kotNo}: ${itemsText}`.slice(0, 500),
+            amount,
+            source: 'F&B',
+            date: now,
+            items,
+            kotNo,
+            notes,
+            paidMode: paidNow,
+            staff: staffName
+        });
+        booking.financials.totalAmount = (booking.financials.totalAmount || 0) + amount;
+
+        let payEntry = null;
+        if (paidNow) {
+            booking.financials.paymentHistory.push({ amount, mode: paidNow, staff: staffName, note: `Food bill ${kotNo} paid`, timestamp: now });
+            payEntry = booking.financials.paymentHistory[booking.financials.paymentHistory.length - 1];
+            booking.financials.amountPaid = (booking.financials.amountPaid || 0) + amount;
+        }
+        booking.financials.balance = (booking.financials.totalAmount || 0) - (booking.financials.amountPaid || 0);
+        await booking.save();
+
+        if (payEntry) {
+            await new Transaction({
+                type: 'Income',
+                category: 'F&B',
+                amount: encrypt(String(amount)),
+                description: encrypt(`Food Bill ${kotNo} (${paidNow}) - ${booking.guestDetails?.firstName || ''} ${booking.guestDetails?.lastName || ''} - Ref #${booking._id.toString().slice(-8)}`),
+                paymentMode: paidNow,
+                recordedBy: staffName,
+                approved: true,
+                date: now,
+                booking: booking._id,
+                paymentId: payEntry._id
+            }).save();
+        }
+
+        const updated = await Booking.findById(booking._id).populate('roomCategory').populate('roomUnit');
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('booking_updated', { type: 'charge', bookingId: booking._id });
+            if (payEntry) io.emit('finance_updated', { bookingId: booking._id });
+        }
+        res.json({ booking: updated, kotNo, amount });
+    } catch (err) {
+        console.error('Food order error:', err);
         res.status(400).json({ message: err.message });
     }
 });
@@ -913,6 +1072,7 @@ router.post('/:id/payment', protect, superAdmin, async (req, res) => {
         }
 
         booking.financials.paymentHistory.push(newPayment);
+        const addedPayment = booking.financials.paymentHistory[booking.financials.paymentHistory.length - 1];
 
         // Recalculate amountPaid and balance
         const totalPaid = booking.financials.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
@@ -932,8 +1092,9 @@ router.post('/:id/payment', protect, superAdmin, async (req, res) => {
             paymentMode: mode || 'Cash',
             recordedBy: staffName,
             approved: !isOtaMode,
-            date: date ? new Date(date) : new Date(),
-            booking: booking._id
+            date: addedPayment.timestamp,
+            booking: booking._id,
+            paymentId: addedPayment._id
         });
         await paymentTx.save();
 
@@ -953,6 +1114,30 @@ router.post('/:id/payment', protect, superAdmin, async (req, res) => {
     }
 });
 
+// ---- Keep Finance in step with a booking's payment entries ----
+const sameDay = (a, b) => {
+    const x = new Date(a), y = new Date(b);
+    return x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate();
+};
+// Finds the finance transaction that mirrors one paymentHistory entry.
+// New entries are linked by paymentId; older ones are matched by booking + amount (same day first).
+const findTxForPayment = async (booking, entry) => {
+    const linked = await Transaction.findOne({ paymentId: entry._id, isVoided: false });
+    if (linked) return linked;
+    const amt = Number(entry.amount) || 0;
+    const cands = (await Transaction.find({ booking: booking._id, type: 'Income', isVoided: false, paymentId: null }))
+        .filter(t => Math.abs((Number(decrypt(t.amount)) || 0) - amt) < 0.01);
+    if (!cands.length) return null;
+    const sd = cands.find(t => sameDay(t.date, entry.timestamp));
+    if (sd) return sd;
+    // A same-amount entry on another day: only take it if no other payment entry already accounts for it
+    const others = (booking.financials.paymentHistory || []).filter(p => String(p._id) !== String(entry._id));
+    const free = cands.filter(t => !others.some(p => Math.abs((Number(p.amount) || 0) - amt) < 0.01 && sameDay(p.timestamp, t.date)));
+    if (!free.length) return null;
+    free.sort((a, b) => Math.abs(new Date(a.date) - new Date(entry.timestamp)) - Math.abs(new Date(b.date) - new Date(entry.timestamp)));
+    return free[0];
+};
+
 // PUT: Edit Specific Payment Entry (Super Admin Only)
 router.put('/:id/payment/:paymentIndex', protect, superAdmin, async (req, res) => {
     try {
@@ -965,6 +1150,8 @@ router.put('/:id/payment/:paymentIndex', protect, superAdmin, async (req, res) =
         }
 
         const { amount, mode, note, date } = req.body;
+        // Find the matching finance entry BEFORE the change (it is matched on the old amount/date)
+        const linkedTx = await findTxForPayment(booking, booking.financials.paymentHistory[idx]);
         if (amount !== undefined) booking.financials.paymentHistory[idx].amount = Number(amount);
         if (mode) booking.financials.paymentHistory[idx].mode = mode;
         if (note !== undefined) booking.financials.paymentHistory[idx].note = note;
@@ -977,12 +1164,38 @@ router.put('/:id/payment/:paymentIndex', protect, superAdmin, async (req, res) =
 
         await booking.save();
 
+        // Move the finance entry with the payment so it is never counted on two days
+        const p = booking.financials.paymentHistory[idx];
+        const pMode = ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Online', 'OTA'].includes(p.mode) ? p.mode : 'Online';
+        if (linkedTx) {
+            linkedTx.amount = encrypt(String(Number(p.amount) || 0));
+            linkedTx.paymentMode = pMode;
+            linkedTx.date = p.timestamp;
+            linkedTx.paymentId = p._id;
+            if (pMode === 'OTA' && mode) linkedTx.approved = false;
+            if (pMode !== 'OTA') linkedTx.approved = true;
+            await linkedTx.save();
+        } else if ((Number(p.amount) || 0) > 0) {
+            await new Transaction({
+                type: 'Income',
+                category: 'Room Rent',
+                amount: encrypt(String(Number(p.amount))),
+                description: encrypt(`Payment (${pMode}) - ${booking.guestDetails?.firstName || ''} ${booking.guestDetails?.lastName || ''} - Ref #${booking._id.toString().slice(-8)}`.trim()),
+                paymentMode: pMode,
+                recordedBy: req.user ? `${req.user.firstName} ${req.user.lastName}`.trim() : 'SuperAdmin',
+                approved: pMode !== 'OTA',
+                date: p.timestamp,
+                booking: booking._id,
+                paymentId: p._id
+            }).save();
+        }
+
         const updatedBooking = await Booking.findById(booking._id)
             .populate('roomCategory')
             .populate('roomUnit');
 
         const io = req.app.get('socketio');
-        if (io) io.emit('booking_updated', updatedBooking);
+        if (io) { io.emit('booking_updated', updatedBooking); io.emit('finance_updated', { bookingId: booking._id }); }
 
         res.json(updatedBooking);
     } catch (err) {
@@ -1001,7 +1214,14 @@ router.delete('/:id/payment/:paymentIndex', protect, superAdmin, async (req, res
             return res.status(404).json({ message: 'Payment record not found' });
         }
 
+        // Void the matching finance entry too, otherwise the money stays in Finance Audit
+        const removedTx = await findTxForPayment(booking, booking.financials.paymentHistory[idx]);
         booking.financials.paymentHistory.splice(idx, 1);
+        if (removedTx) {
+            removedTx.isVoided = true;
+            removedTx.voidReason = 'Payment entry deleted from booking';
+            await removedTx.save();
+        }
 
         // Recalculate
         const totalPaid = booking.financials.paymentHistory.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
