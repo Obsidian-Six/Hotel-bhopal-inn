@@ -363,23 +363,18 @@ const calculateFinancialsForRange = async (sDate, eDate) => {
 };
 
 // Calculate opening cash balance for a given day (carried forward from previous days)
+// Cash still to be added after a handover was saved on its own day (late cash in/out that day)
+const cashAfterHandover = async (h) => {
+    const t = new Date(h.createdAt || h.date);
+    const d = new Date(h.date);
+    const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+    if (!(h.countedCash) || t > dayEnd) return 0; // old-style handovers already include the whole day
+    const f = await calculateFinancialsForRange(new Date(t.getTime() + 1), dayEnd);
+    return (f.cash || 0) - (f.cashExpenses || 0);
+};
+
 const getOpeningCashBalance = async (startOfDay) => {
-    // 1. Check if an explicit CashHandover was submitted on the previous day
-    const yesterdayStart = new Date(startOfDay);
-    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-    yesterdayStart.setHours(0, 0, 0, 0);
-    const yesterdayEnd = new Date(yesterdayStart);
-    yesterdayEnd.setHours(23, 59, 59, 999);
-
-    const prevHandover = await CashHandover.findOne({
-        date: { $gte: yesterdayStart, $lte: yesterdayEnd }
-    });
-
-    if (prevHandover) {
-        return Number(decrypt(prevHandover.closingBalance)) || 0;
-    }
-
-    // 2. Check the most recent CashHandover prior to this date
+    // Most recent cash handover before this day sets the base
     const mostRecentHandover = await CashHandover.findOne({
         date: { $lt: startOfDay }
     }).sort({ date: -1 });
@@ -391,7 +386,7 @@ const getOpeningCashBalance = async (startOfDay) => {
         baseDate = new Date(mostRecentHandover.date);
         baseDate.setDate(baseDate.getDate() + 1);
         baseDate.setHours(0, 0, 0, 0);
-        baseBalance = Number(decrypt(mostRecentHandover.closingBalance)) || 0;
+        baseBalance = (Number(decrypt(mostRecentHandover.closingBalance)) || 0) + await cashAfterHandover(mostRecentHandover);
     }
 
     if (startOfDay <= baseDate) {
@@ -405,7 +400,6 @@ const getOpeningCashBalance = async (startOfDay) => {
     return Math.max(0, baseBalance + accumulatedCash);
 };
 
-// Get daily report summary
 // Builds the Finance Audit day summary (same numbers the Finance screen shows)
 const buildDailyReport = async (date) => {
         let startOfDay, endOfDay, queryDate;
@@ -458,7 +452,23 @@ const buildDailyReport = async (date) => {
 
         const totalCashIncome = todayFin.cash;
         const totalCashExpense = todayFin.cashExpenses;
-        const closingCashBalance = openingBalance + totalCashIncome - totalCashExpense;
+        let closingCashBalance = openingBalance + totalCashIncome - totalCashExpense;
+
+        // A cash count at handover today replaces the software's running figure
+        const todayHandover = await CashHandover.findOne({ date: { $gte: startOfDay, $lte: endOfDay } });
+        let handover = null;
+        if (todayHandover && todayHandover.countedCash) {
+            const counted = Number(decrypt(todayHandover.countedCash)) || 0;
+            closingCashBalance = counted + await cashAfterHandover(todayHandover);
+            handover = {
+                countedCash: counted,
+                handedOver: todayHandover.handedOver ? Number(decrypt(todayHandover.handedOver)) || 0 : 0,
+                systemBalance: todayHandover.systemBalance ? Number(decrypt(todayHandover.systemBalance)) || 0 : null,
+                at: todayHandover.createdAt,
+                by: todayHandover.staffName,
+                to: todayHandover.handoverTo
+            };
+        }
 
         return {
             summary: {
@@ -473,7 +483,8 @@ const buildDailyReport = async (date) => {
                 incomeByMode,
                 otaTotal: todayFin.otaTotal,
                 otaApproved: todayFin.otaApproved,
-                otaPending: todayFin.otaPending
+                otaPending: todayFin.otaPending,
+                handover
             },
             transactions, startOfDay, endOfDay
         };
@@ -629,27 +640,10 @@ router.get('/analytics-date', staffOrIntegration, async (req, res) => {
         const totalSale = todayFin.total;
         const cashExpenses = todayFin.expenses;
 
-        // 3. Counter Opening Balance calculation (starts from 10th Aug 2026 with opening balance on Aug 10 = 0)
-        let openingBalanceCounter = 0;
-        const [targetY, targetM, targetD] = targetDateStr.split('-').map(Number);
-        const baseDate = new Date(2026, 7, 10, 0, 0, 0, 0); // 10th Aug 2026 local
-        const currentDateObj = new Date(targetY, targetM - 1, targetD, 0, 0, 0, 0);
-
-        if (currentDateObj > baseDate) {
-            let iterDate = new Date(baseDate);
-            while (iterDate < currentDateObj) {
-                const iterStart = new Date(iterDate);
-                const iterEnd = new Date(iterDate);
-                iterEnd.setHours(23, 59, 59, 999);
-
-                const iterFin = await calculateFinancialsForRange(iterStart, iterEnd);
-                openingBalanceCounter += (iterFin.total - iterFin.expenses);
-
-                iterDate.setDate(iterDate.getDate() + 1);
-            }
-        }
-
-        const cashBalanceCounter = openingBalanceCounter + totalSale - cashExpenses;
+        // 3. Counter cash: same opening / closing cash as the Finance Audit screen
+        const { summary: daySummary } = await buildDailyReport(targetDateStr);
+        const openingBalanceCounter = daySummary.openingBalance;
+        const cashBalanceCounter = daySummary.closingBalance;
 
         // 4. Electricity Meter Analytics Calculation
         const todayMeterDoc = await ElectricityReading.findOne({ dateStr: targetDateStr });
@@ -919,22 +913,39 @@ router.get('/pending-dues', protect, admin, async (req, res) => {
 // Submit Cash Handover
 router.post('/cash-handover', protect, admin, async (req, res) => {
     try {
-        const { date, shiftEndTime, staffName, handoverTo, openingBalance, totalCashIncome, totalCashExpense, closingBalance, netDayTotal } = req.body;
-        
-        const handover = new CashHandover({
+        const { date, shiftEndTime, staffName, handoverTo, openingBalance, totalCashIncome, totalCashExpense, closingBalance, netDayTotal, handedOver, countedCash, note } = req.body;
+        const num = v => (v === '' || v === null || v === undefined || isNaN(Number(v))) ? null : Number(v);
+        const counted = num(countedCash), given = num(handedOver);
+        if (counted !== null && counted < 0) return res.status(400).json({ message: 'Cash left in drawer cannot be negative' });
+        if (given !== null && given < 0) return res.status(400).json({ message: 'Cash given cannot be negative' });
+
+        const d = new Date(date);
+        const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+        const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+        const existing = await CashHandover.findOne({ date: { $gte: dayStart, $lte: dayEnd } });
+        if (existing && !(req.user && req.user.role === 'superadmin')) {
+            return res.status(400).json({ message: 'Cash handover for this day is already submitted. Ask the Super Admin to correct it.' });
+        }
+
+        const fields = {
             date,
             shiftEndTime,
             staffName,
             handoverTo,
-            openingBalance: encrypt(openingBalance.toString()),
-            totalCashIncome: encrypt(totalCashIncome.toString()),
-            totalCashExpense: encrypt(totalCashExpense.toString()),
-            closingBalance: encrypt(closingBalance.toString()),
-            netDayTotal: encrypt(netDayTotal.toString())
-        });
-        
-        await handover.save();
-        res.status(201).json({ message: 'Cash handover submitted successfully' });
+            openingBalance: encrypt(String(openingBalance ?? 0)),
+            totalCashIncome: encrypt(String(totalCashIncome ?? 0)),
+            totalCashExpense: encrypt(String(totalCashExpense ?? 0)),
+            // With a real count, the drawer balance becomes what was actually counted
+            closingBalance: encrypt(String(counted !== null ? counted : (closingBalance ?? 0))),
+            netDayTotal: encrypt(String(netDayTotal ?? 0)),
+            handedOver: given !== null ? encrypt(String(given)) : '',
+            countedCash: counted !== null ? encrypt(String(counted)) : '',
+            systemBalance: encrypt(String(closingBalance ?? 0)),
+            note: String(note || '').slice(0, 300)
+        };
+        if (existing) { Object.assign(existing, fields); await existing.save(); }
+        else await new CashHandover(fields).save();
+        res.status(201).json({ message: existing ? 'Cash handover corrected' : 'Cash handover submitted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -964,6 +975,9 @@ router.get('/cash-handover', protect, admin, async (req, res) => {
         result.totalCashExpense = Number(decrypt(result.totalCashExpense)) || 0;
         result.closingBalance = Number(decrypt(result.closingBalance)) || 0;
         result.netDayTotal = Number(decrypt(result.netDayTotal)) || 0;
+        result.handedOver = result.handedOver ? Number(decrypt(result.handedOver)) || 0 : null;
+        result.countedCash = result.countedCash ? Number(decrypt(result.countedCash)) || 0 : null;
+        result.systemBalance = result.systemBalance ? Number(decrypt(result.systemBalance)) || 0 : null;
         
         res.json(result);
     } catch (err) {

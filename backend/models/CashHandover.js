@@ -37,6 +37,12 @@ const CashHandoverSchema = new mongoose.Schema({
         type: String, // Encrypted
         required: true
     },
+    // Real cash count at handover: cash given to the owner and cash left in the drawer.
+    // When countedCash is set, closingBalance = countedCash (the software's own figure is kept in systemBalance).
+    handedOver: { type: String, default: '' },   // Encrypted
+    countedCash: { type: String, default: '' },  // Encrypted
+    systemBalance: { type: String, default: '' }, // Encrypted
+    note: { type: String, default: '' },
     status: {
         type: String,
         enum: ['Pending', 'Submitted'],

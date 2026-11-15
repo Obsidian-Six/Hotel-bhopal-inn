@@ -70,8 +70,9 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
   });
   
   const [handoverForm, setHandoverForm] = useState({
-      shiftEndTime: '', staffName: '', handoverTo: ''
+      shiftEndTime: '', staffName: '', handoverTo: '', handedOver: '', countedCash: '', note: ''
   });
+  const [correctingHandover, setCorrectingHandover] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -346,6 +347,10 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
   const submitHandover = async (e) => {
       e.preventDefault();
       if (!summary) return;
+      if (handoverForm.countedCash === '' || isNaN(Number(handoverForm.countedCash))) { alert('Count the cash left in the drawer and enter it.'); return; }
+      const sys = summary.closingBalance !== undefined ? summary.closingBalance : 0;
+      const counted = Number(handoverForm.countedCash);
+      if (Math.abs(sys - counted) >= 1 && !window.confirm(`Software balance was ₹${Math.round(sys).toLocaleString()}. You counted ₹${counted.toLocaleString()} in the drawer.\n\nThe cash balance will be set to ₹${counted.toLocaleString()} from now on. Continue?`)) return;
       try {
           await axios.post(`${API_BASE}/api/finance/cash-handover`, {
               ...handoverForm,
@@ -354,10 +359,15 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
               totalCashIncome: summary.incomeByMode['Cash'] || 0,
               totalCashExpense: summary.todayCashExpense !== undefined ? summary.todayCashExpense : (summary.totalExpense || 0), 
               closingBalance: summary.closingBalance !== undefined ? summary.closingBalance : ((summary.openingBalance || 0) + (summary.incomeByMode['Cash'] || 0) - (summary.todayCashExpense || 0)),
-              netDayTotal: (summary.totalIncome || 0) - (summary.totalExpense || 0)
+              netDayTotal: (summary.totalIncome || 0) - (summary.totalExpense || 0),
+              handedOver: handoverForm.handedOver === '' ? null : Number(handoverForm.handedOver),
+              countedCash: counted,
+              note: handoverForm.note
           });
+          setCorrectingHandover(false);
+          setHandoverForm({ shiftEndTime: '', staffName: '', handoverTo: '', handedOver: '', countedCash: '', note: '' });
           fetchData();
-      } catch (err) { console.error(err); }
+      } catch (err) { alert(err.response?.data?.message || 'Could not save the cash handover'); }
   };
 
   const handleDownloadExcelReport = () => {
@@ -558,7 +568,9 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
 
   const incomeTx = transactions.filter(tx => tx.type === 'Income');
   const expenseTx = transactions.filter(tx => tx.type === 'Expense');
-  const isLocked = !!handover;
+  // A handover locks past days. Today stays open: cash entered after the handover (night shift) is added on top of the counted cash.
+  const _t = new Date(); const todayStr = `${_t.getFullYear()}-${String(_t.getMonth() + 1).padStart(2, '0')}-${String(_t.getDate()).padStart(2, '0')}`;
+  const isLocked = !!handover && String(selectedDate).slice(0, 10) < todayStr;
 
   return (
     <div className="space-y-8 pb-12">
@@ -1222,7 +1234,7 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                 <div className="bg-[#BFA37E] p-4 text-white text-center">
                     <h3 className="text-sm font-bold uppercase tracking-[0.2em]">End of Day — Cash Handover Summary</h3>
                 </div>
-                {handover ? (
+                {handover && !correctingHandover ? (
                     <div className="p-8 text-center bg-green-50/30">
                         <CheckCircle className="mx-auto text-green-500 mb-4" size={48} />
                         <h4 className="text-lg font-serif font-bold text-[#000000] mb-2">Handover Submitted</h4>
@@ -1241,10 +1253,26 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                                 <p className="text-sm font-bold text-[#000000] mt-1">{handover.handoverTo}</p>
                             </div>
                             <div className="bg-white p-4 border border-slate-100 rounded-sm">
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Closing Balance</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{handover.countedCash !== null && handover.countedCash !== undefined ? 'Cash left in drawer' : 'Closing Balance'}</p>
                                 <p className="text-sm font-bold text-green-600 mt-1">₹{handover.closingBalance.toLocaleString()}</p>
                             </div>
+                            {handover.handedOver !== null && handover.handedOver !== undefined && (
+                              <div className="bg-white p-4 border border-slate-100 rounded-sm">
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Cash given to {handover.handoverTo || 'owner'}</p>
+                                <p className="text-sm font-bold text-[#000000] mt-1">₹{Number(handover.handedOver).toLocaleString()}</p>
+                              </div>
+                            )}
+                            {handover.systemBalance !== null && handover.systemBalance !== undefined && Math.abs(handover.systemBalance - handover.closingBalance) >= 1 && (
+                              <div className="bg-white p-4 border border-slate-100 rounded-sm col-span-2 md:col-span-3">
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Software balance before count</p>
+                                <p className="text-sm font-bold text-amber-600 mt-1">₹{Math.round(handover.systemBalance).toLocaleString()} → set to counted ₹{handover.closingBalance.toLocaleString()}</p>
+                                {handover.note && <p className="text-xs text-slate-500 mt-1">{handover.note}</p>}
+                              </div>
+                            )}
                         </div>
+                        {isSuperAdmin && (
+                          <button type="button" onClick={() => { setHandoverForm({ shiftEndTime: handover.shiftEndTime || '', staffName: handover.staffName || '', handoverTo: handover.handoverTo || '', handedOver: handover.handedOver ?? '', countedCash: handover.countedCash ?? handover.closingBalance ?? '', note: handover.note || '' }); setCorrectingHandover(true); }} className="mt-6 text-xs font-bold uppercase tracking-widest text-[#1A2B48] underline">Correct this handover (Super Admin)</button>
+                        )}
                     </div>
                 ) : (
                     <form onSubmit={submitHandover} className="p-6">
@@ -1266,6 +1294,21 @@ const FinanceManagement = ({ role = 'Admin', isSuperAdmin: propIsSuperAdmin }) =
                                 <input type="text" required value={handoverForm.handoverTo} onChange={e => setHandoverForm({...handoverForm, handoverTo: e.target.value})} placeholder="e.g. Night Manager Ravi" className="w-full border border-slate-200 p-2.5 text-xs bg-white focus:outline-none focus:border-[#BFA37E]" />
                             </div>
                         </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end mt-6">
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Cash given (to owner / next shift) ₹</label>
+                                <input type="number" min="0" inputMode="decimal" value={handoverForm.handedOver} onChange={e => setHandoverForm({...handoverForm, handedOver: e.target.value})} placeholder="0" className="w-full border border-slate-200 p-2.5 text-sm bg-white focus:outline-none focus:border-[#BFA37E]" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Cash left in drawer — counted ₹ *</label>
+                                <input type="number" min="0" required inputMode="decimal" value={handoverForm.countedCash} onChange={e => setHandoverForm({...handoverForm, countedCash: e.target.value})} placeholder="Count the notes" className="w-full border-2 border-[#BFA37E] p-2.5 text-sm bg-white focus:outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Note (optional)</label>
+                                <input type="text" value={handoverForm.note} onChange={e => setHandoverForm({...handoverForm, note: e.target.value})} placeholder="e.g. ₹1,800 given to Aadarsh" className="w-full border border-slate-200 p-2.5 text-xs bg-white focus:outline-none focus:border-[#BFA37E]" />
+                            </div>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-3">Software says ₹{Math.round(summary?.closingBalance || 0).toLocaleString()} should be in the drawer. The amount you count becomes the cash balance from now on.</p>
                         <div className="mt-8 flex justify-end">
                             <button type="submit" className="bg-[#BFA37E] hover:bg-[#A38A6A] text-white px-8 py-3 text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-2 rounded-sm shadow-sm">
                                 <ShieldAlert size={14} /> Lock & Submit Handover
